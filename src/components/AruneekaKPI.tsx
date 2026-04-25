@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from './AruneekaShell';
 
 interface KPIItem {
   id: string;
@@ -45,7 +46,12 @@ const PlatformIcon = ({ platform }: { platform: string }) => {
   }
 };
 
-const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
+const AruneekaKPI = ({ 
+  selectedProfileId 
+}: { 
+  selectedProfileId?: string 
+}) => {
+  const { selectedWorkspaceId } = useWorkspace();
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePlatform, setActivePlatform] = useState<'ALL' | 'INSTAGRAM' | 'TIKTOK' | 'THREADS'>('ALL');
@@ -59,17 +65,20 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
     if (storedUser) {
        setUserRole(JSON.parse(storedUser).role || 'Member');
     }
-    fetchRealData();
-    fetchChecklist();
-  }, [selectedProfileId]);
+    if (selectedWorkspaceId) {
+      fetchRealData();
+      fetchChecklist();
+    }
+  }, [selectedProfileId, selectedWorkspaceId]);
 
   const fetchRealData = async () => {
     setIsLoading(true);
     try {
-      const storedUser = localStorage.getItem('aruneeka_user');
-      if (!storedUser) return;
-      const user = JSON.parse(storedUser);
-      const workspaceId = user.workspace_id || user.parent_user_id || user.id;
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) {
+         setIsLoading(false);
+         return;
+      }
 
       let plansQuery = supabase.from('v2_agency_content_plans')
         .select('*')
@@ -90,7 +99,12 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
 
       if (plans) {
         setData(plans);
-        calculateKPIs(plans, targets || []);
+        const formattedTargets = (targets || []).map(t => ({
+          ...t,
+          metric: t.metric_name, // Map for internal state
+          target: t.target_value
+        }));
+        calculateKPIs(plans, formattedTargets);
       }
     } catch (e) {
       console.error("KPI Data fetch error:", e);
@@ -101,10 +115,8 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
 
   const fetchChecklist = async () => {
     try {
-      const storedUser = localStorage.getItem('aruneeka_user');
-      if (!storedUser) return;
-      const user = JSON.parse(storedUser);
-      const workspaceId = user.workspace_id || user.parent_user_id || user.id;
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) return;
 
       const { data } = await supabase
         .from('v2_agency_strategy_checklist')
@@ -260,21 +272,22 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
 
   const handleAddGoal = async () => {
     try {
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) return;
+      
       const userStr = localStorage.getItem('aruneeka_user');
-      if (!userStr) return;
-      const user = JSON.parse(userStr);
-      const workspaceId = user.workspace_id;
+      const user = userStr ? JSON.parse(userStr) : { id: null };
       const userId = user.id;
 
       const payload = {
         profile_id: selectedProfileId || null,
         platform: newGoal.platform,
-        metric: newGoal.metric,
+        metric_name: newGoal.metric,
         target_value: newGoal.target,
         category: newGoal.category,
         workspace_id: workspaceId,
-        user_id: userId, // Absolute Isolation
-        month_year: new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+        user_id: userId,
+        month_year: new Date().toISOString().slice(0, 7)
       };
 
       const { error } = await supabase.from('v2_agency_kpi_targets').insert([payload]);
@@ -291,30 +304,29 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
   const toggleTask = async (id: string, currentState: any) => {
     if (!id) return;
     
-    // Konversi ke boolean asli apapun isi dari DB
-    const isCompleted = currentState === true || currentState === 'true';
-    const newStatus = !isCompleted;
+    // Konversi ke status string untuk DB
+    const isCompleted = currentState === 'completed';
+    const newStatus = isCompleted ? 'pending' : 'completed';
     
-    // Optimistic update (Update layar dulu biar cepet)
+    // Optimistic update
     setChecklist(prev => prev.map(t => 
-      t.id === id ? { ...t, is_completed: newStatus } : t
+      t.id === id ? { ...t, status: newStatus } : t
     ));
 
     try {
       const { error } = await supabase
         .from('v2_agency_strategy_checklist')
-        .update({ is_completed: newStatus })
+        .update({ status: newStatus })
         .eq('id', id);
         
       if (error) throw error;
       
-      // Ambil ulang data buat mastiin sinkron
       fetchChecklist();
     } catch (e) {
       console.error("Gagal update status checklist:", e);
-      // Rollback jika gagal
+      // Rollback
       setChecklist(prev => prev.map(t => 
-        t.id === id ? { ...t, is_completed: isCompleted } : t
+        t.id === id ? { ...t, status: currentState } : t
       ));
     }
   };
@@ -345,9 +357,12 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
 
   const handleUpdateTask = async (id: string) => {
     if (!editingText.trim() || !id) return;
-    const userStr = localStorage.getItem('aruneeka_user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    const workspaceId = user ? (user.workspace_id || user.parent_user_id || user.id) : null;
+    
+    let workspaceId = selectedWorkspaceId;
+    if (!workspaceId) {
+      const savedWs = localStorage.getItem('aruneeka_selected_workspace');
+      if (savedWs) workspaceId = JSON.parse(savedWs).id;
+    }
     
     setChecklist(prev => prev.map(t => t.id === id ? { ...t, task: editingText } : t));
     setEditingId(null);
@@ -379,12 +394,11 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
   };
 
   const handleAddTask = async () => {
-    if (!newTaskText.trim()) return;
+    if (!newTaskText.trim() || !selectedWorkspaceId) return;
     try {
       const userStr = localStorage.getItem('aruneeka_user');
-      if (!userStr) return;
-      const user = JSON.parse(userStr);
-      const workspaceId = user.workspace_id || user.parent_user_id || user.id; // Fallback
+      const user = userStr ? JSON.parse(userStr) : { id: null };
+      const workspaceId = selectedWorkspaceId;
       const userId = user.id;
 
       if (!userId) return;
@@ -393,7 +407,7 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
         .from('v2_agency_strategy_checklist')
         .insert([{ 
           task: newTaskText, 
-          is_completed: false, 
+          status: 'pending', 
           workspace_id: workspaceId,
           user_id: userId // Personality Lock
         }])
@@ -505,6 +519,12 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
                                  const val = parseFloat(e.target.value) || 0;
                                  setKpis(prev => prev.map(item => item.id === kpi.id ? { ...item, target: val } : item));
                                }}
+                               onBlur={async (e) => {
+                                 const val = parseFloat(e.target.value) || 0;
+                                 if (userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') {
+                                   await supabase.from('v2_agency_kpi_targets').update({ target_value: val }).eq('id', kpi.id);
+                                 }
+                               }}
                                className={`w-24 text-xl font-bold text-amethyst-primary bg-slate-50 border-none rounded-lg text-right focus:ring-2 ring-amethyst-light outline-none px-2 ${!(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') ? 'cursor-default opacity-50' : ''}`}
                              />
                           </div>
@@ -552,10 +572,10 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
                     >
                        <div className="flex items-center gap-4 flex-1">
                           <button 
-                            onClick={(e) => { e.stopPropagation(); toggleTask(task.id, task.is_completed); } }
-                            className={`${task.is_completed ? 'text-emerald-500' : 'text-slate-200 hover:text-amethyst-light'} transition-colors`}
+                            onClick={(e) => { e.stopPropagation(); toggleTask(task.id, task.status); } }
+                            className={`${task.status === 'completed' ? 'text-emerald-500' : 'text-slate-200 hover:text-amethyst-light'} transition-colors`}
                           >
-                             {task.is_completed ? <CheckCircle2 size={22}/> : <Circle size={22}/>}
+                             {task.status === 'completed' ? <CheckCircle2 size={22}/> : <Circle size={22}/>}
                           </button>
                           
                           {editingId === task.id ? (
@@ -568,7 +588,7 @@ const AruneekaKPI = ({ selectedProfileId }: { selectedProfileId?: string }) => {
                               className="flex-1 bg-white border border-amethyst-primary/30 rounded-lg px-2 py-1 text-sm outline-none"
                             />
                           ) : (
-                            <span className={`text-sm font-semibold tracking-tight ${task.is_completed ? 'text-slate-300 line-through' : 'text-amethyst-dark'}`}>
+                            <span className={`text-sm font-semibold tracking-tight ${task.status === 'completed' ? 'text-slate-300 line-through' : 'text-amethyst-dark'}`}>
                                 {task.task}
                             </span>
                           )}

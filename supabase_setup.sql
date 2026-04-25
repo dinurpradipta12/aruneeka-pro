@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS v2_agency_social_profiles (
 CREATE TABLE IF NOT EXISTS v2_agency_content_plans (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workspace_id UUID,          -- Pengunci data multi-tenant
+    user_id UUID,               -- PIC ID
+    author_name TEXT,            -- PIC Name (Denormalized)
     title TEXT NOT NULL,
     description TEXT,
     due_date TIMESTAMP WITH TIME ZONE,

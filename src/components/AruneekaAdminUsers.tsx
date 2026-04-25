@@ -18,24 +18,22 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
-interface AppUser {
-  id: string;
-  username: string;
-  full_name: string;
-  role: string;
-  created_at: string;
-  verification_status?: string; // Verified, Pending
-  account_status?: string; // Active, Suspended
+interface AruneekaAdminUsersProps {
+  subscriptionTier?: string;
 }
 
-const AruneekaAdminUsers = () => {
+const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersProps) => {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     fetchUsers();
+    
+    const userStr = localStorage.getItem('aruneeka_user');
+    if (userStr) setCurrentUser(JSON.parse(userStr));
 
     // AKTIVASI REAL-TIME: Hemat Bandwidth & Instan
     const channel = supabase
@@ -168,9 +166,13 @@ const AruneekaAdminUsers = () => {
                      className="bg-amber-50 border border-amber-100 rounded-[32px] p-6 flex flex-col justify-between gap-4 group hover:shadow-lg hover:shadow-amber-500/10 transition-all"
                    >
                       <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-500 font-black shadow-sm border border-amber-200">
-                            {pUser.full_name?.[0] || 'U'}
-                         </div>
+                         {pUser.avatar_url ? (
+                            <img src={pUser.avatar_url} alt={pUser.full_name} className="w-12 h-12 object-contain" />
+                         ) : (
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-500 font-black shadow-sm border border-amber-200">
+                               {pUser.full_name?.[0] || 'U'}
+                            </div>
+                         )}
                          <div>
                             <p className="font-black text-slate-800 text-sm tracking-tight">{pUser.full_name}</p>
                             <p className="text-[10px] text-amber-600 font-bold opacity-70 italic">@{pUser.username}</p>
@@ -224,10 +226,20 @@ const AruneekaAdminUsers = () => {
             <button className="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all">
                <Filter size={18} />
             </button>
-            <button className="flex items-center gap-3 px-8 py-4 bg-amethyst-dark text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-amethyst-dark/20">
-               <UserPlus size={16} />
-               Register New User
-            </button>
+            {((users.length + pendingUsers.length) >= 2 && subscriptionTier === 'free' && !(currentUser?.role === 'Superuser' || currentUser?.role === 'developer')) ? (
+              <button 
+                onClick={() => alert("limit 2 users reached. upgrade to pro to invite more team members.")}
+                className="flex items-center gap-3 px-8 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold text-[10px] tracking-tight border border-slate-200 cursor-not-allowed"
+              >
+                 <ShieldCheck size={16} /> 
+                 Upgrade to invite more
+              </button>
+            ) : (
+              <button className="flex items-center gap-3 px-8 py-4 bg-amethyst-dark text-white rounded-2xl font-bold text-[10px] tracking-tight hover:bg-black transition-all shadow-lg shadow-amethyst-dark/20">
+                 <UserPlus size={16} />
+                 Register new user
+              </button>
+            )}
          </div>
       </div>
 
@@ -254,9 +266,13 @@ const AruneekaAdminUsers = () => {
                   >
                      <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                           <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg border border-amethyst-light/10">
-                              {user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
-                           </div>
+                           {user.avatar_url ? (
+                              <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 object-contain" />
+                           ) : (
+                              <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg border border-amethyst-light/10 shadow-inner">
+                                 {user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
+                              </div>
+                           )}
                            <div className="space-y-0.5">
                               <p className="font-black text-slate-800 tracking-tight">{user.full_name || 'Anonymous User'}</p>
                               <p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p>

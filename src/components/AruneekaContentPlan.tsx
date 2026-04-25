@@ -18,7 +18,9 @@ import {
   X,
   Link as LinkIcon,
   ExternalLink,
-  Repeat
+  Repeat,
+  ShieldCheck,
+  List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -74,7 +76,10 @@ const AruneekaContentPlan = ({
   onInsight,
   onStatusChange,
   onInlineUpdate,
-  selectedProfileId
+  selectedProfileId,
+  view = 'table',
+  onViewChange,
+  subscriptionTier = 'free'
 }: { 
   plans: any[], 
   onSelectContent: (p: any) => void, 
@@ -84,12 +89,18 @@ const AruneekaContentPlan = ({
   onInsight: (p: any) => void,
   onStatusChange?: (id: string, status: string) => void,
   onInlineUpdate?: (id: string, field: string, value: string) => void,
-  selectedProfileId?: string
+  selectedProfileId?: string,
+  view?: 'table' | 'kanban' | 'calendar',
+  onViewChange?: (view: any) => void,
+  subscriptionTier?: string
 }) => {
   const [filter, setFilter] = useState('all');
-  const [selectedMonth, setSelectedMonth] = useState('April 2026');
-  const [isMonthOpen, setIsMonthOpen] = useState(false);
-  const [view, setView] = useState<'table' | 'kanban' | 'calendar'>('table');
+  const [dateRange, setDateRange] = useState({ 
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0], 
+    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0] 
+  });
+  const [isRangeOpen, setIsRangeOpen] = useState(false);
+
   const [editingAsset, setEditingAsset] = useState<{ id: string, type: 'post' | 'script' | 'content' } | null>(null);
   const [tempLink, setTempLink] = useState('');
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
@@ -100,22 +111,20 @@ const AruneekaContentPlan = ({
     // Platform filter
     const platformMatch = filter === 'all' || p.platform?.toLowerCase() === filter.toLowerCase();
     
-    // Month filter
-    let monthMatch = false;
-    if (selectedMonth === 'All Time') {
-      monthMatch = true;
-    } else if (selectedMonth === 'Unscheduled') {
-      monthMatch = !p.due_date;
+    // Date Range filter
+    let dateMatch = true;
+    if (p.due_date) {
+      const pDate = new Date(p.due_date).toISOString().split('T')[0];
+      dateMatch = pDate >= dateRange.start && pDate <= dateRange.end;
     } else {
-      const date = new Date(p.due_date);
-      const monthYear = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-      monthMatch = monthYear.toLowerCase() === selectedMonth.toLowerCase();
+      dateMatch = true; // Jangan sembunyikan konten yang tidak ada due_date-nya
     }
 
     // Account filter (from Shell)
-    const accountMatch = !selectedProfileId || p.target_account === selectedProfileId;
+    // Tampilkan jika cocok dengan profil aktif ATAU jika target_account-nya kosong (belum di-assign)
+    const accountMatch = !selectedProfileId || p.target_account === selectedProfileId || !p.target_account;
 
-    return platformMatch && monthMatch && accountMatch;
+    return platformMatch && dateMatch && accountMatch;
   });
 
   return (
@@ -130,59 +139,109 @@ const AruneekaContentPlan = ({
          <div className="flex items-center gap-4">
             <div className="relative">
                <button 
-                  onClick={() => setIsMonthOpen(!isMonthOpen)}
-                  className="flex items-center gap-3 bg-white border border-amethyst-light rounded-2xl px-6 py-3 shadow-sm hover:border-amethyst-primary transition-all"
+                  onClick={() => setIsRangeOpen(!isRangeOpen)}
+                  className="flex items-center gap-4 bg-white border border-amethyst-light rounded-2xl px-6 py-3 shadow-sm hover:border-amethyst-primary transition-all group"
                >
-                  <span className="text-xs font-bold text-amethyst-dark uppercase tracking-widest">{selectedMonth}</span>
-                  <ChevronDown size={14} className={`text-amethyst-primary transition-transform ${isMonthOpen ? 'rotate-180' : ''}`}/>
+                  <Calendar size={16} className="text-amethyst-primary" />
+                  <div className="flex items-center gap-2">
+                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.start).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                     <div className="w-4 h-px bg-slate-200" />
+                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.end).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                  <ChevronDown size={14} className={`text-amethyst-primary transition-transform ${isRangeOpen ? 'rotate-180' : ''}`}/>
                </button>
 
                <AnimatePresence>
-                 {isMonthOpen && (
+                 {isRangeOpen && (
                    <>
-                     <div className="fixed inset-0 z-[110]" onClick={() => setIsMonthOpen(false)}/>
+                     <div className="fixed inset-0 z-[110]" onClick={() => setIsRangeOpen(false)}/>
                      <motion.div 
                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
                        animate={{ opacity: 1, y: 0, scale: 1 }}
                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                       className="absolute top-full right-0 mt-2 w-56 bg-white rounded-[24px] shadow-xl border border-amethyst-light overflow-hidden z-[111] py-2"
+                       className="absolute top-full right-0 mt-3 w-[320px] bg-white rounded-[32px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[111] p-6 space-y-6"
                      >
-                        <div className="max-h-[300px] overflow-y-auto no-scrollbar">
-                           {periods.map(period => (
-                             <button
-                                key={period}
-                                onClick={() => {
-                                  setSelectedMonth(period);
-                                  setIsMonthOpen(false);
-                                }}
-                                className={`w-full px-6 py-3 text-left text-xs font-bold transition-all flex items-center justify-between ${
-                                  selectedMonth === period 
-                                  ? 'bg-amethyst-light text-amethyst-dark' 
-                                  : 'text-amethyst-primary/60 hover:bg-slate-50'
-                                }`}
-                             >
-                                {period}
-                                {selectedMonth === period && <div className="w-1.5 h-1.5 bg-amethyst-dark rounded-full"/>}
-                             </button>
-                           ))}
+                        <div className="space-y-4">
+                           <div className="space-y-2">
+                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1 italic">Start Range</label>
+                              <input 
+                                 type="date" 
+                                 value={dateRange.start}
+                                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                 className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
+                              />
+                           </div>
+                           <div className="space-y-2">
+                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1 italic">End Range</label>
+                              <input 
+                                 type="date" 
+                                 value={dateRange.end}
+                                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                 className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
+                              />
+                           </div>
                         </div>
+                        <button 
+                           onClick={() => setIsRangeOpen(false)}
+                           className="w-full py-3 bg-amethyst-dark text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amethyst-dark/20 hover:bg-black transition-all"
+                        >
+                           Apply Filter
+                        </button>
                      </motion.div>
                    </>
                  )}
                </AnimatePresence>
             </div>
 
-            <div className="flex items-center bg-white border border-amethyst-light rounded-2xl p-1 shadow-sm">
-               <button onClick={() => setView('table')} className={`p-2.5 rounded-xl transition-all ${view === 'table' ? 'bg-amethyst-light text-amethyst-dark shadow-inner' : 'text-slate-200'}`}><Table2 size={18}/></button>
-               <button onClick={() => setView('kanban')} className={`p-2.5 rounded-xl transition-all ${view === 'kanban' ? 'bg-amethyst-light text-amethyst-dark shadow-inner' : 'text-slate-200'}`}><Kanban size={18}/></button>
-               <button onClick={() => setView('calendar')} className={`p-2.5 rounded-xl transition-all ${view === 'calendar' ? 'bg-amethyst-light text-amethyst-dark shadow-inner' : 'text-slate-200'}`}><Calendar size={18}/></button>
+            {/* View Switcher Tabs */}
+            <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center">
+               <button 
+                 onClick={() => onViewChange?.('table')}
+                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${view === 'table' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+               >
+                 <List size={14} /> List
+               </button>
+               <button 
+                 onClick={() => {
+                    const userStr = localStorage.getItem('aruneeka_user');
+                    const user = userStr ? JSON.parse(userStr) : null;
+                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                    if (subscriptionTier === 'free' && !isPowerUser) {
+                      alert("Kanban is a Pro feature. upgrade to unlock.");
+                    } else {
+                      onViewChange?.('kanban');
+                    }
+                 }}
+                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all relative ${view === 'kanban' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+               >
+                 {(subscriptionTier === 'free' && !(localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer'))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
+                 <Kanban size={14} /> Kanban
+               </button>
+               <button 
+                 onClick={() => {
+                    const userStr = localStorage.getItem('aruneeka_user');
+                    const user = userStr ? JSON.parse(userStr) : null;
+                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                    if (subscriptionTier === 'free' && !isPowerUser) {
+                      alert("Calendar is a Pro feature. upgrade to unlock.");
+                    } else {
+                      onViewChange?.('calendar');
+                    }
+                 }}
+                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all relative ${view === 'calendar' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+               >
+                 {(subscriptionTier === 'free' && !(localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer'))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
+                 <Calendar size={14} /> Calendar
+               </button>
             </div>
+
+            <div className="w-px h-6 bg-slate-100 hidden md:block" />
 
             <button 
                onClick={onNewContent}
-               className="flex items-center gap-2 px-8 py-4 bg-amethyst-dark text-white rounded-[18px] font-bold text-xs uppercase tracking-widest shadow-md hover:scale-105 active:scale-95 transition-all"
+               className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
             >
-               <Plus size={18}/> New Content
+               <Plus size={16}/> New Content
             </button>
          </div>
       </div>
@@ -476,7 +535,7 @@ const AruneekaContentPlan = ({
                       ))}
                       {filteredPlans.filter(p => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
                         <div className="h-24 border-2 border-dashed border-slate-50 rounded-3xl flex items-center justify-center">
-                           <p className="text-[10px] font-bold text-slate-200 uppercase tracking-widest">No Tasks</p>
+                           <p className="text-[10px] font-bold text-slate-200 tracking-widest">No Tasks</p>
                         </div>
                       )}
                    </div>
@@ -498,10 +557,12 @@ const AruneekaContentPlan = ({
                       <Calendar size={24}/>
                    </div>
                    <div>
-                      <h3 className="text-3xl font-bold text-amethyst-dark tracking-tight">{selectedMonth}</h3>
+                      <h3 className="text-3xl font-bold text-amethyst-dark tracking-tight">
+                         {new Date(dateRange.start).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                      </h3>
                       <div className="text-xs font-normal text-amethyst-primary flex items-center gap-2">
                          <div className="w-1.5 h-1.5 bg-amethyst-primary rounded-full animate-pulse"/>
-                         {filteredPlans.length} Tasks This Month
+                         {filteredPlans.length} Tasks in this range
                       </div>
                    </div>
                 </div>
@@ -509,23 +570,34 @@ const AruneekaContentPlan = ({
                 <div className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
                    <button 
                      onClick={() => {
-                        const idx = periods.indexOf(selectedMonth);
-                        if (idx > 2) setSelectedMonth(periods[idx - 1]);
+                        const s = new Date(dateRange.start);
+                        const e = new Date(dateRange.end);
+                        s.setMonth(s.getMonth() - 1);
+                        e.setMonth(e.getMonth() - 1);
+                        setDateRange({ start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] });
                      }}
                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"
                    >
                      <ChevronLeft size={20}/>
                    </button>
                    <button 
-                     onClick={() => setSelectedMonth('April 2026')}
+                     onClick={() => {
+                        const now = new Date();
+                        const s = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        setDateRange({ start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] });
+                     }}
                      className="px-6 py-2 bg-amethyst-dark text-white text-[10px] font-bold uppercase tracking-widest rounded-xl mx-2 shadow-lg"
                    >
-                     Today
+                     This Month
                    </button>
                    <button 
                      onClick={() => {
-                        const idx = periods.indexOf(selectedMonth);
-                        if (idx < periods.length - 1) setSelectedMonth(periods[idx + 1]);
+                        const s = new Date(dateRange.start);
+                        const e = new Date(dateRange.end);
+                        s.setMonth(s.getMonth() + 1);
+                        e.setMonth(e.getMonth() + 1);
+                        setDateRange({ start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] });
                      }}
                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"
                    >
@@ -546,13 +618,9 @@ const AruneekaContentPlan = ({
              {/* Calendar Grid */}
              <div className="grid grid-cols-7 grid-rows-5 h-[auto] min-h-[700px]">
                 {(() => {
-                  const [monthName, yearStr] = selectedMonth.split(' ');
-                  const monthMap: any = {
-                    'Januari': 0, 'Februari': 1, 'Maret': 2, 'April': 3, 'Mei': 4, 'Juni': 5,
-                    'Juli': 6, 'Agustus': 7, 'September': 8, 'Oktober': 9, 'November': 10, 'Desember': 11
-                  };
-                  const monthIndex = monthMap[monthName] || 0;
-                  const year = parseInt(yearStr) || 2026;
+                  const startDate = new Date(dateRange.start);
+                  const monthIndex = startDate.getMonth();
+                  const year = startDate.getFullYear();
 
                   const firstDay = new Date(year, monthIndex, 1).getDay();
                   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
@@ -597,7 +665,7 @@ const AruneekaContentPlan = ({
                                     onClick={(e) => { e.stopPropagation(); onSelectContent(plan); }}
                                     className="px-3 py-2 bg-white border border-amethyst-light rounded-xl shadow-sm cursor-pointer hover:border-amethyst-dark transition-all"
                                   >
-                                     <p className="text-[9px] font-bold text-amethyst-dark truncate leading-tight uppercase">{plan.title}</p>
+                                     <p className="text-[9px] font-bold text-amethyst-dark truncate leading-tight">{plan.title}</p>
                                   </motion.div>
                                 ))}
                              </div>

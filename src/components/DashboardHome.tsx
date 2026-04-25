@@ -19,7 +19,13 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const DashboardHome = ({ selectedProfileId }: { selectedProfileId?: string }) => {
+const DashboardHome = ({ 
+  selectedProfileId, 
+  selectedWorkspaceId 
+}: { 
+  selectedProfileId?: string,
+  selectedWorkspaceId?: string
+}) => {
   const [stats, setStats] = useState({
     kpiProgress: 0,
     totalContent: 0,
@@ -33,15 +39,11 @@ const DashboardHome = ({ selectedProfileId }: { selectedProfileId?: string }) =>
 
   useEffect(() => {
     fetchDashboardIntelligence();
-  }, [selectedProfileId]);
+  }, [selectedProfileId, selectedWorkspaceId]);
 
   const fetchDashboardIntelligence = async () => {
     try {
-      const userStr = localStorage.getItem('aruneeka_user');
-      const user = userStr ? JSON.parse(userStr) : null;
-      const workspaceId = user?.workspace_id || user?.parent_user_id || user?.id; // Fallback
-      const userId = user?.id;
-
+      const workspaceId = selectedWorkspaceId;
       if (!workspaceId) return;
 
       // 1. Fetch KPI Average

@@ -85,6 +85,10 @@ const LoginPage = () => {
 
        const updatedUser = { ...loggedInUser, avatar_url: selectedAvatar, theme_color: selectedColor };
        localStorage.setItem('aruneeka_user', JSON.stringify(updatedUser));
+       
+       // Hapus workspace lama HANYA JIKA sedang dalam proses onboarding/pilih avatar pertama kali
+       localStorage.removeItem('aruneeka_selected_workspace'); 
+       
        router.push('/');
     } catch (e: any) {
        setError(e.message);

@@ -29,7 +29,7 @@ interface TeamMember {
   created_at: string;
 }
 
-const AruneekaTeam = () => {
+const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string }) => {
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,25 +50,25 @@ const AruneekaTeam = () => {
     setPopup({ isOpen: true, title, message, onConfirm, type });
   };
 
-  useEffect(() => { fetchMembers(); }, []);
+  useEffect(() => { 
+    if (selectedWorkspaceId) fetchMembers(); 
+  }, [selectedWorkspaceId]);
 
   const fetchMembers = async () => {
+    if (!selectedWorkspaceId) return;
     setIsLoading(true);
     try {
-      const userStr = localStorage.getItem('aruneeka_user');
-      const user = userStr ? JSON.parse(userStr) : null;
-      const currentUserId = user?.id;
-
-      if (!currentUserId) return;
-
       const { data, error } = await supabase
-        .from('v2_agency_users')
-        .select('*')
-        .eq('parent_user_id', currentUserId)
-        .order('created_at', { ascending: false });
+        .from('v2_agency_workspace_members')
+        .select('role, v2_agency_users(*)')
+        .eq('workspace_id', selectedWorkspaceId);
       
       if (data) {
-         const processed = data.map(m => ({ ...m, ...parsePackedRole(m) }));
+         const processed = data.map(m => ({ 
+            ...m.v2_agency_users, 
+            role: m.role,
+            ...parsePackedRole(m.v2_agency_users) 
+         }));
          setMembers(processed);
       }
     } catch (e) { console.error(e); } finally { setIsLoading(false); }
@@ -124,10 +124,11 @@ const AruneekaTeam = () => {
 
   const handleRegisterMember = async () => {
     if (!regMember.username || !regMember.full_name || !regMember.password) return;
+    if (!selectedWorkspaceId) return;
+
     try {
       const userStr = localStorage.getItem('aruneeka_user');
       const user = userStr ? JSON.parse(userStr) : null;
-      const workspaceId = user?.workspace_id || user?.id;
       const currentUserId = user?.id;
       
       const payload: any = {
@@ -137,13 +138,19 @@ const AruneekaTeam = () => {
         role: regMember.role,
         status: 'Active',
         parent_user_id: currentUserId,
-        workspace_id: workspaceId
+        workspace_id: selectedWorkspaceId
       };
 
-      const { data, error } = await supabase.from('v2_agency_users').insert([payload]).select();
+      const { data, error: userError } = await supabase.from('v2_agency_users').insert([payload]).select();
       
-      if (error) throw error;
-      if (data) { 
+      if (userError) throw userError;
+      if (data && data[0]) { 
+         await supabase.from('v2_agency_workspace_members').insert([{
+            user_id: data[0].id,
+            workspace_id: selectedWorkspaceId,
+            role: regMember.role
+         }]);
+
          fetchMembers(); 
          setIsInviteModalOpen(false); 
          setRegMember({ full_name: '', username: '', password: '', role: 'Member' }); 

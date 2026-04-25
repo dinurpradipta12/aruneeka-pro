@@ -14,8 +14,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from './AruneekaShell';
 
 const AruneekaAdminAppearance = () => {
+  const { selectedWorkspaceId } = useWorkspace();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -30,17 +32,22 @@ const AruneekaAdminAppearance = () => {
   });
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (selectedWorkspaceId) fetchSettings();
+  }, [selectedWorkspaceId]);
 
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) {
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('v2_agency_settings')
         .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
+        .eq('id', workspaceId)
         .maybeSingle();
       
       if (error) console.error("Fetch Settings Error:", error);
@@ -107,10 +114,13 @@ const AruneekaAdminAppearance = () => {
     setIsSaving(true);
     setMessage(null);
     try {
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) return;
+
       const { error } = await supabase
         .from('v2_agency_settings')
         .upsert({
-          id: '00000000-0000-0000-0000-000000000000',
+          id: workspaceId,
           ...config,
           updated_at: new Date().toISOString()
         });

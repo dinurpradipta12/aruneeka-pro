@@ -35,6 +35,7 @@ interface SocialProfilesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect?: (profile: SocialProfile) => void;
+  selectedWorkspaceId?: string;
 }
 
 const platforms = [
@@ -53,7 +54,12 @@ const platformIcons: any = {
   facebook: <img src="https://cdn.simpleicons.org/facebook/916DD5" className="w-5 h-5" alt="Facebook" />,
 };
 
-const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({ isOpen, onClose, onSelect }) => {
+const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSelect,
+  selectedWorkspaceId 
+}) => {
   const [profiles, setProfiles] = useState<SocialProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'list' | 'form'>('list');
@@ -71,18 +77,16 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({ isOpen, onClo
   });
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && selectedWorkspaceId) {
        fetchProfiles();
        setView('list');
     }
-  }, [isOpen]);
+  }, [isOpen, selectedWorkspaceId]);
 
   const fetchProfiles = async () => {
     try {
-      const storedUser = localStorage.getItem('aruneeka_user');
-      if (!storedUser) return;
-      const parsedUser = JSON.parse(storedUser);
-      const workspaceId = parsedUser.workspace_id || parsedUser.parent_user_id || parsedUser.id;
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) return;
       
       setLoading(true);
       const { data } = await supabase
@@ -116,15 +120,28 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({ isOpen, onClo
     
     setLoading(true);
     try {
+      let workspaceId = selectedWorkspaceId;
+      
+      // Safety Fallback
+      if (!workspaceId) {
+        const savedWs = localStorage.getItem('aruneeka_selected_workspace');
+        if (savedWs) workspaceId = JSON.parse(savedWs).id;
+      }
+
+      if (!workspaceId) {
+        alert("Brand tidak terdeteksi. Silakan pilih brand ulang.");
+        setLoading(false);
+        return;
+      }
+
       const storedUser = localStorage.getItem('aruneeka_user');
       const parsedUser = JSON.parse(storedUser!);
-      const workspaceId = parsedUser.workspace_id || parsedUser.parent_user_id || parsedUser.id;
 
       const payload: any = {
         name: formData.name,
         platform: formData.platform,
         handle: formData.handle.startsWith('@') ? formData.handle : `@${formData.handle}`,
-        followers: formData.followers ? parseInt(formData.followers).toLocaleString() : '0',
+        followers: formData.followers ? parseInt(formData.followers.toString().replace(/,/g, '')).toLocaleString() : '0',
         workspace_id: workspaceId,
         user_id: parsedUser.id
       };

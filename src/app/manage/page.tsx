@@ -3,10 +3,13 @@
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaTeam from '@/components/AruneekaTeam';
 
+import { useWorkspace } from '@/components/AruneekaShell';
+
 export default function TeamPage() {
+  const { selectedWorkspaceId } = useWorkspace();
   return (
     <AruneekaShell>
-      <AruneekaTeam />
+      <AruneekaTeam selectedWorkspaceId={selectedWorkspaceId} />
     </AruneekaShell>
   );
 }

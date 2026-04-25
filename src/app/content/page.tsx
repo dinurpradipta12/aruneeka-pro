@@ -1,82 +1,85 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaContentPlan from '@/components/AruneekaContentPlan';
 import ContentDetailModal from '@/components/ContentDetailModal';
 import NewContentWizard from '@/components/NewContentWizard';
 import AruneekaMetricsModal from '@/components/AruneekaMetricsModal';
 import AruneekaConfirmModal from "@/components/AruneekaConfirmModal";
+import { List, Layout, Calendar, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from '@/components/AruneekaShell';
 
-export default function ContentPage({ selectedProfileId }: { selectedProfileId?: string }) {
+export default function ContentPage() {
+  return (
+    <AruneekaShell>
+      <ContentManager />
+    </AruneekaShell>
+  );
+}
+
+interface ContentManagerProps {
+  selectedWorkspaceId?: string;
+  selectedProfileId?: string;
+  subscriptionTier?: string;
+}
+
+const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTier = 'free' }: ContentManagerProps) => {
   const [isWizardOpen, setIsWizardOpen] = React.useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = React.useState(false);
   const [selectedContent, setSelectedContent] = React.useState<any>(null);
   const [editingContent, setEditingContent] = React.useState<any>(null);
   const [plans, setPlans] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState<'list' | 'kanban' | 'calendar'>('list');
   const [deleteModal, setDeleteModal] = React.useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
 
   React.useEffect(() => {
-    fetchPlans();
+    if (!selectedWorkspaceId) return;
+    
+    // Panggilan pertama (memunculkan efek loading)
+    fetchPlans(false);
+ 
+    // 1. Polling Otomatis (Setiap 5 menit / 300.000 ms)
+    const pollingInterval = setInterval(() => {
+      fetchPlans(true); // Diam-diam tanpa memicu loading screen
+    }, 300000);
 
-    // Realtime Subscription
-    const workspaceId = getWorkspaceId();
-    if (workspaceId) {
-      const channel = supabase
-        .channel(`content_changes_${workspaceId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "v2_agency_content_plans"
-          },
-          () => {
-            fetchPlans();
-          }
-        )
-        .subscribe();
+    // 2. Refetch on Window Focus (Tarik data cepat saat user kembali ke tab ini)
+    const handleFocus = () => {
+      fetchPlans(true); 
+    };
+    window.addEventListener('focus', handleFocus);
+ 
+    return () => {
+      clearInterval(pollingInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedProfileId, selectedWorkspaceId]);
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
 
-  }, [selectedProfileId]);
 
-  const getWorkspaceId = () => {
-    const userStr = localStorage.getItem('aruneeka_user');
-    if (!userStr) return null;
-    const user = JSON.parse(userStr);
-    return user.workspace_id || user.parent_user_id || user.id; // Fallback
-  };
+  const fetchPlans = async (isSilent = false) => {
+    const workspaceId = selectedWorkspaceId;
+    if (!workspaceId) return;
 
-  const getUserId = () => {
-    const userStr = localStorage.getItem('aruneeka_user');
-    return userStr ? JSON.parse(userStr).id : null;
-  };
-
-  const fetchPlans = async () => {
-    const workspaceId = getWorkspaceId();
-    const userId = getUserId();
-    if (!workspaceId || !userId) return;
-
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     let query = supabase
       .from('v2_agency_content_plans')
       .select('*')
       .eq('workspace_id', workspaceId);
     
     if (selectedProfileId) {
-      query = query.eq('target_account', selectedProfileId);
+      // Gunakan string filter 'or' yang valid di Supabase:
+      // Tampilkan yang target_account-nya COCOK DENGAN ID profil, atau yang masih KOSONG (null).
+      query = query.or(`target_account.eq.${selectedProfileId},target_account.is.null`);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
     
     if (data) setPlans(data);
-    setLoading(false);
+    if (!isSilent) setLoading(false);
   };
 
   // Only include columns that exist in the v2_agency_content_plans table
@@ -95,27 +98,40 @@ export default function ContentPage({ selectedProfileId }: { selectedProfileId?:
       script_link: data.script_link || null,
       content_link: data.content_link || null,
       post_link: data.post_link || null,
-      workspace_id: user.workspace_id || user.parent_user_id || user.id,
+      workspace_id: selectedWorkspaceId,
       user_id: user.id, author_name: user.full_name || "Team Member"
     };
   };
 
   const handleSaveContent = async (data: any) => {
-    const payload = sanitizePayload(data);
-    const workspaceId = getWorkspaceId();
+    let workspaceId = selectedWorkspaceId;
+    
+    // Safety fallback
+    if (!workspaceId) {
+      const savedWs = localStorage.getItem('aruneeka_selected_workspace');
+      if (savedWs) workspaceId = JSON.parse(savedWs).id;
+    }
+
+    if (!workspaceId) {
+      alert("Brand tidak teridentifikasi. Silakan refresh halaman.");
+      return;
+    }
+
+    // Update payload with verified workspaceId
+    const payload = { ...sanitizePayload(data), workspace_id: workspaceId };
     
     if (editingContent) {
       const { error } = await supabase
         .from('v2_agency_content_plans')
         .update(payload)
         .eq('id', editingContent.id)
-        .eq('workspace_id', workspaceId); // Security check
+        .eq('workspace_id', workspaceId); 
       
       if (error) {
         console.error('Update error:', error);
         alert(`Gagal update: ${error.message}`);
       } else {
-        fetchPlans();
+        fetchPlans(true);
         setEditingContent(null);
       }
     } else {
@@ -128,7 +144,7 @@ export default function ContentPage({ selectedProfileId }: { selectedProfileId?:
         console.error('Insert error full:', errStr);
         alert(`Gagal simpan:\n${errStr}`);
       } else {
-        fetchPlans();
+        fetchPlans(true);
       }
     }
     setIsWizardOpen(false);
@@ -140,56 +156,68 @@ export default function ContentPage({ selectedProfileId }: { selectedProfileId?:
 
   const confirmDelete = async () => {
     if (!deleteModal.id) return;
-    const workspaceId = getWorkspaceId();
+    const workspaceId = selectedWorkspaceId;
     const { error } = await supabase
       .from("v2_agency_content_plans")
       .delete()
       .eq("id", deleteModal.id)
       .eq("workspace_id", workspaceId);
 
-    if (!error) fetchPlans();
+    if (!error) fetchPlans(true);
   };
 
 
   const handleSaveMetrics = async (id: string, metrics: any) => {
-    const workspaceId = getWorkspaceId();
+    const workspaceId = selectedWorkspaceId;
     const { error } = await supabase
       .from('v2_agency_content_plans')
       .update({ metrics, metrics_updated: true })
       .eq('id', id)
       .eq('workspace_id', workspaceId);
     
-    if (!error) fetchPlans();
+    if (!error) fetchPlans(true);
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const workspaceId = getWorkspaceId();
+    // 1. Optimistic Update: Ganti seketika di layar tanpa menunggu server!
+    setPlans(prevPlans => prevPlans.map(p => p.id === id ? { ...p, status: newStatus } : p));
+
+    const workspaceId = selectedWorkspaceId;
     const { error } = await supabase
       .from('v2_agency_content_plans')
       .update({ status: newStatus })
       .eq('id', id)
       .eq('workspace_id', workspaceId);
     
-    if (!error) fetchPlans();
-    else alert(`Gagal update status: ${error.message}`);
+    if (error) {
+      alert(`Gagal update status: ${error.message}`);
+      fetchPlans(true); // Revert jika gagal
+    }
   };
 
   const handleInlineUpdate = async (id: string, field: string, value: string) => {
-    const workspaceId = getWorkspaceId();
+    // Optimistic Update: Link atau field lainnya seketika berganti
+    setPlans(prevPlans => prevPlans.map(p => p.id === id ? { ...p, [field]: value } : p));
+
+    const workspaceId = selectedWorkspaceId;
     const { error } = await supabase
       .from('v2_agency_content_plans')
       .update({ [field]: value })
       .eq('id', id)
       .eq('workspace_id', workspaceId);
-    if (!error) fetchPlans();
+      
+    if (error) fetchPlans(true); // Revert jika gagal
   };
 
   return (
-    <AruneekaShell 
-      onNewStrategy={() => { setEditingContent(null); setIsWizardOpen(true); }}
-    >
+    <>
+
+
       <AruneekaContentPlan 
         plans={plans} 
+        view={activeTab === 'list' ? 'table' : activeTab}
+        onViewChange={(v) => setActiveTab(v === 'table' ? 'list' : v)}
+        subscriptionTier={subscriptionTier}
         onSelectContent={(p) => setSelectedContent(p)}
         onNewContent={() => { setEditingContent(null); setIsWizardOpen(true); }}
         onDelete={handleDelete}
@@ -211,6 +239,8 @@ export default function ContentPage({ selectedProfileId }: { selectedProfileId?:
         onClose={() => { setIsWizardOpen(false); setEditingContent(null); }}
         onSave={handleSaveContent}
         editData={editingContent}
+        selectedWorkspaceId={selectedWorkspaceId}
+        selectedProfileId={selectedProfileId}
       />
 
       <AruneekaMetricsModal 
@@ -229,7 +259,6 @@ export default function ContentPage({ selectedProfileId }: { selectedProfileId?:
         type="danger"
         confirmText="Hapus Permanen"
       />
-    </AruneekaShell>
+    </>
   );
 }
- 

@@ -21,12 +21,26 @@ import {
   Check,
   FileText,
   Video,
-  Zap
+  Zap,
+  ShieldCheck,
+  Package,
+  CheckCircle2,
+  CreditCard,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from './AruneekaShell';
 
-const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }) => {
+const AruneekaAnalytics = ({ 
+  selectedProfileId,
+  selectedWorkspaceId,
+  subscriptionTier = 'free'
+}: { 
+  selectedProfileId?: string,
+  selectedWorkspaceId?: string,
+  subscriptionTier?: string
+}) => {
   const [activeRange, setActiveRange] = useState('This Month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -36,32 +50,23 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
   const [isLoading, setIsLoading] = useState(true);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [selectedContent, setSelectedContent] = useState<any>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, [activeRange, selectedProfileId, customStart, customEnd]);
+  }, [currentTier]);
 
   const fetchData = async () => {
     const isInitial = data.length === 0;
     if (isInitial) setIsLoading(true);
     
     try {
-      const userStr = localStorage.getItem('aruneeka_user');
-      if (!userStr) {
-        setIsLoading(false);
-        return;
-      }
+      const workspaceId = selectedWorkspaceId;
+      if (!workspaceId) return;
 
-      const user = JSON.parse(userStr);
-      const workspaceId = user.workspace_id || user.parent_user_id || user.id;
-
-      // Fetch Profiles only if not already loaded or profiles empty
-      if (profiles.length === 0) {
-        const { data: profileData } = await supabase
-          .from('v2_agency_social_profiles')
-          .select('*')
-          .eq('workspace_id', workspaceId);
-        if (profileData) setProfiles(profileData);
+      const { data: profileData, error: profileError } = await supabase
+        .from('v2_agency_social_profiles')
+        .select('*')
+        .eq('workspace_id', workspaceId);
+      
+      if (!profileError && profileData) {
+        setProfiles(profileData);
       }
 
       // Fetch Content Plans
@@ -320,7 +325,7 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
   };
 
   return (
-    <>
+    <div className="analytics-main-container">
       <div className="space-y-10 pb-20">
       {/* Header Area */}
       <div className="flex items-start justify-between">
@@ -392,29 +397,48 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
               gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` 
             }}
           >
-             {stats.map((stat, i) => (
-               <motion.div 
-                 initial={{ opacity: 0, y: 20 }} 
-                 animate={{ opacity: 1, y: 0 }} 
-                 transition={{ delay: i * 0.05 }} 
-                 key={i} 
-                 className="bg-white p-5 rounded-[24px] border border-slate-50 shadow-premium group transition-all hover:shadow-lg flex flex-col justify-between"
-               >
-                  <div className="flex items-start justify-between mb-4">
-                     <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
-                        {React.cloneElement(stat.icon as React.ReactElement, { size: 14 })}
+             {stats.map((stat, i) => {
+                const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
+                const user = userStr ? JSON.parse(userStr) : null;
+                const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                const isLocked = i >= 3 && currentTier === 'free' && !isPowerUser;
+
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    transition={{ delay: i * 0.05 }} 
+                    key={i} 
+                    className={`relative bg-white p-5 rounded-[24px] border border-slate-50 shadow-premium group transition-all hover:shadow-lg flex flex-col justify-between overflow-hidden ${isLocked ? 'cursor-default' : ''}`}
+                  >
+                     <div className={`flex flex-col h-full justify-between transition-all duration-500 ${isLocked ? 'blur-[8px] opacity-30 select-none grayscale' : ''}`}>
+                        <div className="flex items-start justify-between mb-4">
+                           <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
+                              {React.cloneElement(stat.icon as React.ReactElement, { size: 14 })}
+                           </div>
+                           <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-500">
+                              <TrendingUp size={9}/> {stat.trend}
+                           </div>
+                        </div>
+                        <div className="space-y-0.5">
+                           <p className="text-[9px] font-bold text-slate-300 leading-none truncate">{stat.label}</p>
+                           <h3 className="text-xl font-bold text-amethyst-dark tracking-tight">{stat.value}</h3>
+                           {stat.subValue && <p className="text-[8px] font-bold text-slate-400 truncate">{stat.subValue}</p>}
+                        </div>
                      </div>
-                     <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-500">
-                        <TrendingUp size={9}/> {stat.trend}
-                     </div>
-                  </div>
-                  <div className="space-y-0.5">
-                     <p className="text-[9px] font-bold text-slate-300 leading-none truncate">{stat.label}</p>
-                     <h3 className="text-xl font-bold text-amethyst-dark tracking-tight">{stat.value}</h3>
-                     {stat.subValue && <p className="text-[8px] font-bold text-slate-400 truncate">{stat.subValue}</p>}
-                  </div>
-               </motion.div>
-             ))}
+
+                     {/* Subscribe Overlay */}
+                     {isLocked && (
+                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/10 backdrop-blur-[1px]">
+                          <div className="bg-amber-400 p-2 rounded-full shadow-lg mb-2 shadow-amber-400/30">
+                             <ShieldCheck size={12} className="text-white"/>
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-amber-600 whitespace-nowrap">Subscribe only</span>
+                       </div>
+                     )}
+                  </motion.div>
+                );
+             })}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -655,13 +679,47 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
            transition={{ delay: 0.3 }}
            className="bg-white rounded-[40px] shadow-premium p-12 border border-slate-50 relative overflow-hidden"
         >
-           <div className="flex items-center justify-between mb-12">
-              <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">Detailed Asset Breakdown</h3>
-              <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                 <span className="text-[10px] font-black text-slate-300">Live Tracking Data (this month)</span>
+           {/* Logic Locking for Breakdown Table */}
+           {(() => {
+              const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
+              const user = userStr ? JSON.parse(userStr) : null;
+              const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+              const isBreakdownLocked = currentTier === 'free' && !isPowerUser;
+
+              return isBreakdownLocked && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/5 backdrop-blur-[12px] transition-all duration-700">
+                   <motion.div 
+                     initial={{ scale: 0.9, opacity: 0 }}
+                     animate={{ scale: 1, opacity: 1 }}
+                     className="flex flex-col items-center gap-4 text-center p-12"
+                   >
+                      <div className="flex flex-col items-center text-center space-y-4">
+                          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 shadow-inner">
+                            <ShieldCheck size={32} />
+                          </div>
+                          <div className="space-y-1">
+                             <h3 className="text-xl font-bold text-slate-800 tracking-tight">Pro Insight Required</h3>
+                             <p className="text-[10px] text-slate-400 font-medium">Upgrade to view detailed analytics for each individual asset.</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={() => openUpgrade()}
+                         className="mt-2 px-8 py-3 bg-amethyst-primary text-white rounded-xl text-[10px] font-bold shadow-xl shadow-amethyst-primary/20 hover:scale-105 transition-all">
+                        Upgrade to Unlock
+                      </button>
+                   </motion.div>
+                </div>
+              );
+           })()}
+
+           <div className={`transition-all duration-700 ${currentTier === 'free' && !(localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer')) ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
+              <div className="flex items-center justify-between mb-12">
+                 <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">Detailed Asset Breakdown</h3>
+                 <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                    <span className="text-[10px] font-black text-slate-300">Live Tracking Data (this month)</span>
+                 </div>
               </div>
-           </div>
 
            <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full">
@@ -766,6 +824,7 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
                     })}
                  </tbody>
               </table>
+           </div>
            </div>
         </motion.div>
         </>
@@ -954,7 +1013,7 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
                                     <Zap size={20}/>
                                  </div>
                                  <p className="text-sm font-bold text-amethyst-dark/90 leading-relaxed italic">
-                                    "{(() => {
+                                    {(() => {
                                       const m = selectedContent.metrics || {};
                                       const hasMetrics = Object.keys(m).length > 0 && Object.values(m).some(v => Number(v) > 0);
                                       if (!hasMetrics) return "Lengkapi data metrics untuk mendapatkan insight strategis.";
@@ -976,7 +1035,7 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
                                       if (v > 5000 && er < 2) return "Reach tinggi tapi engagement rendah. Coba ganti pola 'Call to Action' di awal video.";
                                       if (er > 12) return `Performa luar biasa! Konten ini berhasil menarik ${f} followers baru secara organik.`;
                                       return "Performa konten stabil. Fokus pada konsistensi jadwal posting untuk menjaga momentum algoritma.";
-                                    })()}"
+                                    })()}
                                  </p>
                               </div>
                            </div>
@@ -1015,13 +1074,18 @@ const AruneekaAnalytics = ({ selectedProfileId }: { selectedProfileId?: string }
                            )}
                         </div>
                     </div>
-                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
+                     </div>
+                     
+                     <p className="text-[9px] text-center text-slate-300 font-medium mt-10">
+                        Secured by Aruneeka Encryption. Payments are manually verified by our team.
+                     </p>
+                  </div>
+               </motion.div>
+            </div>
+          )}
+       </AnimatePresence>
+     </div>
+
   );
 };
 

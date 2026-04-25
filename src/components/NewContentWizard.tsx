@@ -22,6 +22,8 @@ interface NewContentWizardProps {
   onClose: () => void;
   onSave: (data: any) => void;
   editData?: any;
+  selectedWorkspaceId?: string;
+  selectedProfileId?: string;
 }
 
 const platformIcons: any = {
@@ -32,7 +34,7 @@ const platformIcons: any = {
   facebook: <img src="https://cdn.simpleicons.org/facebook/916DD5" className="w-3 h-3" alt="Facebook" />,
 };
 
-const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, onSave, editData }) => {
+const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, onSave, editData, selectedWorkspaceId, selectedProfileId }) => {
   const [profiles, setProfiles] = useState<any[]>([]);
   
   const defaultValues = {
@@ -61,13 +63,14 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
 
   const fetchProfiles = async () => {
     try {
-      const userStr = localStorage.getItem('aruneeka_user');
-      if (!userStr) return;
-      const user = JSON.parse(userStr);
-      const workspaceId = user.workspace_id || user.parent_user_id || user.id; // Fallback
-      const userId = user.id;
-
-      if (!userId) return;
+      let workspaceId = selectedWorkspaceId;
+      
+      if (!workspaceId) {
+        const userStr = localStorage.getItem('aruneeka_user');
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        workspaceId = user.workspace_id || user.parent_user_id || user.id;
+      }
 
       const { data } = await supabase
         .from('v2_agency_social_profiles')
@@ -90,9 +93,25 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
         due_date: editData.due_date ? new Date(editData.due_date).toISOString().split('T')[0] : defaultValues.due_date
       });
     } else if (!editData && isOpen) {
-      setFormData(defaultValues);
+      // Saat form baru dibuka, cek apakah ada profil yang sedang aktif di Shell
+      let initialTarget = '';
+      let initialPlatform = '';
+      
+      if (selectedProfileId && profiles.length > 0) {
+        const matchingProfile = profiles.find(p => p.id === selectedProfileId);
+        if (matchingProfile) {
+          initialTarget = matchingProfile.id;
+          initialPlatform = matchingProfile.platform;
+        }
+      }
+
+      setFormData({
+        ...defaultValues,
+        target_account: initialTarget,
+        platform: initialPlatform
+      });
     }
-  }, [editData, isOpen]);
+  }, [editData, isOpen, selectedProfileId, profiles]);
 
   const handleAccountChange = (id: string) => {
     const selected = profiles.find(p => p.id === id);
