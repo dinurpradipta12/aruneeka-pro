@@ -47,11 +47,14 @@ const PlatformIcon = ({ platform }: { platform: string }) => {
 };
 
 const AruneekaKPI = ({ 
-  selectedProfileId 
+  selectedProfileId,
+  selectedWorkspaceId: propWorkspaceId
 }: { 
-  selectedProfileId?: string 
+  selectedProfileId?: string,
+  selectedWorkspaceId?: string
 }) => {
-  const { selectedWorkspaceId } = useWorkspace();
+  const { selectedWorkspaceId: contextWorkspaceId } = useWorkspace();
+  const workspaceId = propWorkspaceId || contextWorkspaceId;
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePlatform, setActivePlatform] = useState<'ALL' | 'INSTAGRAM' | 'TIKTOK' | 'THREADS'>('ALL');
@@ -65,16 +68,15 @@ const AruneekaKPI = ({
     if (storedUser) {
        setUserRole(JSON.parse(storedUser).role || 'Member');
     }
-    if (selectedWorkspaceId) {
+    if (workspaceId) {
       fetchRealData();
       fetchChecklist();
     }
-  }, [selectedProfileId, selectedWorkspaceId]);
+  }, [selectedProfileId, workspaceId]);
 
   const fetchRealData = async () => {
     setIsLoading(true);
     try {
-      const workspaceId = selectedWorkspaceId;
       if (!workspaceId) {
          setIsLoading(false);
          return;
@@ -115,7 +117,6 @@ const AruneekaKPI = ({
 
   const fetchChecklist = async () => {
     try {
-      const workspaceId = selectedWorkspaceId;
       if (!workspaceId) return;
 
       const { data } = await supabase
@@ -272,7 +273,6 @@ const AruneekaKPI = ({
 
   const handleAddGoal = async () => {
     try {
-      const workspaceId = selectedWorkspaceId;
       if (!workspaceId) return;
       
       const userStr = localStorage.getItem('aruneeka_user');
@@ -358,11 +358,7 @@ const AruneekaKPI = ({
   const handleUpdateTask = async (id: string) => {
     if (!editingText.trim() || !id) return;
     
-    let workspaceId = selectedWorkspaceId;
-    if (!workspaceId) {
-      const savedWs = localStorage.getItem('aruneeka_selected_workspace');
-      if (savedWs) workspaceId = JSON.parse(savedWs).id;
-    }
+    // workspaceId is already available from component scope
     
     setChecklist(prev => prev.map(t => t.id === id ? { ...t, task: editingText } : t));
     setEditingId(null);
@@ -394,11 +390,10 @@ const AruneekaKPI = ({
   };
 
   const handleAddTask = async () => {
-    if (!newTaskText.trim() || !selectedWorkspaceId) return;
+    if (!newTaskText.trim() || !workspaceId) return;
     try {
       const userStr = localStorage.getItem('aruneeka_user');
       const user = userStr ? JSON.parse(userStr) : { id: null };
-      const workspaceId = selectedWorkspaceId;
       const userId = user.id;
 
       if (!userId) return;
