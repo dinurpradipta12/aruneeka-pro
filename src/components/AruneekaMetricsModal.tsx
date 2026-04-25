@@ -134,7 +134,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
             onClick={showWarning ? () => { onClose(); setShowWarning(false); } : onClose}
-            className="fixed inset-0 bg-amethyst-dark/40 backdrop-blur-sm z-[99]"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99]"
           />
           <AnimatePresence>
             {showWarning ? (

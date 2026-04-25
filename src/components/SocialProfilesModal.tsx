@@ -16,11 +16,13 @@ import {
   Music2,
   Share2,
   ChevronDown,
-  Plus
+  Plus,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import AruneekaConfirmModal from "./AruneekaConfirmModal";
+import { useWorkspace } from './AruneekaShell';
 
 interface SocialProfile {
   id: string;
@@ -36,6 +38,7 @@ interface SocialProfilesModalProps {
   onClose: () => void;
   onSelect?: (profile: SocialProfile) => void;
   selectedWorkspaceId?: string;
+  subscriptionTier?: string;
 }
 
 const platforms = [
@@ -58,8 +61,10 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
   isOpen, 
   onClose, 
   onSelect,
-  selectedWorkspaceId 
+  selectedWorkspaceId,
+  subscriptionTier
 }) => {
+  const { openUpgrade } = useWorkspace();
   const [profiles, setProfiles] = useState<SocialProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'list' | 'form'>('list');
@@ -180,7 +185,7 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-950/60 backdrop-blur-xl" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl" />
           
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -235,13 +240,26 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
                                </div>
                             ))}
 
-                            <button 
-                              onClick={() => { setEditingId(null); setFormData({ name: '', platform: 'tiktok', handle: '', followers: '0' }); setView('form'); }}
-                              className="w-full p-8 rounded-[32px] border-2 border-dashed border-slate-100 text-slate-300 hover:border-amethyst-primary/30 hover:text-amethyst-primary hover:bg-amethyst-light/5 transition-all flex flex-col items-center gap-3"
-                            >
-                               <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-slate-50"><Plus size={24}/></div>
-                               <span className="text-[11px] font-black">Register new account profile</span>
-                            </button>
+                            {subscriptionTier === 'free' && profiles.length >= 2 ? (
+                               <button 
+                                 onClick={openUpgrade}
+                                 className="w-full p-8 rounded-[32px] border-2 border-dashed border-amber-100 bg-amber-50/30 text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-3 group"
+                               >
+                                  <div className="w-12 h-12 rounded-2xl bg-amber-400 text-white shadow-xl shadow-amber-400/20 flex items-center justify-center group-hover:scale-110 transition-all"><Lock size={24}/></div>
+                                  <div className="text-center">
+                                     <span className="text-[11px] font-black block uppercase tracking-widest">Upgrade to Pro</span>
+                                     <span className="text-[9px] font-bold opacity-60">Limit 2 akun tercapai. Unlock untuk member tak terbatas!</span>
+                                  </div>
+                               </button>
+                            ) : (
+                               <button 
+                                 onClick={() => { setEditingId(null); setFormData({ name: '', platform: 'tiktok', handle: '', followers: '0' }); setView('form'); }}
+                                 className="w-full p-8 rounded-[32px] border-2 border-dashed border-slate-100 text-slate-300 hover:border-amethyst-primary/30 hover:text-amethyst-primary hover:bg-amethyst-light/5 transition-all flex flex-col items-center gap-3"
+                               >
+                                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-slate-50"><Plus size={24}/></div>
+                                  <span className="text-[11px] font-black">Register new account profile</span>
+                               </button>
+                            )}
                          </div>
                       </motion.div>
                    ) : (

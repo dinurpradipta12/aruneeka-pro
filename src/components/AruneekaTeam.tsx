@@ -14,10 +14,12 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Settings
+  Settings,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from './AruneekaShell';
 
 interface TeamMember {
   id: string;
@@ -123,6 +125,10 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
   };
 
   const handleRegisterMember = async () => {
+    if (isLimitReached) {
+      openUpgrade();
+      return;
+    }
     if (!regMember.username || !regMember.full_name || !regMember.password) return;
     if (!selectedWorkspaceId) return;
 
@@ -182,20 +188,41 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     }
   };
 
+  const { subscriptionTier, openUpgrade } = useWorkspace();
+  const isLimitReached = subscriptionTier === 'free' && members.length >= 2;
+
   return (
     <div className="space-y-10 pb-20">
       {/* Header & Controls */}
       <div className="flex items-end justify-between">
          <div className="space-y-1">
-            <h2 className="text-4xl font-extrabold text-amethyst-dark tracking-tight">Team Squad</h2>
-            <p className="text-sm text-slate-400 font-medium italic">Manage personnel roles and access control.</p>
+            <h2 className="text-4xl font-extrabold text-amethyst-dark tracking-tight leading-tight">Team Squad</h2>
+            <p className="text-xs text-slate-400 font-bold italic">Manage personnel roles and access control.</p>
          </div>
          <div className="flex items-center gap-4">
             <div className="relative">
               <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search squad..." className="pl-10 pr-6 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold focus:ring-2 ring-amethyst-light/30 outline-none transition-all w-64 shadow-sm" />
             </div>
-            <button onClick={() => setIsInviteModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-amethyst-dark text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-amethyst-dark/20"><UserPlus size={14}/> Invite Personnel</button>
+            
+            {isLimitReached ? (
+               <button 
+                  onClick={() => openUpgrade()}
+                  className="flex items-center gap-3 px-6 py-3 bg-amber-400 text-white rounded-xl font-black text-[10px] uppercase tracking-[1px] shadow-lg shadow-amber-400/20 hover:scale-105 active:scale-95 transition-all group"
+               >
+                  <div className="w-5 h-5 bg-white/20 rounded-lg flex items-center justify-center">
+                     <ShieldCheck size={12} className="text-white fill-current" />
+                  </div>
+                  Squad Limit Reached
+               </button>
+            ) : (
+               <button 
+                  onClick={() => setIsInviteModalOpen(true)} 
+                  className="flex items-center gap-2 px-6 py-3 bg-amethyst-dark text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-amethyst-dark/20"
+               >
+                  <UserPlus size={14}/> Invite Personnel
+               </button>
+            )}
          </div>
       </div>
 
@@ -246,7 +273,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
       {/* Register Personnel Modal */}
       <AnimatePresence>
         {isInviteModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-amethyst-dark/40 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 space-y-8 border border-slate-100">
                <div className="space-y-2"><h3 className="text-2xl font-black text-amethyst-dark">Register Personnel</h3><p className="text-sm text-slate-400 font-medium">Create a new login for your agency squad.</p></div>
                <div className="space-y-6">
@@ -312,7 +339,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
 
       <AnimatePresence>
         {popup.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-amethyst-dark/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden border border-slate-100">
                <div className="p-8 space-y-6">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${popup.type === 'danger' ? 'bg-rose-50 text-rose-500' : 'bg-amethyst-primary/10 text-amethyst-primary'}`}>{popup.type === 'danger' ? <Trash2 size={28}/> : <AlertCircle size={28}/>}</div>

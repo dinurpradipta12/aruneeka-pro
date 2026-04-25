@@ -8,14 +8,9 @@ export default function AnalyticsPage({
 }: { 
   selectedProfileId?: string
 }) {
-  const { selectedWorkspaceId, subscriptionTier } = useWorkspace();
   return (
     <AruneekaShell>
-      <AruneekaAnalytics 
-        selectedProfileId={selectedProfileId} 
-        selectedWorkspaceId={selectedWorkspaceId}
-        subscriptionTier={subscriptionTier}
-      />
+      <AruneekaAnalytics selectedProfileId={selectedProfileId} />
     </AruneekaShell>
   );
 }

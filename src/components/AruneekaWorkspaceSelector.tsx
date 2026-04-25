@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import AruneekaUpgradeModal from './AruneekaUpgradeModal';
 
 interface Workspace {
   id: string;
@@ -26,6 +27,7 @@ export const AruneekaWorkspaceSelector = ({
   const [newBrandName, setNewBrandName] = useState('');
   const [brandCategory, setBrandCategory] = useState('F&B');
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [editBrandName, setEditBrandName] = useState('');
 
@@ -95,6 +97,13 @@ export const AruneekaWorkspaceSelector = ({
 
   const handleCreateWorkspace = async () => {
     if (!newBrandName.trim()) return;
+    
+    const isFreeLimit = workspaces.length >= 2 && currentUser?.subscription_tier === 'free';
+    if (isFreeLimit && !(['Superuser', 'developer'].includes(currentUser?.role))) {
+      setIsUpgradeOpen(true);
+      return;
+    }
+
     try {
       // 1. Create Workspace
       const { data: ws, error: wsError } = await supabase
@@ -116,17 +125,17 @@ export const AruneekaWorkspaceSelector = ({
 
       // 3. Initialize Template (Auto-Clone Strategy & KPI)
       const defaultStrategy = [
-        { workspace_id: ws.id, title: 'Audience Research & Segmentation', is_completed: false },
-        { workspace_id: ws.id, title: 'Competitor Benchmarking', is_completed: false },
-        { workspace_id: ws.id, title: 'Content Pillar & Tone Formulation', is_completed: false },
-        { workspace_id: ws.id, title: 'Visual DNA & Aesthetic Guide', is_completed: false },
-        { workspace_id: ws.id, title: 'Social Media Profile Optimization', is_completed: false }
+        { workspace_id: ws.id, task: 'Audience Research & Segmentation', status: 'pending' },
+        { workspace_id: ws.id, task: 'Competitor Benchmarking', status: 'pending' },
+        { workspace_id: ws.id, task: 'Content Pillar & Tone Formulation', status: 'pending' },
+        { workspace_id: ws.id, task: 'Visual DNA & Aesthetic Guide', status: 'pending' },
+        { workspace_id: ws.id, task: 'Social Media Profile Optimization', status: 'pending' }
       ];
 
       const defaultKPIs = [
-        { workspace_id: ws.id, metric_name: 'Total Views', target_value: 10000, current_value: 0, color: 'blue' },
-        { workspace_id: ws.id, metric_name: 'Engagement Rate', target_value: 3, current_value: 0, color: 'emerald' },
-        { workspace_id: ws.id, metric_name: 'Follower Growth', target_value: 100, current_value: 0, color: 'orange' }
+        { workspace_id: ws.id, metric: 'Total Views', target_value: 10000, category: 'View' },
+        { workspace_id: ws.id, metric: 'Engagement Rate', target_value: 3, category: 'Engagement' },
+        { workspace_id: ws.id, metric: 'Follower Growth', target_value: 100, category: 'Growth' }
       ];
 
       await Promise.all([
@@ -222,29 +231,38 @@ export const AruneekaWorkspaceSelector = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
               onClick={() => onSelect(ws)}
-              className="group relative bg-white rounded-[40px] p-10 text-left shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_30px_80px_rgba(145,109,213,0.15)] transition-all duration-700 overflow-hidden cursor-pointer border border-white min-h-[340px] flex flex-col justify-between"
+              className="group relative bg-white rounded-[40px] p-10 text-left shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_30px_80px_rgba(145,109,213,0.15)] transition-all duration-700 cursor-pointer border border-white min-h-[340px] flex flex-col justify-between"
             >
+              {/* Decorative Geometric Shapes (INTERNALIZED CLIPPING) */}
+              <div className="absolute inset-0 rounded-[40px] overflow-hidden pointer-events-none">
+                <div className="absolute bottom-[-20px] right-[-20px] opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000">
+                   <div className="w-48 h-48 border-[25px] border-black rounded-full" />
+                   <div className="absolute top-10 right-10 w-24 h-24 bg-black rounded-[40px] rotate-45" />
+                   <div className="absolute bottom-10 left-10 w-16 h-16 border-[15px] border-black rounded-full" />
+                </div>
+              </div>
+
               {/* Top Icons & Badges */}
-              <div className="flex items-start justify-between relative z-10">
-                <div className="flex flex-col gap-1">
-                   <h3 className="text-3xl font-black text-amethyst-dark tracking-tight leading-tight group-hover:text-amethyst-primary transition-colors pr-10">
-                    {ws.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-3">
-                    <span className="px-3 py-1.5 bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest rounded-xl border border-slate-100">
-                      {ws.category || 'Production'}
-                    </span>
-                    {ws.owner_id === currentUser.id && (
-                      <span className="px-3 py-1.5 bg-amethyst-light/20 text-amethyst-primary text-[9px] font-black uppercase tracking-widest rounded-xl">
-                        {ws.role}
-                      </span>
-                    )}
-                  </div>
-                </div>
+              <div className="relative z-10 flex flex-col items-start h-24">
+                <h3 className="text-3xl font-black text-amethyst-dark tracking-tight leading-tight group-hover:text-amethyst-primary transition-colors pr-16 line-clamp-2">
+                  {ws.name}
+                </h3>
                 
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${getCategoryColor(ws.category || '')} text-white flex items-center justify-center shadow-lg shadow-black/5 group-hover:scale-110 transition-transform duration-500 flex-shrink-0`}>
-                   {React.cloneElement(getCategoryIcon(ws.category || '') as React.ReactElement, { size: 18 })}
+                {/* Floating Category Icon (Popping Outside) */}
+                <div className={`absolute -top-14 -right-14 w-20 h-20 rounded-[28px] bg-gradient-to-br ${getCategoryColor(ws.category || '')} text-white flex items-center justify-center shadow-2xl shadow-black/10 group-hover:scale-110 group-hover:-translate-y-2 group-hover:translate-x-2 transition-all duration-500 z-30 border-4 border-white`}>
+                   {React.cloneElement(getCategoryIcon(ws.category || '') as React.ReactElement, { size: 28 })}
                 </div>
+              </div>
+
+              <div className="relative z-10 flex items-center gap-2 mb-6">
+                <span className="px-3 py-1.5 bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest rounded-xl border border-slate-100">
+                  {ws.category || 'Production'}
+                </span>
+                {ws.owner_id === currentUser.id && (
+                  <span className="px-3 py-1.5 bg-amethyst-light/20 text-amethyst-primary text-[9px] font-black uppercase tracking-widest rounded-xl">
+                    {ws.role}
+                  </span>
+                )}
               </div>
 
               {/* Stats & Members Info */}
@@ -278,13 +296,6 @@ export const AruneekaWorkspaceSelector = ({
                   </div>
                 )}
               </div>
-
-              {/* Decorative Geometric Shapes (BOTTOM RIGHT) */}
-              <div className="absolute bottom-[-20px] right-[-20px] opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 pointer-events-none">
-                 <div className="w-48 h-48 border-[25px] border-black rounded-full" />
-                 <div className="absolute top-10 right-10 w-24 h-24 bg-black rounded-[40px] rotate-45" />
-                 <div className="absolute bottom-10 left-10 w-16 h-16 border-[15px] border-black rounded-full" />
-              </div>
             </motion.div>
           ))}
 
@@ -297,17 +308,19 @@ export const AruneekaWorkspaceSelector = ({
                     animate={{ opacity: 1, scale: 1 }}
                     className="relative bg-gradient-to-br from-amethyst-primary/5 to-white border border-amethyst-light/30 rounded-[40px] p-10 flex flex-col items-center justify-center text-center gap-4 transition-all duration-500 overflow-hidden min-h-[340px]"
                   >
-                    <div className="w-16 h-16 rounded-3xl bg-white text-amethyst-primary flex items-center justify-center shadow-lg shadow-amethyst-primary/10">
-                      <Sparkles size={28} />
+                    <div className="w-16 h-16 rounded-3xl bg-amber-400/10 text-amber-500 flex items-center justify-center shadow-lg shadow-amber-400/10">
+                      <Lock size={28} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-700 tracking-tight">Upgrade needed</h3>
-                      <p className="text-[11px] text-slate-400 font-medium mt-2 leading-relaxed">
-                        you've reached the 2 workspace limit.<br/>upgrade to unlock unlimited workspace.
+                      <h3 className="text-xl font-bold text-slate-700 tracking-tight">Upgrade Needed</h3>
+                      <p className="text-[11px] text-slate-400 font-bold mt-2 leading-relaxed italic">
+                        Kamu telah mencapai limit 2 brand.<br/>Upgrade ke Pro untuk tambah brand tak terbatas.
                       </p>
                     </div>
-                    <button className="mt-4 px-6 py-3 bg-amethyst-primary text-white rounded-2xl text-[10px] font-bold shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all">
-                      Upgrade to Pro Intellect
+                    <button 
+                      onClick={() => setIsUpgradeOpen(true)}
+                      className="mt-4 px-8 py-4 bg-amethyst-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all">
+                      Upgrade
                     </button>
                     {/* Decorative pattern */}
                     <div className="absolute -bottom-6 -right-6 opacity-5 rotate-12">
@@ -396,7 +409,7 @@ export const AruneekaWorkspaceSelector = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-amethyst-dark/20 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setIsCreateOpen(false)}
             />
             <motion.div 
@@ -488,7 +501,7 @@ export const AruneekaWorkspaceSelector = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-amethyst-dark/20 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setIsEditOpen(false)}
             />
             <motion.div 
@@ -572,6 +585,11 @@ export const AruneekaWorkspaceSelector = ({
           </div>
         )}
       </AnimatePresence>
+      <AruneekaUpgradeModal 
+        isOpen={isUpgradeOpen} 
+        onClose={() => setIsUpgradeOpen(false)} 
+        user={currentUser}
+      />
     </div>
   );
 };

@@ -134,7 +134,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-amethyst-dark/20 backdrop-blur-md z-[99]"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99]"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}

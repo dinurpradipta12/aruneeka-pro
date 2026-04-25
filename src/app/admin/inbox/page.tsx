@@ -14,6 +14,13 @@ export default function AdminInboxPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'requests' | 'pricing'>('requests');
   const [previewProof, setPreviewProof] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    id: string;
+    type: 'approve' | 'reject' | 'delete-pkg';
+    title: string;
+    description: string;
+    data?: any;
+  } | null>(null);
 
   // Package Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,30 +51,57 @@ export default function AdminInboxPage() {
       }
       setIsAuthorized(true);
       fetchData();
+
+      // Enable Realtime Listener for Inbox
+      const channel = supabase
+        .channel('admin-inbox-live')
+        .on(
+          'postgres_changes', 
+          { event: '*', schema: 'public', table: 'v2_agency_inbox' }, 
+          () => {
+            console.log("Realtime update detected in Inbox!");
+            fetchData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
     checkAuth();
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
-    // Fetch Requests
-    const { data: inboxData } = await supabase
-      .from('v2_agency_inbox')
-      .select('*, v2_agency_users(full_name, username, avatar_url)')
-      .order('created_at', { ascending: false });
-    
-    // Fetch Packages
-    const { data: pkgData } = await supabase
-      .from('v2_agency_packages')
-      .select('*')
-      .order('monthly_price', { ascending: true });
+    try {
+      // Fetch Requests
+      const { data: inboxData, error: inboxError } = await supabase
+        .from('v2_agency_inbox')
+        .select('*, v2_agency_users(full_name, username, avatar_url)')
+        .order('created_at', { ascending: false });
+      
+      if (inboxError) console.error("Inbox permission error:", inboxError.message);
+      
+      // Fetch Packages
+      const { data: pkgData, error: pkgError } = await supabase
+        .from('v2_agency_packages')
+        .select('*')
+        .order('monthly_price', { ascending: true });
 
-    if (inboxData) setMessages(inboxData);
-    if (pkgData) setPackages(pkgData);
-    setLoading(false);
+      if (pkgError) console.error("Package access error:", pkgError.message);
+
+      if (inboxData) setMessages(inboxData);
+      if (pkgData) setPackages(pkgData);
+    } catch (e) {
+      console.error("System fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStatusUpdate = async (id: string, status: string, userId: string, tier: string) => {
+    setLoading(true);
     // Get existing message to clear the proof from payload
     const msg = messages.find(m => m.id === id);
     let newPayload = { ...msg.payload };
@@ -87,12 +121,35 @@ export default function AdminInboxPage() {
       .eq('id', id);
 
     if (status === 'approved') {
+      // Get current user data to check existing expiry
+      const { data: userData } = await supabase
+        .from('v2_agency_users')
+        .select('subscription_expiry')
+        .eq('id', userId)
+        .single();
+
+      let expiryDate = new Date();
+      const currentExpiry = userData?.subscription_expiry ? new Date(userData.subscription_expiry) : null;
+
+      if (currentExpiry && currentExpiry > new Date()) {
+         // Cumulative: Add 30 days to current future expiry
+         expiryDate = new Date(currentExpiry);
+         expiryDate.setDate(expiryDate.getDate() + 30);
+      } else {
+         // Fresh / Expired: 30 days from now
+         expiryDate.setDate(expiryDate.getDate() + 30);
+      }
+
       await supabase
         .from('v2_agency_users')
-        .update({ subscription_tier: tier.toLowerCase() })
+        .update({ 
+          subscription_tier: tier.toLowerCase(),
+          subscription_expiry: expiryDate.toISOString() 
+        })
         .eq('id', userId);
     }
     
+    setConfirmAction(null);
     fetchData();
   };
 
@@ -186,10 +243,11 @@ export default function AdminInboxPage() {
   };
 
   const handleDeletePackage = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this package?")) return;
     const { error } = await supabase.from('v2_agency_packages').delete().eq('id', id);
-    if (!error) fetchData();
-    else alert(error.message);
+    if (!error) {
+       setConfirmAction(null);
+       fetchData();
+    } else alert(error.message);
   };
 
   if (!isAuthorized) return null;
@@ -292,19 +350,25 @@ export default function AdminInboxPage() {
                                  </button>
                                )}
                                <button 
-                                 onClick={() => {
-                                    if (!confirm("Approve request ini? Bukti pembayaran akan otomatis dihapus setelah ini.")) return;
-                                    handleStatusUpdate(msg.id, "approved", msg.user_id, msg.payload?.tier || "pro");
-                                 }}
+                                 onClick={() => setConfirmAction({
+                                    id: msg.id,
+                                    type: 'approve',
+                                    title: 'Approve Request?',
+                                    description: 'User ini akan mendapatkan akses langganan dan bukti bayar akan otomatis dihapus.',
+                                    data: { userId: msg.user_id, tier: msg.payload?.tier || "pro" }
+                                 })}
                                  className="px-6 py-3 bg-emerald-500 text-white rounded-2xl font-bold text-[10px] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
                                >
                                  Approve
                                </button>
                                <button 
-                                 onClick={() => {
-                                    if (!confirm("Reject request ini? Bukti pembayaran akan otomatis dihapus setelah ini.")) return;
-                                    handleStatusUpdate(msg.id, "rejected", msg.user_id, "");
-                                 }}
+                                 onClick={() => setConfirmAction({
+                                    id: msg.id,
+                                    type: 'reject',
+                                    title: 'Reject Request?',
+                                    description: 'Permintaan akan ditolak dan bukti bayar akan dihapus demi privasi.',
+                                    data: { userId: msg.user_id }
+                                 })}
                                  className="px-6 py-3 bg-white text-slate-400 border border-slate-200 rounded-2xl font-bold text-[10px] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200 transition-all"
                                >
                                  Reject
@@ -409,7 +473,12 @@ export default function AdminInboxPage() {
                              </button>
                           </div>
                           <button 
-                            onClick={() => handleDeletePackage(pkg.id)}
+                            onClick={() => setConfirmAction({
+                              id: pkg.id,
+                              type: 'delete-pkg',
+                              title: 'Delete Package?',
+                              description: 'Paket ini akan dihapus permanen. User yang berlangganan paket ini tidak akan terpengaruh secara langsung.'
+                            })}
                             className="w-full py-4 bg-rose-50/50 text-rose-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-2"
                           >
                              <Trash2 size={12} /> Delete Package
@@ -562,47 +631,6 @@ export default function AdminInboxPage() {
                         </div>
                       ))}
                    </div>
-       {/* Proof Preview Modal */}
-       <AnimatePresence>
-         {previewProof && (
-           <div className="fixed inset-0 z-[200] flex items-center justify-center p-8">
-             <motion.div 
-               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-               onClick={() => setPreviewProof(null)}
-               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-             />
-             <motion.div 
-               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-               className="bg-white rounded-[48px] overflow-hidden relative z-10 max-w-2xl w-full shadow-2xl flex flex-col" 
-             >
-                <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amethyst-primary/10 text-amethyst-primary rounded-xl flex items-center justify-center"><CreditCard size={18} /></div>
-                      <div>
-                         <h3 className="font-bold text-slate-800">Bukti Pembayaran</h3>
-                         <p className="text-[10px] font-medium text-slate-400">Verifikasi dokumen transfer user</p>
-                      </div>
-                   </div>
-                   <button onClick={() => setPreviewProof(null)} className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center">✕</button>
-                </div>
-                <div className="p-10 bg-slate-50 flex-1 overflow-auto flex items-center justify-center min-h-[400px]">
-                   <img src={previewProof} className="max-w-full rounded-2xl shadow-xl border border-white" alt="Payment Proof" />
-                </div>
-                <div className="p-6 bg-white border-t border-slate-50 flex items-center justify-center gap-4">
-                   <a 
-                     href={previewProof} 
-                     download="payment-proof-admin-arsip.png" 
-                     className="px-8 py-3 bg-slate-800 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all" 
-                   >
-                     Download for Archive
-                   </a>
-                   <button onClick={() => setPreviewProof(null)} className="px-8 py-3 bg-slate-50 text-slate-400 rounded-2xl font-bold text-xs hover:bg-slate-100 transition-all">Close Preview</button>
-                </div>
-             </motion.div>
-           </div>
-         )}
-       </AnimatePresence>
-
                 </div>
               </div>
 
@@ -618,6 +646,100 @@ export default function AdminInboxPage() {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Proof Preview Modal */}
+      <AnimatePresence>
+        {previewProof && (
+          <div className="fixed inset-0 z-[11000] flex items-center justify-center p-8">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setPreviewProof(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[40px] overflow-hidden relative z-10 max-w-2xl w-full shadow-2xl flex flex-col" 
+            >
+               <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-amethyst-primary/10 text-amethyst-primary rounded-xl flex items-center justify-center"><CreditCard size={18} /></div>
+                     <div>
+                        <h3 className="font-bold text-slate-800 tracking-tight">Bukti Pembayaran</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Verification</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setPreviewProof(null)} className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all">✕</button>
+               </div>
+               <div className="p-10 bg-slate-50/50 flex-1 overflow-auto flex items-center justify-center min-h-[400px]">
+                  <img src={previewProof} className="max-w-full rounded-[32px] shadow-2xl border-4 border-white" alt="Payment Proof" />
+               </div>
+               <div className="p-8 bg-white border-t border-slate-50 flex items-center justify-center gap-4">
+                  <a 
+                    href={previewProof} 
+                    download="aruneeka-payment-proof.png" 
+                    className="px-10 py-5 bg-slate-900 text-white rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-900/10" 
+                  >
+                    Download for Archive
+                  </a>
+                  <button onClick={() => setPreviewProof(null)} className="px-10 py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">Close Preview</button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modern Confirmation Modal */}
+      <AnimatePresence>
+         {confirmAction && (
+            <div className="fixed inset-0 z-[20000] flex items-center justify-center p-6">
+               <motion.div 
+                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                 onClick={() => setConfirmAction(null)}
+                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
+               />
+               <motion.div 
+                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                 className="bg-white w-full max-w-sm rounded-[48px] p-10 text-center shadow-2xl relative z-10 space-y-8" 
+               >
+                  <div className={`w-20 h-20 rounded-[32px] flex items-center justify-center mx-auto shadow-xl ${
+                    confirmAction.type === 'approve' ? 'bg-emerald-50 text-emerald-500 shadow-emerald-500/10' : 
+                    confirmAction.type === 'reject' ? 'bg-rose-50 text-rose-500 shadow-rose-500/10' : 'bg-amber-50 text-amber-500 shadow-amber-500/10'
+                  }`}>
+                     {confirmAction.type === 'approve' ? <CheckCircle2 size={32} /> : 
+                      confirmAction.type === 'reject' ? <XCircle size={32} /> : <Trash2 size={32} />}
+                  </div>
+                  
+                  <div className="space-y-3">
+                     <h3 className="text-2xl font-black text-slate-800 tracking-tight">{confirmAction.title}</h3>
+                     <p className="text-xs font-bold text-slate-400 leading-relaxed px-4 italic">
+                        "{confirmAction.description}"
+                     </p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                     <button 
+                       onClick={() => {
+                          if (confirmAction.type === 'approve') handleStatusUpdate(confirmAction.id, 'approved', confirmAction.data.userId, confirmAction.data.tier);
+                          else if (confirmAction.type === 'reject') handleStatusUpdate(confirmAction.id, 'rejected', confirmAction.data.userId, '');
+                          else if (confirmAction.type === 'delete-pkg') handleDeletePackage(confirmAction.id);
+                       }}
+                       className={`w-full py-5 rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl transition-all hover:scale-105 active:scale-95 ${
+                         confirmAction.type === 'approve' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 
+                         confirmAction.type === 'reject' ? 'bg-rose-500 text-white shadow-rose-500/20' : 'bg-amber-500 text-white shadow-amber-500/20'
+                       }`}
+                     >
+                        Confirm Action
+                     </button>
+                     <button onClick={() => setConfirmAction(null)} className="w-full py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">
+                        Maybe Later
+                     </button>
+                  </div>
+               </motion.div>
+            </div>
+         )}
       </AnimatePresence>
     </div>
   );

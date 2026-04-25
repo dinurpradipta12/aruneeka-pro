@@ -23,6 +23,7 @@ const AruneekaAdminAppearance = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   const [config, setConfig] = useState({
     login_hero_bg_color: '#916DD5',
@@ -111,11 +112,17 @@ const AruneekaAdminAppearance = () => {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
     setMessage(null);
+    const workspaceId = selectedWorkspaceId || JSON.parse(localStorage.getItem('aruneeka_selected_workspace') || '{}').id;
+    
+    if (!workspaceId) {
+      alert("Akses ditolak: Sistem tidak bisa mengidentifikasi Brand aktif. Silakan pilih brand ulang di header.");
+      return;
+    }
+
+    setIsSaving(true);
+    console.log("Attempting to save branding for workspace:", workspaceId, config);
     try {
-      const workspaceId = selectedWorkspaceId;
-      if (!workspaceId) return;
 
       const { error } = await supabase
         .from('v2_agency_settings')
@@ -130,7 +137,10 @@ const AruneekaAdminAppearance = () => {
         throw error;
       }
       
-      setMessage({ text: 'Identitas visual berhasil disinkronkan ke seluruh sistem!', type: 'success' });
+      setShowSuccess(true);
+      setTimeout(() => {
+        setMessage(null);
+      }, 5000);
     } catch (e: any) {
       setMessage({ text: `Gagal menyimpan: ${e.message}`, type: 'error' });
     } finally {
@@ -139,6 +149,7 @@ const AruneekaAdminAppearance = () => {
   };
 
   return (
+    <>
     <div className="space-y-10 pb-20">
       {/* Header */}
       <div className="space-y-1">
@@ -252,15 +263,14 @@ const AruneekaAdminAppearance = () => {
 
               <div className="space-y-4 pt-4">
                  <AnimatePresence>
-                   {message && (
+                   {message && message.type === 'error' && (
                      <motion.div 
                        initial={{ opacity: 0, scale: 0.95 }}
                        animate={{ opacity: 1, scale: 1 }}
-                       className={`flex items-center gap-3 p-4 rounded-2xl text-[11px] font-bold ${
-                         message.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
-                       }`}
+                       exit={{ opacity: 0, scale: 0.95 }}
+                       className="flex items-center gap-3 p-4 rounded-2xl text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100"
                      >
-                       {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                       <AlertCircle size={16} />
                        {message.text}
                      </motion.div>
                    )}
@@ -366,6 +376,47 @@ const AruneekaAdminAppearance = () => {
 
       </div>
     </div>
+
+    {/* Success Modal Overlay */}
+    <AnimatePresence>
+      {showSuccess && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSuccess(false)}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+          />
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="bg-white rounded-[50px] p-12 text-center max-w-sm w-full shadow-[0_32px_80px_rgba(0,0,0,0.15)] relative z-10 space-y-8"
+          >
+            <div className="relative mx-auto w-24 h-24">
+              <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
+              <div className="relative w-full h-full bg-emerald-500 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-emerald-500/30 rotate-6">
+                <CheckCircle2 size={40} className="fill-current" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Identity Synced!</h3>
+              <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-2">
+                "Seluruh sistem kini telah menggunakan identitas visual terbaru yang Anda tentukan."
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowSuccess(false)}
+              className="w-full py-5 bg-amethyst-dark text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              Great, Continue
+            </button>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+    </>
   );
 };
 

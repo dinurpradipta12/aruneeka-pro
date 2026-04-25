@@ -101,7 +101,7 @@ const AruneekaKPI = ({
         setData(plans);
         const formattedTargets = (targets || []).map(t => ({
           ...t,
-          metric: t.metric_name, // Map for internal state
+          metric: t.metric, // Map for internal state
           target: t.target_value
         }));
         calculateKPIs(plans, formattedTargets);
@@ -282,7 +282,7 @@ const AruneekaKPI = ({
       const payload = {
         profile_id: selectedProfileId || null,
         platform: newGoal.platform,
-        metric_name: newGoal.metric,
+        metric: newGoal.metric,
         target_value: newGoal.target,
         category: newGoal.category,
         workspace_id: workspaceId,
@@ -661,7 +661,7 @@ const AruneekaKPI = ({
       {/* Add Goal Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-amethyst-dark/40 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -726,7 +726,7 @@ const AruneekaKPI = ({
       {/* Global Popup Modal */}
       <AnimatePresence>
         {popup.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-amethyst-dark/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
             <motion.div 
                initial={{ opacity: 0, scale: 0.95, y: 20 }}
                animate={{ opacity: 1, scale: 1, y: 0 }}

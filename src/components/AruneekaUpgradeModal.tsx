@@ -76,13 +76,18 @@ const AruneekaUpgradeModal = ({ isOpen, onClose, user }: AruneekaUpgradeModalPro
             }
         }]);
 
-        if (error) throw error;
+        if (error) {
+           console.error("Submission error:", error.message);
+           alert("Gagal mengirim permintaan. Pastikan koneksi stabil dan coba lagi.");
+           return;
+        }
+
         setIsSuccess(true);
         setTimeout(() => {
             onClose();
         }, 3000);
     } catch (e: any) {
-        alert(e.message);
+        console.error("Critical submission error:", e);
     } finally {
         setIsSubmitting(false);
     }

@@ -50,14 +50,14 @@ const AruneekaAnalytics = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [selectedContent, setSelectedContent] = useState<any>(null);
-  }, [currentTier]);
+  const { selectedWorkspaceId: contextWorkspaceId, subscriptionTier: currentTier, openUpgrade } = useWorkspace();
+  const workspaceId = selectedWorkspaceId || contextWorkspaceId;
 
   const fetchData = async () => {
     const isInitial = data.length === 0;
     if (isInitial) setIsLoading(true);
     
     try {
-      const workspaceId = selectedWorkspaceId;
       if (!workspaceId) return;
 
       const { data: profileData, error: profileError } = await supabase
@@ -71,7 +71,7 @@ const AruneekaAnalytics = ({
 
       // Fetch Content Plans
       let query = supabase.from('v2_agency_content_plans')
-        .select('id, title, platform, content_pillar, due_date, metrics, status, post_link')
+        .select('id, title, platform, content_pillar, due_date, metrics, status, post_link, author_name, author_avatar')
         .eq('workspace_id', workspaceId);
 
       // Filter by selected account if applicable
@@ -104,6 +104,11 @@ const AruneekaAnalytics = ({
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [workspaceId, selectedProfileId, activeRange, customStart, customEnd, currentTier]);
+
 
   // Group Data by Date for Charting
   const dailyMetrics = useMemo(() => {
@@ -712,7 +717,7 @@ const AruneekaAnalytics = ({
               );
            })()}
 
-           <div className={`transition-all duration-700 ${currentTier === 'free' && !(localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer')) ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
+           <div className={`transition-all duration-700 ${currentTier === 'free' && !(typeof window !== 'undefined' && (localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer'))) ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
               <div className="flex items-center justify-between mb-12">
                  <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">Detailed Asset Breakdown</h3>
                  <div className="flex items-center gap-2">
@@ -726,7 +731,7 @@ const AruneekaAnalytics = ({
                  <thead>
                     <tr className="border-b border-slate-50">
                        <th className="text-left py-6 px-4 text-[10px] font-black text-slate-300">Content identity</th>
-                       <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Platform</th>
+                       <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">PIC / Author</th>
                        <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Posting Date</th>
                        <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Views</th>
                        <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">ER %</th>
@@ -777,10 +782,17 @@ const AruneekaAnalytics = ({
                                 </div>
                              </td>
                              <td className="py-6 px-4 text-center">
-                                <div className="flex justify-center">
-                                   <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100/50 group-hover:bg-amethyst-light/10 transition-all">
-                                      <PlatformIcon />
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                   <div className="w-9 h-9 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 overflow-hidden shadow-inner group-hover:border-amethyst-primary/30 transition-all">
+                                      {item.author_avatar ? (
+                                         <img src={item.author_avatar} className="w-full h-full object-cover" alt="PIC" />
+                                      ) : (
+                                         <div className="text-[10px] font-black text-slate-300 uppercase">
+                                            {item.author_name?.charAt(0) || 'P'}
+                                         </div>
+                                      )}
                                    </div>
+                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.author_name || 'Owner'}</p>
                                 </div>
                              </td>
                              <td className="py-6 px-4 text-center">
@@ -832,7 +844,7 @@ const AruneekaAnalytics = ({
     </div>
     <AnimatePresence>
         {selectedContent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-12 bg-amethyst-dark/40 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-12 bg-slate-900/60 backdrop-blur-md">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

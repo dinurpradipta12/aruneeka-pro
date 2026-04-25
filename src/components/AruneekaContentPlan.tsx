@@ -20,9 +20,13 @@ import {
   ExternalLink,
   Repeat,
   ShieldCheck,
-  List
+  List,
+  Lock,
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWorkspace } from './AruneekaShell';
 
 const platforms = [
   { id: 'all', label: 'All Platforms' },
@@ -94,6 +98,9 @@ const AruneekaContentPlan = ({
   onViewChange?: (view: any) => void,
   subscriptionTier?: string
 }) => {
+  const { openUpgrade } = useWorkspace();
+  const [isLockModalOpen, setIsLockModalOpen] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState({ title: '', desc: '', icon: <Kanban/> });
   const [filter, setFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ 
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0], 
@@ -203,34 +210,44 @@ const AruneekaContentPlan = ({
                </button>
                <button 
                  onClick={() => {
-                    const userStr = localStorage.getItem('aruneeka_user');
+                    const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
                     const user = userStr ? JSON.parse(userStr) : null;
                     const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
                     if (subscriptionTier === 'free' && !isPowerUser) {
-                      alert("Kanban is a Pro feature. upgrade to unlock.");
+                      setLockedFeature({ 
+                        title: 'Kanban Visualizer', 
+                        desc: 'Kelola alur kerja konten Anda dengan drag-and-drop Kanban board yang intuitif.',
+                        icon: <Kanban size={32} />
+                      });
+                      setIsLockModalOpen(true);
                     } else {
                       onViewChange?.('kanban');
                     }
                  }}
                  className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all relative ${view === 'kanban' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                >
-                 {(subscriptionTier === 'free' && !(localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer'))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
+                 {(subscriptionTier === 'free' && !(typeof window !== 'undefined' && (localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer')))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
                  <Kanban size={14} /> Kanban
                </button>
                <button 
                  onClick={() => {
-                    const userStr = localStorage.getItem('aruneeka_user');
+                    const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
                     const user = userStr ? JSON.parse(userStr) : null;
                     const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
                     if (subscriptionTier === 'free' && !isPowerUser) {
-                      alert("Calendar is a Pro feature. upgrade to unlock.");
+                      setLockedFeature({ 
+                        title: 'Content Calendar', 
+                        desc: 'Rencanakan jadwal posting harian dan bulanan Anda dalam satu tampilan kalender yang rapi.',
+                        icon: <Calendar size={32} />
+                      });
+                      setIsLockModalOpen(true);
                     } else {
                       onViewChange?.('calendar');
                     }
                  }}
                  className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all relative ${view === 'calendar' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                >
-                 {(subscriptionTier === 'free' && !(localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer'))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
+                 {(subscriptionTier === 'free' && !(typeof window !== 'undefined' && (localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer')))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
                  <Calendar size={14} /> Calendar
                </button>
             </div>
@@ -713,6 +730,59 @@ const AruneekaContentPlan = ({
                   {s}
                 </button>
               ))}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Feature Locked Modal */}
+      <AnimatePresence>
+        {isLockModalOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="bg-white w-full max-w-sm rounded-[44px] shadow-2xl overflow-hidden border border-white/20 relative"
+            >
+               {/* Pattern Decor */}
+               <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                  <Zap size={120} />
+               </div>
+
+               <div className="p-10 space-y-8 flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-amber-300 to-amber-500 text-white flex items-center justify-center shadow-2xl shadow-amber-500/20">
+                    {lockedFeature.icon}
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center gap-2">
+                       <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md border border-amber-100 flex items-center gap-1">
+                         <Sparkles size={10}/> Pro Feature
+                       </span>
+                    </div>
+                    <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">{lockedFeature.title}</h3>
+                    <p className="text-xs text-slate-400 font-bold leading-relaxed">{lockedFeature.desc}</p>
+                  </div>
+
+                  <div className="w-full space-y-3">
+                    <button 
+                      onClick={() => {
+                        setIsLockModalOpen(false);
+                        openUpgrade();
+                      }}
+                      className="w-full py-4 rounded-2xl bg-amethyst-dark text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    >
+                      Upgrade to unlock
+                    </button>
+                    <button 
+                      onClick={() => setIsLockModalOpen(false)}
+                      className="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
+                    >
+                      Mungkin Nanti
+                    </button>
+                  </div>
+               </div>
             </motion.div>
           </div>
         )}

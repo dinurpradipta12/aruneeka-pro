@@ -11,13 +11,15 @@ import {
   ChevronRight,
   BarChart3, 
   Clock, 
-  AlertCircle,
+  Plus,
+  Lock,
+  ShieldCheck,
   TrendingUp,
   Globe,
-  Share2,
-  Plus
+  Share2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from './AruneekaShell';
 
 const DashboardHome = ({ 
   selectedProfileId, 
@@ -36,59 +38,63 @@ const DashboardHome = ({
   const [nextToPost, setNextToPost] = useState<any>(null);
   const [recentOutput, setRecentOutput] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { subscriptionTier, openUpgrade } = useWorkspace();
+
+  const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+  const isLocked = subscriptionTier === 'free' && !isPowerUser;
 
   useEffect(() => {
     fetchDashboardIntelligence();
   }, [selectedProfileId, selectedWorkspaceId]);
 
-  const fetchDashboardIntelligence = async () => {
+    const fetchDashboardIntelligence = async () => {
     try {
       const workspaceId = selectedWorkspaceId;
       if (!workspaceId) return;
 
-      // 1. Fetch KPI Average
-      let kpiQuery = supabase
-        .from('v2_agency_kpi_targets')
-        .select('*')
-        .eq('workspace_id', workspaceId);
-      
-      if (selectedProfileId) {
-        kpiQuery = kpiQuery.eq('profile_id', selectedProfileId);
-      }
-      
-      const { data: kpiData } = await kpiQuery;
-      
+      // START PARALLEL FETCHING (Much faster than sequential)
+      const [
+        kpiResponse,
+        contentResponse,
+        strategyResponse,
+        profileResponse,
+        recentResponse
+      ] = await Promise.all([
+         // 1. KPI Targets
+         supabase.from('v2_agency_kpi_targets').select('*').eq('workspace_id', workspaceId).eq(selectedProfileId ? 'profile_id' : '', selectedProfileId || ''),
+         
+         // 2. Content Plans Distribution
+         supabase.from('v2_agency_content_plans').select('status, due_date, title, platform, target_account').eq('workspace_id', workspaceId).eq(selectedProfileId ? 'target_account' : '', selectedProfileId || ''),
+         
+         // 3. Strategy Completion
+         supabase.from('v2_agency_strategy_checklist').select('status, is_completed').eq('workspace_id', workspaceId),
+         
+         // 4. Active Profiles Count
+         supabase.from('v2_agency_social_profiles').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+         
+         // 5. Recent Output
+         supabase.from('v2_agency_content_plans').select('*').eq('workspace_id', workspaceId).eq(selectedProfileId ? 'target_account' : '', selectedProfileId || '').order('created_at', { ascending: false }).limit(3)
+      ]);
+
+      // Processing KPI
       let kpiAvg = 0;
-      if (kpiData && kpiData.length > 0) {
-        const totalProgress = kpiData.reduce((acc, kpi) => {
+      if (kpiResponse.data && kpiResponse.data.length > 0) {
+        const totalProgress = kpiResponse.data.reduce((acc: number, kpi: any) => {
           const current = kpi.current_value || kpi.actual_value || 0;
           const target = kpi.target_value || 1;
-          const progress = (current / target) * 100;
-          return acc + Math.min(progress, 100);
+          return acc + Math.min((current / target) * 100, 100);
         }, 0);
-        kpiAvg = Math.round(totalProgress / kpiData.length);
+        kpiAvg = Math.round(totalProgress / kpiResponse.data.length);
       }
 
-      // 2. Fetch Content Stats & Distribution
-      let contentQuery = supabase
-        .from('v2_agency_content_plans')
-        .select('status, due_date, title, platform, target_account')
-        .eq('workspace_id', workspaceId);
-
-      if (selectedProfileId) {
-        contentQuery = contentQuery.eq('target_account', selectedProfileId);
-      }
-
-      const { data: contentData } = await contentQuery;
-
+      // Processing Content & Distribution
       const statusCounts: any = {};
-      let closestContent = null;
-      const today = new Date();
-
-      if (contentData) {
-        contentData.forEach(item => {
+      let closestContent: any = null;
+      if (contentResponse.data) {
+        contentResponse.data.forEach((item: any) => {
           statusCounts[item.status] = (statusCounts[item.status] || 0) + 1;
-          
           if (item.status !== 'Uploaded' && item.status !== 'Approved' && item.due_date) {
             const dueDate = new Date(item.due_date);
             if (!closestContent || dueDate < new Date(closestContent.due_date)) {
@@ -98,49 +104,23 @@ const DashboardHome = ({
         });
       }
 
-      // 3. Fetch Strategy Completion
-      const { data: strategyData } = await supabase
-        .from('v2_agency_strategy_checklist')
-        .select('status, is_completed')
-        .eq('workspace_id', workspaceId);
-      
+      // Processing Strategy
       let strategyProgress = 0;
-      if (strategyData && strategyData.length > 0) {
-        const completed = strategyData.filter(s => s.is_completed).length;
-        strategyProgress = Math.round((completed / strategyData.length) * 100);
+      if (strategyResponse.data && strategyResponse.data.length > 0) {
+        const completed = strategyResponse.data.filter((s: any) => s.is_completed).length;
+        strategyProgress = Math.round((completed / strategyResponse.data.length) * 100);
       }
-
-      // 4. Fetch Active Profiles (Private Only)
-      const { count: profileCount } = await supabase
-        .from('v2_agency_social_profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId);
-
-      // 5. Recent Output
-      let recentQuery = supabase
-        .from('v2_agency_content_plans')
-        .select('*')
-        .eq('workspace_id', workspaceId);
-
-      if (selectedProfileId) {
-        recentQuery = recentQuery.eq('target_account', selectedProfileId);
-      }
-
-      const { data: recent } = await recentQuery
-        .order('created_at', { ascending: false })
-        .limit(3);
 
       setStats({
         kpiProgress: kpiAvg,
-        totalContent: contentData?.length || 0,
+        totalContent: contentResponse.data?.length || 0,
         strategyCompletion: strategyProgress,
-        activeProfiles: profileCount || 0
+        activeProfiles: profileResponse.count || 0
       });
 
-      const dist = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
-      setStatusDistribution(dist);
+      setStatusDistribution(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
       setNextToPost(closestContent);
-      setRecentOutput(recent || []);
+      setRecentOutput(recentResponse.data || []);
 
     } catch (e) {
       console.error("Dashboard Intelligence Error:", e);
@@ -150,16 +130,29 @@ const DashboardHome = ({
   };
 
   const platformIcons: any = {
-    instagram: <Share2 size={14} />,
-    tiktok: <Video size={14} />,
-    facebook: <Globe size={14} />,
+    instagram: <img src="https://cdn.simpleicons.org/instagram/slate-400" className="w-3.5 h-3.5 group-hover:filter group-hover:invert transition-all" alt="IG" />,
+    tiktok: <img src="https://cdn.simpleicons.org/tiktok/slate-400" className="w-3.5 h-3.5 group-hover:filter group-hover:invert transition-all" alt="TT" />,
+    facebook: <img src="https://cdn.simpleicons.org/facebook/slate-400" className="w-3.5 h-3.5 group-hover:filter group-hover:invert transition-all" alt="FB" />,
+    youtube: <img src="https://cdn.simpleicons.org/youtube/slate-400" className="w-3.5 h-3.5 group-hover:filter group-hover:invert transition-all" alt="YT" />,
+    threads: <img src="https://cdn.simpleicons.org/threads/slate-400" className="w-3.5 h-3.5 group-hover:filter group-hover:invert transition-all" alt="TH" />,
     default: <Share2 size={14} />
   };
 
   return (
     <div className="space-y-8 pb-20">
+      {/* WELCOME GREETINGS SECTION (Minimalist) */}
+      <section className="py-2">
+         <div className="space-y-1 max-w-4xl">
+            <h2 className="text-4xl font-black text-slate-800 tracking-tight">Selamat Datang, <span className="text-amethyst-primary">{user?.full_name?.split(' ')[0]}!</span></h2>
+            <p className="text-sm text-slate-400 font-medium leading-relaxed">
+               Dashboard ini adalah pusat operasional Anda untuk memantau pertumbuhan KPI, eksekusi strategi, 
+               dan efisiensi produksi konten secara terpadu.
+            </p>
+         </div>
+      </section>
+
       {/* SECTION 1: CORE INTELLIGENCE CARDS */}
-      <section className="grid grid-cols-4 gap-6">
+      <section className="grid grid-cols-4 gap-6 relative">
         {[
           { label: 'Strategic KPI', value: `${stats.kpiProgress}%`, sub: 'Target average', icon: <Target/>, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           { label: 'Strategy Milestone', value: `${stats.strategyCompletion}%`, sub: 'Checklist completion', icon: <CheckCircle2/>, color: 'text-amethyst-primary', bg: 'bg-amethyst-light/20' },
@@ -169,7 +162,7 @@ const DashboardHome = ({
           <motion.div 
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
             key={i} 
-            className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all"
+            className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all relative overflow-hidden"
           >
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${item.bg} ${item.color} group-hover:scale-110 transition-transform`}>
               {item.icon}
@@ -186,8 +179,8 @@ const DashboardHome = ({
       {/* SECTION 2: OPERATIONAL CENTER */}
       <div className="grid grid-cols-12 gap-8">
         {/* KPI Performance Gauge */}
-        <div className="col-span-4 h-full">
-           <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm flex flex-col h-full min-h-[400px] relative overflow-hidden group">
+        <div className="col-span-4 h-full relative group">
+           <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm flex flex-col h-full min-h-[400px] relative overflow-hidden transition-all duration-700">
               <div className="flex items-center justify-between mb-8">
                  <div className="px-4 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black border border-emerald-100">
                     KPI Performance
@@ -215,9 +208,9 @@ const DashboardHome = ({
                     <h3 className="text-xl font-black text-slate-800 tracking-tight">Growth Achievement</h3>
                     <p className="text-xs text-slate-400 font-medium">Average across all active KPI targets</p>
                  </div>
-              </div>
-           </div>
-        </div>
+               </div>
+            </div>
+         </div>
 
         {/* Operational Focus: Next to Post & Status */}
         <div className="col-span-8 grid grid-cols-2 gap-8">
@@ -239,7 +232,9 @@ const DashboardHome = ({
                      </div>
                      <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10 backdrop-blur-md">
-                           {platformIcons[nextToPost.platform?.toLowerCase()] || <Share2 size={12}/>}
+                           <div className="brightness-0 invert opacity-80">
+                              {platformIcons[nextToPost.platform?.toLowerCase()] || <Share2 size={12}/>}
+                           </div>
                            <span className="text-[10px] font-bold">{nextToPost.platform}</span>
                         </div>
                         <div className="text-[10px] font-black text-amber-300">
@@ -256,7 +251,7 @@ const DashboardHome = ({
               </div>
 
               <button 
-                onClick={() => window.location.href = '/plans'}
+                onClick={() => window.location.href = '/content'}
                 className="relative z-10 w-full py-4 bg-white text-amethyst-dark rounded-2xl font-black text-[10px] hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5"
               >
                   Review Schedule <ChevronRight size={14}/>
@@ -268,37 +263,53 @@ const DashboardHome = ({
            </div>
 
            {/* Content Status Pie Chart */}
-           <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Workload Flow</h3>
-                 <Layers size={18} className="text-slate-200"/>
-              </div>
-              
-              <div className="flex-1 space-y-4">
-                 {statusDistribution.length > 0 ? statusDistribution.map((item, i) => (
-                   <div key={i} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[10px] font-black">
-                         <span className="text-slate-400">{item.name}</span>
-                         <span className="text-slate-800">{item.value} Units</span>
+           <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
+              <div className={`flex flex-col h-full transition-all duration-700 ${isLocked ? 'blur-md grayscale opacity-40 select-none pointer-events-none' : ''}`}>
+                 <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Workload Flow</h3>
+                    <Layers size={18} className="text-slate-200"/>
+                 </div>
+                 
+                 <div className="flex-1 space-y-4">
+                    {statusDistribution.length > 0 ? statusDistribution.map((item, i) => (
+                      <div key={i} className="space-y-1.5">
+                         <div className="flex items-center justify-between text-[10px] font-black">
+                            <span className="text-slate-400">{item.name}</span>
+                            <span className="text-slate-800">{item.value} Units</span>
+                         </div>
+                         <div className="h-2 bg-slate-50 rounded-full overflow-hidden">
+                            <motion.div 
+                               initial={{ width: 0 }}
+                               animate={{ width: `${(item.value / stats.totalContent) * 100}%` }}
+                               transition={{ duration: 1, delay: i * 0.1 }}
+                               className={`h-full rounded-full ${
+                                 item.name === 'Published' ? 'bg-emerald-500' : 
+                                 item.name === 'Draft' ? 'bg-slate-300' : 'bg-amethyst-primary'
+                               }`}
+                            />
+                         </div>
                       </div>
-                      <div className="h-2 bg-slate-50 rounded-full overflow-hidden">
-                         <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(item.value / stats.totalContent) * 100}%` }}
-                            transition={{ duration: 1, delay: i * 0.1 }}
-                            className={`h-full rounded-full ${
-                              item.name === 'Published' ? 'bg-emerald-500' : 
-                              item.name === 'Draft' ? 'bg-slate-300' : 'bg-amethyst-primary'
-                            }`}
-                         />
+                    )) : (
+                      <div className="h-full flex items-center justify-center text-slate-200 italic text-xs">
+                         No distribution data yet
                       </div>
-                   </div>
-                 )) : (
-                   <div className="h-full flex items-center justify-center text-slate-200 italic text-xs">
-                      No distribution data yet
-                   </div>
-                 )}
+                    )}
+                 </div>
               </div>
+
+              {isLocked && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/5 backdrop-blur-[12px]">
+                   <div className="w-12 h-12 bg-amber-400/10 text-amber-500 rounded-2xl flex items-center justify-center mb-4">
+                      <ShieldCheck size={24} />
+                   </div>
+                   <h4 className="text-sm font-black text-amethyst-dark tracking-tight">Workload Flow Locked</h4>
+                   <button 
+                     onClick={() => openUpgrade()}
+                     className="mt-4 px-6 py-2.5 bg-amethyst-primary text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amethyst-primary/20 hover:scale-105 transition-all">
+                    Upgrade Now
+                  </button>
+                </div>
+              )}
            </div>
         </div>
       </div>
@@ -312,7 +323,7 @@ const DashboardHome = ({
                   <h3 className="text-xl font-black text-slate-800 tracking-tight text-gradient bg-clip-text text-transparent bg-gradient-to-r from-amethyst-dark to-amethyst-primary italic">Recent Output</h3>
                   <p className="text-[10px] font-bold text-slate-300">Latest content movement</p>
                </div>
-               <button onClick={() => window.location.href='/plans'} className="text-amethyst-primary hover:text-black transition-colors font-black text-[10px] uppercase tracking-widest flex items-center gap-1">
+               <button onClick={() => window.location.href='/content'} className="text-amethyst-primary hover:text-black transition-colors font-black text-[10px] uppercase tracking-widest flex items-center gap-1">
                   View Full <ChevronRight size={14}/>
                </button>
             </div>
@@ -345,34 +356,52 @@ const DashboardHome = ({
 
          {/* Platform Health & Strategy Snapshot */}
          <div className="col-span-5 space-y-8">
-            <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm">
-               <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Strategy Roadmap</h3>
-                  <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">{stats.strategyCompletion}% Done</div>
-               </div>
-               <div className="space-y-6">
-                  <div className="h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
-                     <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${stats.strategyCompletion}%` }}
-                        transition={{ duration: 1.5, ease: "circOut" }}
-                        className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"
-                     />
+            {/* Card 1: Strategy */}
+            <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm relative overflow-hidden group">
+               <div className={`transition-all duration-700 ${isLocked ? 'blur-md grayscale opacity-40 select-none pointer-events-none' : ''}`}>
+                  <div className="flex items-center justify-between mb-8">
+                     <h3 className="text-xl font-black text-slate-800 tracking-tight">Strategy Roadmap</h3>
+                     <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">{stats.strategyCompletion}% Done</div>
                   </div>
-                  <div className="flex items-center justify-between">
-                     <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-800">Clear Execution</span>
-                        <span className="text-[9px] font-bold text-slate-400">Operational milestone</span>
+                  <div className="space-y-6">
+                     <div className="h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+                        <motion.div 
+                           initial={{ width: 0 }}
+                           animate={{ width: `${stats.strategyCompletion}%` }}
+                           transition={{ duration: 1.5, ease: "circOut" }}
+                           className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"
+                        />
                      </div>
-                     <button onClick={() => window.location.href='/strategy'} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-amethyst-primary hover:text-white transition-all shadow-inner">
-                        <ChevronRight size={18}/>
-                     </button>
+                     <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                           <span className="text-xs font-black text-slate-800">Clear Execution</span>
+                           <span className="text-[9px] font-bold text-slate-400">Operational milestone</span>
+                        </div>
+                        <button onClick={() => window.location.href='/strategy'} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-amethyst-primary hover:text-white transition-all shadow-inner">
+                           <ChevronRight size={18}/>
+                        </button>
+                     </div>
                   </div>
                </div>
+
+               {isLocked && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/5 backdrop-blur-[12px]">
+                   <div className="w-10 h-10 bg-amber-400/10 text-amber-500 rounded-xl flex items-center justify-center mb-3">
+                      <ShieldCheck size={20} />
+                   </div>
+                   <h4 className="text-[11px] font-black text-amethyst-dark tracking-tight">Strategy Locked</h4>
+                   <button 
+                     onClick={() => openUpgrade()}
+                     className="mt-2 px-5 py-2 bg-amethyst-primary text-white rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg shadow-amethyst-primary/10">
+                    Unlock Now
+                  </button>
+                </div>
+              )}
             </div>
 
+            {/* Card 2: Platform Dominance */}
             <div className="bg-gradient-to-br from-white to-amethyst-light/10 rounded-[48px] p-10 border border-slate-100 shadow-xl relative overflow-hidden group">
-               <div className="relative z-10">
+               <div className={`relative z-10 transition-all duration-700 ${isLocked ? 'blur-md grayscale opacity-40 select-none pointer-events-none' : ''}`}>
                   <div className="flex items-center justify-between mb-8">
                      <div className="px-4 py-1.5 bg-amethyst-primary/10 text-amethyst-primary rounded-full text-[9px] font-black uppercase tracking-widest border border-amethyst-primary/20">
                         Platform Dominance
@@ -382,7 +411,6 @@ const DashboardHome = ({
                   
                   <div className="flex items-center gap-6">
                      <div className="w-20 h-20 bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] rounded-[28px] flex items-center justify-center text-white shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-500">
-                        {/* Custom Instagram SVG Logo */}
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -414,6 +442,21 @@ const DashboardHome = ({
                   </div>
                </div>
                
+               {isLocked && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-10 text-center bg-white/5 backdrop-blur-[12px]">
+                   <div className="w-16 h-16 bg-amber-400/10 text-amber-500 rounded-[28px] flex items-center justify-center mb-6 shadow-inner">
+                      <ShieldCheck size={32} />
+                   </div>
+                   <h4 className="text-xl font-black text-amethyst-dark tracking-tight leading-none italic uppercase">Platform Dominance</h4>
+                   <p className="text-[10px] font-bold text-slate-400 mt-3 mb-6 italic max-w-[220px]">Buka identifikasi platform terbaik untuk strategi market expansion Anda.</p>
+                   <button 
+                     onClick={() => openUpgrade()}
+                     className="px-10 py-4 bg-amethyst-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amethyst-primary/20 hover:scale-105 transition-all">
+                    Upgrade Now
+                  </button>
+                </div>
+              )}
+
                {/* Decorative Background Element */}
                <div className="absolute -top-10 -right-10 w-40 h-40 bg-orange-500/5 rounded-full blur-[60px]"/>
             </div>

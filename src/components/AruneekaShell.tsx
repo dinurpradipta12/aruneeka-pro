@@ -40,11 +40,11 @@ import { supabase } from '@/lib/supabase';
 
 // --- SUB-COMPONENTS (Optimized to prevent Shell re-renders) ---
 
-const MotivationBubble = memo(() => {
+const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
    const [showBubble, setShowBubble] = useState(false);
    const [bubbleType, setBubbleType] = useState<"motivation" | "subscribe">("motivation");
    const [currentMessage, setCurrentMessage] = useState("");
-   const { subscriptionTier, openUpgrade } = useWorkspace();
+   const { subscriptionTier, openUpgrade, user } = useWorkspace();
 
    const messages = [
       "Eh, udah cek hook Reels hari ini belum? 👀",
@@ -66,8 +66,9 @@ const MotivationBubble = memo(() => {
       const handleDisplay = () => {
          cycle = (cycle + 1) % 4; 
          const isSubscribeCycle = cycle % 2 === 0;
+         const isPowerUser = user?.role === 'developer' || user?.role === 'Superuser';
          
-         if (isSubscribeCycle && subscriptionTier === "free") {
+         if (isSubscribeCycle && subscriptionTier === "free" && !isPowerUser) {
             setBubbleType("subscribe");
             setCurrentMessage("Mau akses penuh aplikasi ini? Segera subscribe biar hasilnya bisa maksimal");
          } else {
@@ -82,15 +83,37 @@ const MotivationBubble = memo(() => {
       const timer = setInterval(handleDisplay, 60000); 
       const initial = setTimeout(handleDisplay, 10000); 
 
+      // REALTIME LISTENER: Detect Subscription Approval & Status Changes
+      const userChannel = supabase
+        .channel(`user-sync-${user?.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'v2_agency_users', filter: `id=eq.${user?.id}` },
+          (payload) => {
+             const updatedUser = payload.new as any;
+             console.log("Realtime Profile Update:", updatedUser);
+
+             // If tier changed to something higher than free, show celebration!
+             if (user?.subscription_tier === 'free' && updatedUser.subscription_tier !== 'free') {
+                // Note: This assumes the parent component handles the celebration state
+             }
+
+             // Auto-sync with local state & storage
+             localStorage.setItem('aruneeka_user', JSON.stringify(updatedUser));
+          }
+        )
+        .subscribe();
+
       return () => {
          clearInterval(timer);
          clearTimeout(initial);
+         supabase.removeChannel(userChannel);
       };
-   }, [subscriptionTier]);
+   }, [subscriptionTier, user]);
 
    return (
       <AnimatePresence>
-         {showBubble && (
+         {showBubble && !forceHide && (
             <motion.div 
                initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }} 
                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} 
@@ -113,7 +136,11 @@ const MotivationBubble = memo(() => {
                      Upgrade Now
                   </button>
                )}
-               <div className={`absolute -bottom-2 -right-2 w-6 h-6 rotate-45 border-r border-b ${bubbleType === "subscribe" ? "bg-amethyst-primary border-white/20" : "bg-white/90 border-white/40"}`} />
+               {/* Side Tail pointing to avatar */}
+               <div 
+                  className={`absolute top-[65%] -right-2.5 w-6 h-6 ${bubbleType === "subscribe" ? "bg-amethyst-primary" : "bg-white/90"} -z-10`}
+                  style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }}
+               />
             </motion.div>
          )}
       </AnimatePresence>
@@ -141,12 +168,13 @@ interface WorkspaceContextType {
   setSelectedWorkspace: (ws: any) => void;
   subscriptionTier?: string;
   openUpgrade: () => void;
+  user?: any;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextType>({
-  setSelectedWorkspace: () => {},
   subscriptionTier: 'free',
-  openUpgrade: () => {}
+  openUpgrade: () => {},
+  user: null
 });
 
 export const useWorkspace = () => React.useContext(WorkspaceContext);
@@ -162,6 +190,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [teamCount, setTeamCount] = useState(0);
    const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
    const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+   const [subscriptionExpiry, setSubscriptionExpiry] = useState<string | null>(null);
    const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
    const [isWsSelectorOpen, setIsWsSelectorOpen] = useState(false);
    const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -176,7 +205,6 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [selectedProfile, setSelectedProfile] = useState<any>(null);
    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
    const [showRealtimeSuccess, setShowRealtimeSuccess] = useState(false);
-   const [currentTier, setCurrentTier] = useState<string>('free');
 
    const avatars = Array.from({ length: 12 }, (_, i) => `/assets/avatars/avatar${i + 1}.svg`);
 
@@ -194,80 +222,101 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
          displayRole: title || dbRole
       };
    };
-
    useEffect(() => {
-      const storedUser = localStorage.getItem('aruneeka_user');
-      if (!storedUser && pathname !== '/login') {
-         window.location.href = '/login';
-         return;
-      }
-      if (storedUser) {
+      const initSession = async () => {
+         const storedUser = localStorage.getItem('aruneeka_user');
+         if (!storedUser) {
+            if (pathname !== '/login') window.location.href = '/login';
+            return;
+         }
+
          const parsed = JSON.parse(storedUser);
-         const { systemRole, displayRole } = parseRoles(parsed);
-         setUser(parsed);
+         
+         // Fix: Fetch latest user record from DB to ensure parent_user_id is up to date
+         const { data: latestUser } = await supabase.from('v2_agency_users').select('*').eq('id', parsed.id).single();
+         const activeUser = latestUser || parsed;
+         
+         const { systemRole, displayRole } = parseRoles(activeUser);
+         setUser(activeUser);
          setEditForm({
-            fullName: parsed.full_name || '',
-            password: parsed.password || '',
-            email: parsed.email || parsed.username + '@aruneeka.pro',
-            avatar: parsed.avatar_url || '',
+            fullName: activeUser.full_name || '',
+            password: activeUser.password || '',
+            email: activeUser.email || activeUser.username + '@aruneeka.pro',
+            avatar: activeUser.avatar_url || '',
             systemRole,
             displayRole
          });
 
-         // Ambil data langganan terbaru
-         const syncSub = async () => {
-            const { data } = await supabase
-              .from('v2_agency_users')
-              .select('subscription_tier')
-              .eq('id', parsed.id)
-              .single();
-            if (data) setSubscriptionTier(data.subscription_tier || 'free');
-         };
-         syncSub();
-
+         // Combine initial data syncs
          const savedWsStr = localStorage.getItem('aruneeka_selected_workspace');
-         if (savedWsStr) {
-            const ws = JSON.parse(savedWsStr);
+         const ws = savedWsStr ? JSON.parse(savedWsStr) : null;
+         
+         if (ws) {
             setSelectedWorkspace(ws);
-            
-            // Pulihkan profil spesifik untuk brand ini
             const savedProfStr = localStorage.getItem(`aruneeka_selected_profile_${ws.id}`);
-            if (savedProfStr) {
-               setSelectedProfile(JSON.parse(savedProfStr));
-            }
+            if (savedProfStr) setSelectedProfile(JSON.parse(savedProfStr));
+
+            // Determine whose subscription to track (Owner vs Self)
+            const trackingUserId = activeUser.parent_user_id || activeUser.id;
+
+            // Parallel fetch remaining metadata
+            Promise.all([
+               supabase.from('v2_agency_users').select('role, subscription_tier, subscription_expiry').eq('id', trackingUserId).single(),
+               supabase.from('v2_agency_social_profiles').select('*').eq('workspace_id', ws.id).order('name'),
+               supabase.from('v2_agency_workspace_members').select('*', { count: 'exact', head: true }).eq('workspace_id', ws.id)
+            ]).then(([subRes, profRes, memberRes]) => {
+               if (subRes.data) {
+                  // If the tracked user (owner) is a Developer/Superuser, give them 'agency' access automatically
+                  const isPowerUser = ['Superuser', 'developer'].includes(subRes.data.role);
+                  setSubscriptionTier(isPowerUser ? 'agency' : (subRes.data.subscription_tier || 'free'));
+                  setSubscriptionExpiry(subRes.data.subscription_expiry);
+               }
+               if (profRes.data) setProfiles(profRes.data);
+               if (memberRes.count !== null) setTeamCount(memberRes.count);
+            });
          }
          
-         fetchProfiles();
-         fetchTeamCount();
-      }
-      setInitializing(false);
-   }, []);
+         setInitializing(false);
+      };
 
-    const fetchTeamCount = async () => {
-       try {
-          const wsId = selectedWorkspace?.id;
-          if (!wsId) return;
+      initSession();
+   }, []);
 
    useEffect(() => {
       if (user) {
+         // Determine whose subscription to track (Owner vs Self)
+         const trackingUserId = user.parent_user_id || user.id;
+
          const channel = supabase
-           .channel(`global-user-sync-${user.id}`)
+           .channel(`subscription-sync-${trackingUserId}`)
            .on(
              "postgres_changes",
              {
                event: "UPDATE",
                schema: "public",
                table: "v2_agency_users",
-               filter: `id=eq.${user.id}`
+               filter: `id=eq.${trackingUserId}`
              },
              (payload) => {
                const oldTier = subscriptionTier;
                const newTier = payload.new.subscription_tier;
-               if (newTier !== oldTier && (newTier === "pro" || newTier === "agency")) {
-                  setSubscriptionTier(newTier);
-                  localStorage.setItem("aruneeka_user", JSON.stringify(payload.new));
-                  setIsUpgradeModalOpen(false);
-                  setShowRealtimeSuccess(true);
+               
+               if (payload.new.subscription_expiry) {
+                  setSubscriptionExpiry(payload.new.subscription_expiry);
+               }
+
+               // Update local tier
+               const isPowerUser = ['Superuser', 'developer'].includes(payload.new.role);
+               const resolvedTier = isPowerUser ? 'agency' : (newTier || 'free');
+
+               if (resolvedTier !== oldTier) {
+                  setSubscriptionTier(resolvedTier);
+                  
+                  // Show success only if it's an upgrade
+                  if ((resolvedTier === "pro" || resolvedTier === "agency") && oldTier === "free") {
+                     setIsUpgradeModalOpen(false);
+                     setShowRealtimeSuccess(true);
+                  }
                }
              }
            )
@@ -277,16 +326,19 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
          };
       }
    }, [user, subscriptionTier]);
+   const fetchTeamCount = async () => {
+      try {
+         const wsId = selectedWorkspace?.id;
+         if (!wsId) return;
 
-          
-          const { count } = await supabase
-            .from('v2_agency_workspace_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('workspace_id', wsId);
-          
-          setTeamCount(count || 0);
-       } catch (e) { console.error(e); }
-    };
+         const { count } = await supabase
+           .from('v2_agency_workspace_members')
+           .select('*', { count: 'exact', head: true })
+           .eq('workspace_id', wsId);
+         
+         setTeamCount(count || 0);
+      } catch (e) { console.error(e); }
+   };
 
    useEffect(() => {
       if (profiles.length > 0) {
@@ -316,7 +368,6 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
           }
           const currentUser = JSON.parse(userStr);
           
-          // Ambil dari state, jika kosong ambil langsung dari localStorage (lebih akurat)
           let workspaceId = selectedWorkspace?.id;
           if (!workspaceId) {
             const savedWsStr = localStorage.getItem('aruneeka_selected_workspace');
@@ -355,10 +406,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             console.error("Save Error:", error);
             alert("Gagal simpan: " + error.message);
           } else {
-            // Success
             setIsWizardOpen(false);
             if (pathname === '/content') {
-              // Jika di halaman konten, biarkan halaman me-refresh datanya (biasanya lewat reload atau state)
               window.location.reload();
             } else {
               window.location.href = '/content';
@@ -390,15 +439,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
     const handleWorkspaceSelect = (ws: any) => {
        setSelectedWorkspace(ws);
-       
-       // Coba pulihkan profil terakhir untuk brand ini
        const savedProfStr = localStorage.getItem(`aruneeka_selected_profile_${ws.id}`);
        if (savedProfStr) {
           setSelectedProfile(JSON.parse(savedProfStr));
        } else {
           setSelectedProfile(null);
        }
-
        localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(ws));
        setIsWsSelectorOpen(false);
        fetchProfiles();
@@ -434,12 +480,13 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
         selectedWorkspace,
         setSelectedWorkspace,
         subscriptionTier,
-        openUpgrade: () => setIsUpgradeModalOpen(true)
+        openUpgrade: () => setIsUpgradeModalOpen(true),
+        user
       }}>
          <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
             <AnimatePresence>
                {user?.status === 'Pending' && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-xl p-4">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xl p-4">
                      <div className="bg-white rounded-[40px] p-10 text-center space-y-6 w-full max-w-lg shadow-2xl">
                         <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto"><Clock size={32} className="animate-spin-slow" /></div>
                         <h3 className="text-2xl font-black text-slate-800 tracking-tight">Akun menunggu verifikasi</h3>
@@ -451,9 +498,36 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             </AnimatePresence>
 
             <header className="p-8 max-w-[1600px] mx-auto">
-               <div className="rounded-[32px] p-10 text-white relative flex items-center justify-between border border-white/10 shadow-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
-                   <div className="relative z-10 space-y-5">
+               <div className="rounded-[48px] p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-hidden group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
+                  {/* DYNAMIC BACKGROUND ELEMENTS */}
+                  <div className="absolute inset-0 pointer-events-none">
+                     {/* Soft Ambient Light Glows */}
+                     
+                     {/* 2. Floating Glass Orbs */}
+                     <motion.div 
+                        animate={{ x: [0, 50, 0], y: [0, -30, 0] }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        className="absolute -top-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-[100px]" 
+                     />
+                     <motion.div 
+                        animate={{ x: [0, -40, 0], y: [0, 20, 0] }}
+                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                        className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-indigo-400/20 rounded-full blur-[120px]" 
+                     />
+                     
+                     {/* 3. Subtle Grain / Noise Overlay (Using robust inline SVG) */}
+                     <svg className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none mix-blend-overlay">
+                        <filter id="noiseFilter">
+                           <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch" />
+                        </filter>
+                        <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+                     </svg>
+
+                     {/* 4. Radial Shine */}
+                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent)] pointer-events-none" />
+                  </div>
+
+                  <div className="relative z-10 space-y-6">
                      <div className="flex items-center gap-3">
                         <button 
                           onClick={() => setSelectedWorkspace(null)}
@@ -556,15 +630,126 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
             {user && (
                <div className="fixed bottom-10 right-10 z-[1000]">
-                  <MotivationBubble />
+                  <MotivationBubble forceHide={isProfilePopupOpen} />
                   <AnimatePresence>
                      {isProfilePopupOpen && (
                         <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} className="absolute bottom-32 right-0 w-80 bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden p-3 space-y-2">
                            <div className="flex flex-col items-center p-6 bg-slate-50 rounded-[30px] mb-1">
                               <div className="w-24 h-24 mb-4 drop-shadow-xl"><img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Identity" className="w-full h-full object-contain" /></div>
                               <h4 className="text-lg font-black text-slate-800 tracking-tight">{user?.full_name}</h4>
-                              <span className="text-[9px] font-black text-amethyst-primary mt-1">{editForm.displayRole}</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                 <span className="text-[9px] font-black text-amethyst-primary">{editForm.displayRole}</span>
+                                 <span className="text-[8px] opacity-20 text-slate-400">•</span>
+                                 <span className={`text-[8px] font-black uppercase tracking-widest ${subscriptionTier === 'free' ? 'text-slate-400' : 'text-emerald-500'}`}>
+                                    {subscriptionTier === 'free' ? 'Free Tier' : 'Subscribed Member'}
+                                 </span>
+                              </div>
                            </div>
+
+                           {/* ACCOUNT HEALTH / STATUS SECTION */}
+                           <div className="px-6 py-5 bg-slate-50/50 rounded-[30px] mb-2 space-y-4">
+                              <div className="flex items-center justify-between">
+                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Status</span>
+                                 <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                                    subscriptionTier === 'free' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-600'
+                                 }`}>
+                                    {subscriptionTier === 'free' ? 'Standard' : 'Subscribed'}
+                                 </span>
+                              </div>
+                              
+                              {(() => {
+                                 if (subscriptionTier === 'free') {
+                                    return (
+                                       <div className="flex items-center gap-3">
+                                          <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400">
+                                             <Sparkles size={18} />
+                                          </div>
+                                          <div>
+                                             <p className="text-[11px] font-black text-slate-700">Unlimited Usage</p>
+                                             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter italic">Lifetime Access</p>
+                                          </div>
+                                       </div>
+                                    );
+                                 }
+                                 
+                                 const now = new Date();
+                                 const exp = subscriptionExpiry ? new Date(subscriptionExpiry) : now;
+                                 const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                 const percent = Math.max(0, Math.min(100, (diffDays / 30) * 100));
+                                 
+                                 return (
+                                    <div className="space-y-3">
+                                       <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-3">
+                                             <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-500">
+                                                <Zap size={18} />
+                                             </div>
+                                             <div>
+                                                <p className="text-[11px] font-black text-slate-700">{diffDays > 0 ? `${diffDays} Days Left` : 'Expired'}</p>
+                                                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter italic">Subscription Health</p>
+                                             </div>
+                                          </div>
+                                          <span className="text-xs font-black text-slate-400">{Math.ceil(percent)}%</span>
+                                       </div>
+                                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                          <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${percent}%` }}
+                                            className={`h-full ${diffDays <= 5 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                          />
+                                       </div>
+                                    </div>
+                                 );
+                              })()}
+                           </div>
+
+                           {/* SUBSCRIPTION EXPIRY ALERT */}
+                           {(() => {
+                              if (subscriptionTier === 'free' || !subscriptionExpiry) return null;
+                              const now = new Date();
+                              const exp = new Date(subscriptionExpiry);
+                              const diffTime = exp.getTime() - now.getTime();
+                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                              if (diffDays > 5) return null;
+
+                              let colorClass = "bg-amber-50 text-amber-600 border-amber-100";
+                              let iconClass = "bg-amber-100 text-amber-600";
+                              let message = `Langganan tersisa ${diffDays} hari lagi.`;
+
+                              if (diffDays <= 0) {
+                                 colorClass = "bg-rose-50 text-rose-600 border-rose-100";
+                                 iconClass = "bg-rose-100 text-rose-600";
+                                 message = "Langganan berakhir HARI INI!";
+                              } else if (diffDays <= 3) {
+                                 colorClass = "bg-orange-50 text-orange-600 border-orange-100";
+                                 iconClass = "bg-orange-100 text-orange-600";
+                              }
+
+                              return (
+                                 <motion.div 
+                                   initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                                   className={`w-full p-4 rounded-[28px] border ${colorClass} flex flex-col gap-4 mb-2 shadow-sm relative overflow-hidden group`}
+                                 >
+                                    <div className="flex items-center gap-4">
+                                       <div className={`w-10 h-10 rounded-xl ${iconClass} flex items-center justify-center shrink-0`}>
+                                          <AlertCircle size={18} />
+                                       </div>
+                                       <div className="space-y-0.5 text-left">
+                                          <p className="text-[10px] font-black uppercase tracking-widest leading-none">Peringatan Akun</p>
+                                          <p className="text-[11px] font-bold tracking-tight">{message}</p>
+                                       </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => { setIsUpgradeModalOpen(true); setIsProfilePopupOpen(false); }}
+                                      className="w-full py-3 bg-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95"
+                                    >
+                                       Perpanjang Sekarang
+                                   </button>
+                                 </motion.div>
+                              );
+                           })()}
+
                            <button onClick={() => { setIsEditorOpen(true); setIsProfilePopupOpen(false); }} className="w-full flex items-center gap-4 p-4 rounded-[24px] hover:bg-slate-50 transition-all text-slate-400 hover:text-amethyst-primary">
                               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center"><Settings size={18} /></div>
                               <div className="text-left"><div className="text-sm font-black text-slate-700">Identity studio</div><div className="text-[9px] font-bold opacity-50">Persona setup</div></div>
@@ -576,7 +761,29 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                         </motion.div>
                      )}
                   </AnimatePresence>
-                  <motion.button whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }} onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)} className="w-24 h-24 overflow-hidden drop-shadow-2xl hover:drop-shadow-amethyst transition-all"><img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Profile" className="w-full h-full object-contain" /></motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.1, rotate: 5 }} 
+                    whileTap={{ scale: 0.9 }} 
+                    onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)} 
+                    className="w-24 h-24 overflow-hidden drop-shadow-2xl hover:drop-shadow-amethyst transition-all relative"
+                  >
+                     <img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Profile" className="w-full h-full object-contain" />
+                     
+                     {/* Floating Alert Badge */}
+                     {(() => {
+                        if (subscriptionTier === 'free' || !subscriptionExpiry) return null;
+                        const now = new Date();
+                        const exp = new Date(subscriptionExpiry);
+                        const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 5) return null;
+                        
+                        return (
+                           <div className="absolute top-2 right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center border-4 border-white shadow-lg animate-bounce">
+                              <AlertCircle size={10} strokeWidth={4} />
+                           </div>
+                        );
+                     })()}
+                  </motion.button>
                </div>
             )}
 
@@ -591,6 +798,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                isOpen={isProfilesOpen} 
                onClose={() => setIsProfilesOpen(false)} 
                selectedWorkspaceId={selectedWorkspace?.id}
+               subscriptionTier={subscriptionTier}
                 onSelect={(p) => { 
                   setSelectedProfile(p); 
                   if (selectedWorkspace?.id) {
@@ -606,36 +814,36 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
             {/* Global Realtime Success Celebration */}
             <AnimatePresence>
-              {showRealtimeSuccess && (
-                 <div className="fixed inset-0 z-[11000] flex items-center justify-center p-6">
-                    <motion.div 
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-amethyst-dark/40 backdrop-blur-md" 
-                    />
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                      className="bg-white w-full max-w-sm rounded-[48px] p-10 text-center shadow-2xl relative z-10 space-y-8" 
-                    >
-                       <div className="relative">
-                          <div className="absolute inset-0 bg-amethyst-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                          <div className="w-24 h-24 bg-gradient-to-br from-amethyst-primary to-amethyst-dark text-white rounded-[40px] flex items-center justify-center mx-auto relative shadow-2xl shadow-amethyst-primary/40 rotate-12">
-                             <Zap size={40} className="fill-current" />
-                          </div>
-                       </div>
-                       <div className="space-y-3">
-                          <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Upgrade Successful!</h3>
-                          <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-4">
-                             "Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!"
-                          </p>
-                       </div>
-                       <button onClick={() => setShowRealtimeSuccess(false)} className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all">
-                          Ayo Mulai!
-                       </button>
-                    </motion.div>
-                 </div>
-              )}
+               {showRealtimeSuccess && (
+                  <div className="fixed inset-0 z-[11000] flex items-center justify-center p-6">
+                     <motion.div 
+                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                       className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
+                     />
+                     <motion.div 
+                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                       animate={{ opacity: 1, scale: 1, y: 0 }}
+                       exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                       className="bg-white w-full max-w-sm rounded-[48px] p-10 text-center shadow-2xl relative z-10 space-y-8" 
+                     >
+                        <div className="relative">
+                           <div className="absolute inset-0 bg-amethyst-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                           <div className="w-24 h-24 bg-gradient-to-br from-amethyst-primary to-amethyst-dark text-white rounded-[40px] flex items-center justify-center mx-auto relative shadow-2xl shadow-amethyst-primary/40 rotate-12">
+                              <Zap size={40} className="fill-current" />
+                           </div>
+                        </div>
+                        <div className="space-y-3">
+                           <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Upgrade Successful!</h3>
+                           <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-4">
+                              "Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!"
+                           </p>
+                        </div>
+                        <button onClick={() => setShowRealtimeSuccess(false)} className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all">
+                           Ayo Mulai!
+                        </button>
+                     </motion.div>
+                  </div>
+               )}
             </AnimatePresence>
          </div>
       </WorkspaceContext.Provider>

@@ -13,7 +13,10 @@ import {
   AlertCircle,
   ArrowUpDown,
   Filter,
-  Clock
+  Clock,
+  Calendar,
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -57,6 +60,25 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     };
   }, []);
 
+  const handleUpdateExpiry = async () => {
+    if (!editingUser || !newExpiry) return;
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('v2_agency_users')
+        .update({ subscription_expiry: new Date(newExpiry).toISOString() })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+      fetchUsers();
+      setEditingUser(null);
+    } catch (e: any) {
+      alert("Gagal update: " + e.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase
@@ -76,6 +98,10 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     }
   };
 
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [newExpiry, setNewExpiry] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const handleApprove = async (userId: string) => {
@@ -210,6 +236,60 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
         )}
       </AnimatePresence>
 
+      {/* Manual Expiry Edit Modal */}
+      <AnimatePresence>
+        {editingUser && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEditingUser(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl relative z-10 space-y-8" 
+            >
+               <div className="text-center space-y-2">
+                  <div className="w-16 h-16 bg-amethyst-primary/10 text-amethyst-primary rounded-[24px] flex items-center justify-center mx-auto mb-4">
+                     <Calendar size={28} />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Adjust Expiry Date</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                     Manual override for {editingUser.full_name}
+                  </p>
+               </div>
+
+               <div className="space-y-4">
+                  <div className="space-y-1.5">
+                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">New Expiry Date</label>
+                     <input 
+                       type="date"
+                       value={newExpiry}
+                       onChange={(e) => setNewExpiry(e.target.value)}
+                       className="w-full bg-slate-50 border-none rounded-2xl p-5 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/10 transition-all text-slate-800"
+                     />
+                  </div>
+               </div>
+
+               <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={handleUpdateExpiry}
+                    disabled={isUpdating}
+                    className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                     {isUpdating ? 'Updating...' : 'Apply Changes'}
+                  </button>
+                  <button onClick={() => setEditingUser(null)} className="w-full py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">
+                     Cancel
+                  </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Control Bar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm">
          <div className="relative w-full md:w-96">
@@ -247,65 +327,139 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       <div className="bg-white rounded-[40px] border border-slate-100 shadow-premium overflow-hidden">
          <table className="w-full text-left border-collapse">
             <thead>
-               <tr className="bg-slate-50/50 border-b border-slate-50">
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">User Profile</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Role</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Verification</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Settings</th>
+               <tr className="bg-slate-50/50 border-b border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <th className="px-8 py-6 text-left">User Profile</th>
+                  <th className="px-8 py-6 text-left">System Role</th>
+                  <th className="px-8 py-6 text-left">Active Package</th>
+                  <th className="px-8 py-6 text-left">Subscription Period</th>
+                  <th className="px-8 py-6 text-left">Usage Health</th>
+                  <th className="px-8 py-6 text-right">Settings</th>
                </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-               {filteredUsers.map((user) => (
-                  <motion.tr 
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    key={user.id} 
-                    className="hover:bg-slate-50/30 transition-colors group"
-                  >
-                     <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                           {user.avatar_url ? (
-                              <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 object-contain" />
-                           ) : (
-                              <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg border border-amethyst-light/10 shadow-inner">
-                                 {user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
+               {filteredUsers.map((user) => {
+                  // Calculate Days Left
+                  const expiryDate = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
+                  const startDate = user.created_at ? new Date(user.created_at) : null;
+                  const now = new Date();
+                  const diffTime = expiryDate ? expiryDate.getTime() - now.getTime() : 0;
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  const isExpired = expiryDate && diffDays <= 0;
+                  const isNearExpiry = expiryDate && diffDays > 0 && diffDays <= 7;
+                  const isUnlimited = user.role === 'Superuser' || user.role === 'developer';
+                  const expiryStr = isUnlimited ? 'Never' : (expiryDate ? expiryDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'None');
+
+                  return (
+                    <motion.tr 
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      key={user.id} 
+                      className="hover:bg-slate-50/30 transition-colors group"
+                    >
+                       <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                             {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 object-contain" />
+                             ) : (
+                                <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg border border-amethyst-light/10 shadow-inner">
+                                   {user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
+                                </div>
+                             )}
+                             <div className="space-y-0.5">
+                                <p className="font-black text-slate-800 tracking-tight">{user.full_name || 'Anonymous User'}</p>
+                                <p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p>
+                             </div>
+                          </div>
+                       </td>
+                       <td className="px-8 py-6">
+                          <span className={getRoleStyle(user.role)}>{user.role}</span>
+                       </td>
+                       <td className="px-8 py-6">
+                          <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all ${
+                             user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : 
+                             user.subscription_tier === 'pro' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'
+                          }`}>
+                             {user.subscription_tier === 'agency' ? <Sparkles size={12} className="animate-pulse" /> : user.subscription_tier === 'pro' ? <Zap size={12} /> : <Clock size={12} />}
+                             <span className="text-[10px] font-black uppercase tracking-widest">
+                                {isUnlimited ? 'Developer Pro' : (user.subscription_tier || 'Free Starter')}
+                             </span>
+                          </div>
+                       </td>
+                       <td className="px-8 py-6">
+                           <div className="flex items-center gap-3">
+                              <div className="space-y-0.5 min-w-[80px]">
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Started</p>
+                                 <p className="text-[10px] font-black text-slate-700">
+                                    {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                 </p>
                               </div>
-                           )}
-                           <div className="space-y-0.5">
-                              <p className="font-black text-slate-800 tracking-tight">{user.full_name || 'Anonymous User'}</p>
-                              <p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p>
+                              <div className="w-4 h-px bg-slate-200" />
+                              <div className="space-y-0.5 min-w-[80px]">
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expires</p>
+                                 <button 
+                                   onClick={() => {
+                                      setEditingUser(user);
+                                      setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
+                                   }}
+                                   className={`text-[10px] font-black text-left hover:text-amethyst-primary transition-all flex items-center gap-1 group ${isExpired ? 'text-rose-500' : 'text-slate-700'}`}
+                                 >
+                                    {expiryStr}
+                                    <Calendar size={10} className="opacity-0 group-hover:opacity-100 transition-all text-amethyst-primary" />
+                                 </button>
+                              </div>
                            </div>
-                        </div>
-                     </td>
-                     <td className="px-8 py-6">
-                        <span className={getRoleStyle(user.role)}>{user.role}</span>
-                     </td>
-                     <td className="px-8 py-6">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500">
-                           <CheckCircle2 size={14} />
-                           Verified
-                        </div>
-                     </td>
-                     <td className="px-8 py-6">
-                        <div className="flex items-center gap-2">
-                           <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active</span>
-                        </div>
-                     </td>
-                     <td className="px-8 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                           <button className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100">
-                              <Edit3 size={14} />
-                           </button>
-                           <button className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent">
-                              <Trash2 size={14} />
-                           </button>
-                        </div>
-                     </td>
-                  </motion.tr>
-               ))}
+                       </td>
+                       <td className="px-8 py-6">
+                          {isUnlimited ? (
+                            <div className="flex items-center gap-2 text-amethyst-primary">
+                               <ShieldCheck size={14} className="opacity-60" />
+                               <div className="space-y-0.5">
+                                  <p className="text-[10px] font-black uppercase tracking-widest leading-none">Internal Account</p>
+                                  <p className="text-[8px] font-bold text-slate-300 italic">No constraints</p>
+                               </div>
+                            </div>
+                          ) : expiryDate ? (
+                            <div className="space-y-2 min-w-[140px]">
+                               <div className="flex items-center justify-between">
+                                  <span className={`text-[9px] font-black uppercase tracking-widest ${
+                                    isExpired ? 'text-rose-500' : isNearExpiry ? 'text-amber-500' : 'text-emerald-500'
+                                  }`}>
+                                     {isExpired ? 'Expired' : isNearExpiry ? `${diffDays} days critical` : `${diffDays} days active`}
+                                  </span>
+                                  <span className="text-[9px] font-black text-slate-300">
+                                     {isExpired ? '0%' : `${Math.min(100, Math.ceil((diffDays / 30) * 100))}%`}
+                                  </span>
+                               </div>
+                               <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: isExpired ? '100%' : `${Math.min(100, (diffDays / 30) * 100)}%` }}
+                                    className={`h-full ${isExpired ? 'bg-rose-500' : isNearExpiry ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                  />
+                               </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-slate-300 italic opacity-50">
+                               <AlertCircle size={12} />
+                               <span className="text-[10px] font-bold">Pending Setup</span>
+                            </div>
+                          )}
+                       </td>
+                       <td className="px-8 py-6 text-right">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                             <button className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100">
+                                <Edit3 size={14} />
+                             </button>
+                             <button className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent">
+                                <Trash2 size={14} />
+                             </button>
+                          </div>
+                       </td>
+                    </motion.tr>
+                  );
+               })}
             </tbody>
          </table>
 
