@@ -4,7 +4,11 @@ import React from 'react';
 import { Target, ShieldCheck, ChevronRight, Zap, BookOpen, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const AruneekaIntelligence = () => {
+interface AruneekaIntelligenceProps {
+  selectedWorkspaceId?: string;
+}
+
+const AruneekaIntelligence = ({ selectedWorkspaceId }: AruneekaIntelligenceProps) => {
   const workflow = [
     { step: '01', title: 'Deep Context & Hook Ideation', desc: 'Synthesizing viral trends with brand-specific intellectual property.' },
     { step: '02', title: 'High-Retention Scripting', desc: 'Crafting narratives designed for 90%+ mid-roll retention.' },
