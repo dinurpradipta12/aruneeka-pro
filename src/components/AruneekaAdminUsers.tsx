@@ -21,6 +21,19 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
+interface AppUser {
+  id: string;
+  full_name: string;
+  username: string;
+  role: string;
+  status: string;
+  avatar_url?: string;
+  created_at: string;
+  subscription_expiry?: string;
+  subscription_tier?: string;
+  is_verified?: boolean;
+}
+
 interface AruneekaAdminUsersProps {
   subscriptionTier?: string;
 }
