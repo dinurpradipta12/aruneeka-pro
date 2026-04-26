@@ -16,7 +16,10 @@ import {
   AlertCircle,
   Settings,
   Lock,
-  Clock
+  Clock,
+  Building2,
+  Check,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -44,6 +47,9 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
   const [isSaving, setIsSaving] = useState(false);
 
   const [regMember, setRegMember] = useState({ full_name: '', username: '', password: '', role: 'Member' as const });
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
+  const [memberAccess, setMemberAccess] = useState<string[]>([]); // Array of workspace IDs
   
   const [popup, setPopup] = useState<{
     isOpen: boolean,
@@ -189,6 +195,110 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
       } catch (e) { console.error(e); }
     }, 'danger');
   };
+  
+  const handleOpenAccessControl = async (member: any) => {
+    setEditingMember(member);
+    setIsLoading(true);
+    try {
+      // Get current admin username from context or localStorage fallback
+      let adminUsername = user?.username;
+      
+      if (!adminUsername) {
+        const storedUser = localStorage.getItem('aruneeka_user');
+        if (storedUser) {
+          adminUsername = JSON.parse(storedUser).username;
+        }
+      }
+
+      // 1. Find all workspaces where the ADMIN (me) has access
+      const { data: adminRecords } = await supabase
+        .from('v2_agency_users')
+        .select('workspace_id')
+        .eq('username', adminUsername);
+      
+      const adminWsIds = (adminRecords?.map(r => r.workspace_id) || []).filter(id => id);
+
+      // 2. Fetch those workspaces
+      let wsData: any[] = [];
+      if (adminWsIds.length > 0) {
+        const { data } = await supabase
+          .from('v2_agency_workspaces')
+          .select('*')
+          .in('id', adminWsIds)
+          .order('name');
+        if (data) wsData = data;
+      }
+      
+      // 3. Find all workspaces where THIS MEMBER is already registered
+      const { data: accessData } = await supabase
+        .from('v2_agency_users')
+        .select('workspace_id')
+        .eq('username', member.username);
+      
+      if (wsData) setAllWorkspaces(wsData);
+      if (accessData) setMemberAccess(accessData.map(a => a.workspace_id));
+      
+      setIsAccessModalOpen(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleAccess = async (workspaceId: string) => {
+    if (!editingMember) return;
+    const isAdding = !memberAccess.includes(workspaceId);
+    
+    try {
+      if (isAdding) {
+        // 1. Create user record in that workspace
+        const { data: newUser, error: userError } = await supabase
+          .from('v2_agency_users')
+          .insert([{
+            full_name: editingMember.full_name,
+            username: editingMember.username,
+            password: editingMember.password, // Sync password
+            role: editingMember.role,
+            status: 'Active',
+            workspace_id: workspaceId,
+            avatar_url: editingMember.avatar_url,
+            theme_color: editingMember.theme_color
+          }])
+          .select()
+          .single();
+        
+        if (userError) throw userError;
+
+        // 2. Add to membership table
+        await supabase.from('v2_agency_workspace_members').insert([{
+          user_id: newUser.id,
+          workspace_id: workspaceId,
+          role: editingMember.role
+        }]);
+
+        setMemberAccess(prev => [...prev, workspaceId]);
+      } else {
+        // Prevent removing access from current workspace if desired, 
+        // but here we just follow the command. 
+        if (workspaceId === selectedWorkspaceId) {
+          alert("Tidak bisa menghapus akses dari brand yang sedang aktif.");
+          return;
+        }
+
+        // Remove from that workspace
+        await supabase
+          .from('v2_agency_users')
+          .delete()
+          .eq('username', editingMember.username)
+          .eq('workspace_id', workspaceId);
+        
+        setMemberAccess(prev => prev.filter(id => id !== workspaceId));
+      }
+    } catch (e: any) {
+      alert("Gagal update akses: " + e.message);
+    }
+  };
 
   const filteredMembers = members.filter(m => m.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || m.username?.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -201,7 +311,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     }
   };
 
-  const { subscriptionTier, openUpgrade } = useWorkspace();
+  const { subscriptionTier, openUpgrade, user } = useWorkspace();
   const isLimitReached = subscriptionTier === 'free' && members.length >= 2;
 
   return (
@@ -276,9 +386,14 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
                   <span className="text-xs font-semibold text-slate-500 truncate">@{member.username}</span>
               </div>
             </div>
-            <button onClick={() => handleOpenEdit(member)} className="w-full mt-6 py-3 rounded-xl border border-slate-100 text-[10px] font-bold text-amethyst-dark hover:bg-slate-50 transition-all">
-               Role Settings
-            </button>
+            <div className="flex gap-2">
+               <button onClick={() => handleOpenEdit(member)} className="flex-1 mt-6 py-3 rounded-xl border border-slate-100 text-[10px] font-bold text-amethyst-dark hover:bg-slate-50 transition-all">
+                  Role Settings
+               </button>
+               <button onClick={() => handleOpenAccessControl(member)} className="flex-1 mt-6 py-3 rounded-xl border border-amethyst-light/30 bg-amethyst-light/5 text-[10px] font-bold text-amethyst-primary hover:bg-amethyst-light/20 transition-all flex items-center justify-center gap-2">
+                  <Building2 size={12}/> Access Brand
+               </button>
+            </div>
           </motion.div>
         ))}
       </div>
@@ -365,6 +480,67 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
                   </div>
                </div>
             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* BRAND ACCESS MODAL */}
+      <AnimatePresence>
+        {isAccessModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl">
+             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl p-10 space-y-8 border border-white/20 flex flex-col max-h-[80vh] relative">
+                <button 
+                  onClick={() => setIsAccessModalOpen(false)}
+                  className="absolute top-8 right-8 w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all z-10"
+                >
+                  <XCircle size={24} />
+                </button>
+
+                <div className="flex items-center gap-4">
+                   <div className="w-16 h-16 bg-amethyst-primary text-white rounded-[20px] flex items-center justify-center">
+                      <Building2 size={32} />
+                   </div>
+                   <div>
+                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">Brand Access Control</h3>
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Assign {editingMember?.full_name} to brands</p>
+                   </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                   {allWorkspaces.map(ws => {
+                      const hasAccess = memberAccess.includes(ws.id);
+                      return (
+                         <div key={ws.id} className={`flex items-center justify-between p-5 rounded-2xl border transition-all ${hasAccess ? 'bg-amethyst-light/5 border-amethyst-primary/20' : 'bg-slate-50/50 border-slate-100'}`}>
+                            <div className="flex items-center gap-4">
+                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasAccess ? 'bg-amethyst-primary text-white' : 'bg-slate-100 text-slate-300'}`}>
+                                  <Building2 size={18} />
+                               </div>
+                               <div>
+                                  <h4 className="text-sm font-black text-slate-700 leading-none">{ws.name}</h4>
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">{ws.category || 'Production'}</span>
+                               </div>
+                            </div>
+                            <button 
+                               onClick={() => handleToggleAccess(ws.id)}
+                               className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                                  hasAccess 
+                                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                                  : 'bg-white text-slate-300 border border-slate-100 hover:border-amethyst-primary hover:text-amethyst-primary'
+                               }`}
+                            >
+                               {hasAccess ? <Check size={20} /> : <Plus size={20} />}
+                            </button>
+                         </div>
+                      );
+                   })}
+                </div>
+
+                <div className="pt-4 border-t border-slate-50">
+                   <button onClick={() => setIsAccessModalOpen(false)} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black transition-all">
+                      Done & Apply
+                   </button>
+                </div>
+             </motion.div>
           </div>
         )}
       </AnimatePresence>

@@ -39,7 +39,16 @@ export const AruneekaWorkspaceSelector = ({
     try {
       setLoading(true);
       
-      // 1. Fetch workspaces where user is a member
+      // 1. Find all user records with the same username
+      const { data: userRecords } = await supabase
+        .from('v2_agency_users')
+        .select('id')
+        .eq('username', currentUser.username);
+        
+      if (!userRecords) return;
+      const userIds = userRecords.map(u => u.id);
+
+      // 2. Fetch workspaces where any of these IDs is a member
       const { data: membershipData, error: memError } = await supabase
         .from('v2_agency_workspace_members')
         .select(`
@@ -49,7 +58,7 @@ export const AruneekaWorkspaceSelector = ({
             v2_agency_workspace_members (count)
           )
         `)
-        .eq('user_id', currentUser.id);
+        .in('user_id', userIds);
 
       if (memError) throw memError;
 

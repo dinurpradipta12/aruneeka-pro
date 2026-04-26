@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspace } from './AruneekaShell';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
+import AruneekaConfirmModal from './AruneekaConfirmModal';
 
 const platforms = [
   { id: 'all', label: 'All Platforms' },
@@ -109,8 +110,8 @@ const AruneekaContentPlan = ({
   const [lockedFeature, setLockedFeature] = useState({ title: '', desc: '', icon: <Kanban/> });
   const [filter, setFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ 
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0], 
-    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0] 
+    start: `${new Date().getFullYear()}-01-01`, 
+    end: `${new Date().getFullYear()}-12-31` 
   });
   const [isRangeOpen, setIsRangeOpen] = useState(false);
 
@@ -120,6 +121,9 @@ const AruneekaContentPlan = ({
   const [statusDropPos, setStatusDropPos] = useState<{ top: number; left: number } | null>(null);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'danger' | 'info' }>({ 
+    isOpen: false, title: '', message: '', type: 'info' 
+  });
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const openPlan = plans.find(p => p.id === openStatusId);
 
@@ -188,7 +192,12 @@ const AruneekaContentPlan = ({
         const rowsToImport = data.slice(3).filter(row => row[0] && row[0].trim());
         
         if (rowsToImport.length === 0) {
-          alert('Tidak ada data yang ditemukan di template CSV.');
+          setFeedbackModal({
+            isOpen: true,
+            title: 'File Kosong',
+            message: 'Tidak ada data yang ditemukan di template CSV yang Anda unggah.',
+            type: 'info'
+          });
           setIsImporting(false);
           return;
         }
@@ -199,7 +208,12 @@ const AruneekaContentPlan = ({
         const workspaceId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_selected_workspace') || '{}').id : null;
 
         if (!workspaceId) {
-          alert('Pilih workspace terlebih dahulu.');
+          setFeedbackModal({
+            isOpen: true,
+            title: 'Akses Ditolak',
+            message: 'Pilih workspace terlebih dahulu sebelum melakukan import.',
+            type: 'danger'
+          });
           setIsImporting(false);
           return;
         }
@@ -207,6 +221,7 @@ const AruneekaContentPlan = ({
         const payloads = rowsToImport.map(row => ({
           workspace_id: workspaceId,
           user_id: user?.id,
+          target_account: selectedProfileId || null, // Auto-assign to selected social profile
           author_name: row[4] || user?.full_name || 'Owner',
           title: row[0],
           content_pillar: row[1],
@@ -223,11 +238,20 @@ const AruneekaContentPlan = ({
         try {
           const { error } = await supabase.from('v2_agency_content_plans').insert(payloads);
           if (error) throw error;
-          alert(`Berhasil mengimpor ${payloads.length} konten plan!`);
-          window.location.reload();
+          setFeedbackModal({
+            isOpen: true,
+            title: 'Import Berhasil!',
+            message: `Berhasil mengimpor ${payloads.length} konten plan ke dalam workspace Anda.`,
+            type: 'success'
+          });
         } catch (err: any) {
           console.error(err);
-          alert('Gagal mengimpor data: ' + err.message);
+          setFeedbackModal({
+            isOpen: true,
+            title: 'Import Gagal',
+            message: 'Terjadi kesalahan: ' + err.message,
+            type: 'danger'
+          });
         } finally {
           setIsImporting(false);
           setIsMoreOpen(false);
@@ -235,7 +259,12 @@ const AruneekaContentPlan = ({
       },
       error: (err) => {
         console.error(err);
-        alert('Gagal membaca file CSV: ' + err.message);
+        setFeedbackModal({
+          isOpen: true,
+          title: 'Format Error',
+          message: 'Gagal membaca file CSV: ' + err.message,
+          type: 'danger'
+        });
         setIsImporting(false);
       }
     });
@@ -998,6 +1027,25 @@ const AruneekaContentPlan = ({
           </div>
         )}
       </AnimatePresence>
+
+      <AruneekaConfirmModal
+        isOpen={feedbackModal.isOpen}
+        onClose={() => {
+          const shouldReload = feedbackModal.type === 'success';
+          setFeedbackModal(prev => ({ ...prev, isOpen: false }));
+          if (shouldReload) window.location.reload();
+        }}
+        onConfirm={() => {
+          const shouldReload = feedbackModal.type === 'success';
+          setFeedbackModal(prev => ({ ...prev, isOpen: false }));
+          if (shouldReload) window.location.reload();
+        }}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        type={feedbackModal.type}
+        confirmText="Tutup"
+        cancelText="Refresh"
+      />
     </div>
   );
 };

@@ -13,10 +13,11 @@ const AruneekaUpdateDetector = () => {
     const fetchInitialVersion = async () => {
       try {
         const res = await fetch('/version.json?t=' + Date.now());
+        if (!res.ok) return;
         const data = await res.json();
         setCurrentVersion(data.version);
       } catch (e) {
-        console.error("UpdateDetector: Failed to fetch initial version", e);
+        // Silent error for development or first run
       }
     };
 

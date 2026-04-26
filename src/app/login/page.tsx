@@ -156,16 +156,18 @@ const LoginPage = () => {
     setError(null);
 
     try {
-      const { data, error: dbError } = await supabase
+      const { data: userRecords, error: dbError } = await supabase
         .from('v2_agency_users')
         .select('*')
         .eq('username', username.toLowerCase())
-        .eq('password', password)
-        .single();
+        .eq('password', password);
 
-      if (dbError || !data) {
+      if (dbError || !userRecords || userRecords.length === 0) {
         throw new Error('Kredensial tidak valid.');
       }
+
+      // Pick the first record as the primary identity (for avatar/full_name)
+      const data = userRecords[0];
 
       if (!data.avatar_url) {
          setLoggedInUser(data);
