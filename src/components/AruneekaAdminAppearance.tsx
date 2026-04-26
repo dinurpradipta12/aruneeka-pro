@@ -151,7 +151,7 @@ const AruneekaAdminAppearance = () => {
 
   const { user } = useWorkspace();
 
-  if (user?.role !== 'developer') {
+  if (!['developer', 'Superuser'].includes(user?.role || '')) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
         <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
@@ -160,7 +160,7 @@ const AruneekaAdminAppearance = () => {
         <div className="space-y-2">
           <h3 className="text-2xl font-black text-slate-800 tracking-tight">Access Restricted</h3>
           <p className="text-xs text-slate-400 font-medium max-w-sm mx-auto leading-relaxed">
-            Halaman System Styling bersifat global dan sangat sensitif. Hanya akun dengan role <span className="text-amethyst-primary font-bold">developer</span> yang diizinkan melakukan konfigurasi branding utama.
+            Halaman System Styling bersifat global dan sangat sensitif. Hanya akun dengan role <span className="text-amethyst-primary font-bold">developer</span> atau <span className="text-amethyst-primary font-bold">Superuser</span> yang diizinkan melakukan konfigurasi branding utama.
           </p>
         </div>
       </div>

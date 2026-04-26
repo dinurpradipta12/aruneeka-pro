@@ -505,7 +505,7 @@ export const AruneekaWorkspaceSelector = ({
                 )}
               </Link>
 
-              {currentUser?.role === 'developer' && (
+              {['developer', 'Superuser'].includes(currentUser?.role) && (
                   <Link prefetch={false} href="/admin/appearance" className="group flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-rose-500/30 transition-all duration-300">
