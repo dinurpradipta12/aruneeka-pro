@@ -2,7 +2,3 @@ name = "aruneeka-pro"
 compatibility_date = "2024-04-03"
 compatibility_flags = [ "nodejs_compat" ]
 pages_build_output_dir = ".vercel/output/static"
-
-[vars]
-NEXT_PUBLIC_SUPABASE_URL = "https://nqvcswuddpashhnytjmk.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xdmNzd3VkZHBhc2hobnl0am1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMDc3ODIsImV4cCI6MjA5MjU4Mzc4Mn0.14MUi4rou94AkQ9xvqLEgz3UaGG63X3Al1LKvqs5BBo"
