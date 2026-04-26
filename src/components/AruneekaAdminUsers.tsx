@@ -256,6 +256,22 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     }
   };
 
+  if (currentUser?.role !== 'Superuser' && currentUser?.role !== 'developer') {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
+        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
+          <ShieldCheck size={32} />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">Access Restricted</h3>
+          <p className="text-xs text-slate-400 font-medium max-w-sm mx-auto leading-relaxed">
+            Halaman User Management bersifat global dan sangat sensitif. Hanya akun dengan kasta <span className="text-amethyst-primary font-bold">developer</span> yang diizinkan melakukan verifikasi populasi user.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-20">
       {/* Header & Stats */}

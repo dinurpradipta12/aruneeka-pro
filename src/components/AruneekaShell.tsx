@@ -687,8 +687,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                       <div className="flex items-center gap-1">
                          {adminItems.map((item) => {
                             const isUserAdmin = item.href === '/admin/users';
-                            const count = isUserAdmin ? pendingUsersCount : pendingInboxCount;
+                            const isStyling = item.href === '/admin/appearance';
+                            const count = isUserAdmin ? pendingUsersCount : (isStyling ? 0 : pendingInboxCount);
                             
+                            // Specific restriction: System Styling ONLY for developer
+                            if (isStyling && user?.role !== 'developer') return null;
+
                             return (
                                <Link key={item.href} href={item.href} className={`relative px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:bg-white hover:text-amethyst-primary shadow-sm'}`}>
                                   {item.icon} 
