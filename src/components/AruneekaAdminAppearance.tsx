@@ -17,7 +17,6 @@ import { supabase } from '@/lib/supabase';
 import { useWorkspace } from './AruneekaShell';
 
 const AruneekaAdminAppearance = () => {
-  const { selectedWorkspaceId } = useWorkspace();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -36,16 +35,12 @@ const AruneekaAdminAppearance = () => {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      const workspaceId = selectedWorkspaceId;
-      if (!workspaceId) {
-        setIsLoading(false);
-        return;
-      }
-
+      // Global Fetch: Get the latest system branding
       const { data, error } = await supabase
         .from('v2_agency_settings')
         .select('*')
-        .eq('id', workspaceId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (error) console.error("Fetch Settings Error:", error);
@@ -66,8 +61,8 @@ const AruneekaAdminAppearance = () => {
   };
 
   useEffect(() => {
-    if (selectedWorkspaceId) fetchSettings();
-  }, [selectedWorkspaceId]);
+    fetchSettings();
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -114,21 +109,23 @@ const AruneekaAdminAppearance = () => {
 
   const handleSave = async () => {
     setMessage(null);
-    const workspaceId = selectedWorkspaceId || JSON.parse(localStorage.getItem('aruneeka_selected_workspace') || '{}').id;
-    
-    if (!workspaceId) {
-      alert("Akses ditolak: Sistem tidak bisa mengidentifikasi Brand aktif. Silakan pilih brand ulang di header.");
-      return;
-    }
-
     setIsSaving(true);
-    console.log("Attempting to save branding for workspace:", workspaceId, config);
+    
     try {
+      // Global Save: Target existing record or create default
+      const { data: existing } = await supabase
+        .from('v2_agency_settings')
+        .select('id')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const targetId = existing?.id || '00000000-0000-0000-0000-000000000000';
 
       const { error } = await supabase
         .from('v2_agency_settings')
         .upsert({
-          id: workspaceId,
+          id: targetId,
           ...config,
           updated_at: new Date().toISOString()
         });
@@ -139,6 +136,9 @@ const AruneekaAdminAppearance = () => {
       }
       
       setShowSuccess(true);
+      // Force refresh on next login for everyone by updating local cache
+      localStorage.setItem('aruneeka_branding', JSON.stringify(config));
+      
       setTimeout(() => {
         setMessage(null);
       }, 5000);
