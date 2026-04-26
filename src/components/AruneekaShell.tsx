@@ -27,7 +27,8 @@ import {
    Eye,
    EyeOff,
    ArrowLeft,
-   Terminal
+   Terminal,
+   Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -172,6 +173,9 @@ interface WorkspaceContextType {
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextType>({
+  selectedWorkspaceId: undefined,
+  selectedWorkspace: null,
+  setSelectedWorkspace: () => {},
   subscriptionTier: 'free',
   openUpgrade: () => {},
   user: null

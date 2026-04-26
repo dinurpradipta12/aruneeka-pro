@@ -250,7 +250,7 @@ export const AruneekaWorkspaceSelector = ({
                 
                 {/* Floating Category Icon (Popping Outside) */}
                 <div className={`absolute -top-14 -right-14 w-20 h-20 rounded-[28px] bg-gradient-to-br ${getCategoryColor(ws.category || '')} text-white flex items-center justify-center shadow-2xl shadow-black/10 group-hover:scale-110 group-hover:-translate-y-2 group-hover:translate-x-2 transition-all duration-500 z-30 border-4 border-white`}>
-                   {React.cloneElement(getCategoryIcon(ws.category || '') as React.ReactElement, { size: 28 })}
+                   {React.cloneElement(getCategoryIcon(ws.category || '') as any, { size: 28 })}
                 </div>
               </div>
 

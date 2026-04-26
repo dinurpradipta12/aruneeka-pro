@@ -249,7 +249,7 @@ const AruneekaAnalytics = ({
         icon: <Layout size={16} className="text-emerald-500"/>, 
         bg: 'bg-emerald-50',
         subValue: `${(metrics.contentUploaded / (dailyMetrics.length || 1)).toFixed(2)} content / hari`
-      },
+      } as any,
       follows: { 
         label: 'New Followers', 
         value: `+${metrics.newFollowers}`, 
@@ -257,7 +257,7 @@ const AruneekaAnalytics = ({
         icon: <Users size={16} className="text-orange-500"/>, 
         bg: 'bg-orange-50', 
         subValue: `${metrics.totalFollowersOverall.toLocaleString()} Total` 
-      },
+      } as any,
       reach: { label: 'Total Reach', value: metrics.totalReach >= 1000 ? `${(metrics.totalReach / 1000).toFixed(1)}K` : metrics.totalReach, trend: '100%', icon: <Activity size={16} className="text-indigo-500"/>, bg: 'bg-indigo-50' },
       reposts: { label: 'Total Reposts', value: metrics.totalReposts.toLocaleString(), trend: '100%', icon: <Share2 size={16} className="text-cyan-500"/>, bg: 'bg-cyan-50' },
       retention: { label: 'Avg Retention', value: `${metrics.avgRetention.toFixed(1)}%`, trend: '100%', icon: <MousePointer2 size={16} className="text-purple-500"/>, bg: 'bg-purple-50' },
@@ -419,7 +419,7 @@ const AruneekaAnalytics = ({
                      <div className={`flex flex-col h-full justify-between transition-all duration-500 ${isLocked ? 'blur-[8px] opacity-30 select-none grayscale' : ''}`}>
                         <div className="flex items-start justify-between mb-4">
                            <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
-                              {React.cloneElement(stat.icon as React.ReactElement, { size: 14 })}
+                              {React.cloneElement(stat.icon as any, { size: 14 })}
                            </div>
                            <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-500">
                               <TrendingUp size={9}/> {stat.trend}
@@ -1003,7 +1003,7 @@ const AruneekaAnalytics = ({
                                 >
                                    <div className="flex items-center gap-3">
                                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                                         link.url ? (link.active ? 'bg-emerald-50 text-emerald-500' : 'bg-amethyst-primary/10 text-amethyst-primary') : 'bg-slate-100 text-slate-300'
+                                         link.url ? 'bg-amethyst-primary/10 text-amethyst-primary' : 'bg-slate-100 text-slate-300'
                                       }`}>
                                          {link.icon}
                                       </div>
