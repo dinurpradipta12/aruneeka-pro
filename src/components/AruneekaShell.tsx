@@ -696,8 +696,10 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                             const isStyling = item.href === '/admin/appearance';
                             const count = isUserAdmin ? pendingUsersCount : (isStyling ? 0 : pendingInboxCount);
                             
+                            const isDeveloper = ['developer', 'Superuser'].includes(user?.role) || user?.username === 'arunika';
+                            
                             // Specific restriction: System Styling ONLY for dev/superuser
-                            if (isStyling && !['developer', 'Superuser'].includes(user?.role)) return null;
+                            if (isStyling && !isDeveloper) return null;
 
                             return (
                                <Link key={item.href} href={item.href} className={`relative px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:bg-white hover:text-amethyst-primary shadow-sm'}`}>

@@ -256,7 +256,10 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     }
   };
 
-  if (currentUser?.role !== 'Superuser' && currentUser?.role !== 'developer') {
+  const isDevOrSuper = currentUser?.role === 'developer' || currentUser?.role === 'Superuser';
+  const isMasterAccount = currentUser?.username === 'arunika';
+
+  if (!isDevOrSuper && !isMasterAccount) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
         <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">

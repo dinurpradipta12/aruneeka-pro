@@ -151,7 +151,10 @@ const AruneekaAdminAppearance = () => {
 
   const { user } = useWorkspace();
 
-  if (!['developer', 'Superuser'].includes(user?.role || '')) {
+  const isDevOrSuper = ['developer', 'Superuser'].includes(user?.role || '');
+  const isMasterAccount = user?.username === 'arunika';
+
+  if (!isDevOrSuper && !isMasterAccount) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
         <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
