@@ -152,8 +152,8 @@ MotivationBubble.displayName = 'MotivationBubble';
 
 const navItems = [
    { label: 'Performance Dashboard', icon: <TrendingUp size={16} />, href: '/analytics' },
-   { label: 'KPI Section', icon: <Target size={16} />, href: '/strategy' },
    { label: 'Content Plan', icon: <Calendar size={16} />, href: '/content' },
+   { label: 'KPI Section', icon: <Target size={16} />, href: '/strategy' },
    { label: 'Team Squad', icon: <Users size={16} />, href: '/manage' },
 ];
 
@@ -676,7 +676,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                </div>
             </header>
 
-             <div className="px-8 max-w-[1600px] mx-auto mt-4 relative z-20 flex items-center justify-between">
+             <div className="px-8 max-w-[1600px] mx-auto mt-4 relative z-20 flex flex-col md:flex-row items-center justify-center gap-6">
                 <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
                    <div className="flex items-center gap-1">
                       {navItems.map((item) => (

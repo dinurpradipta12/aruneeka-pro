@@ -27,7 +27,10 @@ import {
   MoreVertical,
   Download,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspace } from './AruneekaShell';
@@ -109,7 +112,7 @@ const AruneekaContentPlan = ({
   onViewChange?: (view: any) => void,
   subscriptionTier?: string
 }) => {
-  const { openUpgrade } = useWorkspace();
+  const { openUpgrade, user } = useWorkspace();
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
   const [lockedFeature, setLockedFeature] = useState({ title: '', desc: '', icon: <Kanban/> });
   const [filter, setFilter] = useState('all');
@@ -128,6 +131,7 @@ const AruneekaContentPlan = ({
   const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'danger' | 'info' }>({ 
     isOpen: false, title: '', message: '', type: 'info' 
   });
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const openPlan = plans.find(p => p.id === openStatusId);
 
@@ -178,14 +182,24 @@ const AruneekaContentPlan = ({
       const pDate = new Date(p.due_date).toISOString().split('T')[0];
       dateMatch = pDate >= dateRange.start && pDate <= dateRange.end;
     } else {
-      dateMatch = true; // Jangan sembunyikan konten yang tidak ada due_date-nya
+      dateMatch = true; 
     }
 
-    // Account filter (from Shell)
-    // Tampilkan jika cocok dengan profil aktif ATAU jika target_account-nya kosong (belum di-assign)
+    // Account filter
     const accountMatch = !selectedProfileId || p.target_account === selectedProfileId || !p.target_account;
 
     return platformMatch && dateMatch && accountMatch;
+  });
+
+  const sortedPlans = [...filteredPlans].sort((a, b) => {
+    if (!a.due_date && !b.due_date) return 0;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    
+    const dateA = new Date(a.due_date).getTime();
+    const dateB = new Date(b.due_date).getTime();
+    
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
   });
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,6 +273,13 @@ const AruneekaContentPlan = ({
             type: 'success'
           });
           if (onRefresh) onRefresh();
+
+          // Increment usage for free users
+          const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+          if (subscriptionTier === 'free' && !isPowerUser) {
+             const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
+             localStorage.setItem(`usage_import_${user?.id}`, (count + 1).toString());
+          }
         } catch (err: any) {
           console.error(err);
           setFeedbackModal({
@@ -461,7 +482,25 @@ const AruneekaContentPlan = ({
                               </div>
                               
                               <button 
-                                 onClick={() => !isImporting && fileInputRef.current?.click()}
+                                 onClick={() => {
+                                    if (isImporting) return;
+                                    
+                                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                                    if (subscriptionTier === 'free' && !isPowerUser) {
+                                       const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
+                                       if (count >= 1) {
+                                          setLockedFeature({ 
+                                            title: 'Import Limit Reached', 
+                                            desc: 'Anda telah mencapai batas 1x import untuk paket Free. Silakan upgrade ke Pro untuk akses tanpa batas.',
+                                            icon: <Upload size={32} />
+                                          });
+                                          setIsLockModalOpen(true);
+                                          setIsMoreOpen(false);
+                                          return;
+                                       }
+                                    }
+                                    fileInputRef.current?.click();
+                                 }}
                                  disabled={isImporting}
                                  className={`w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                               >
@@ -490,7 +529,25 @@ const AruneekaContentPlan = ({
                               </a>
 
                               <button 
-                                 onClick={handleExportCSV}
+                                 onClick={() => {
+                                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                                    if (subscriptionTier === 'free' && !isPowerUser) {
+                                       const count = parseInt(localStorage.getItem(`usage_export_${user?.id}`) || '0');
+                                       if (count >= 1) {
+                                          setLockedFeature({ 
+                                            title: 'Export Limit Reached', 
+                                            desc: 'Batas export 1x untuk paket Free telah tercapai. Nikmati export sepuasnya di paket Pro!',
+                                            icon: <FileSpreadsheet size={32} />
+                                          });
+                                          setIsLockModalOpen(true);
+                                          setIsMoreOpen(false);
+                                          return;
+                                       }
+                                       // Only increment IF we allow the export
+                                       localStorage.setItem(`usage_export_${user?.id}`, (count + 1).toString());
+                                    }
+                                    handleExportCSV();
+                                 }}
                                  className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
                               >
                                  <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -552,14 +609,24 @@ const AruneekaContentPlan = ({
                       <th className="text-left pb-6 px-4">Platform</th>
                       <th className="text-left pb-6 px-4">Phase</th>
                       <th className="text-left pb-6 px-4">Pic</th>
-                      <th className="text-left pb-6 px-4">Due Date</th>
+                      <th 
+                          className="text-left pb-6 px-4 cursor-pointer hover:text-amethyst-primary transition-colors group/sort"
+                          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                       >
+                          <div className="flex items-center gap-1.5">
+                             Due Date
+                             <span className="text-amethyst-primary/30 group-hover/sort:text-amethyst-primary transition-colors">
+                                {sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>}
+                             </span>
+                          </div>
+                       </th>
                       <th className="text-left pb-6 px-4">Assets</th>
                       <th className="text-left pb-6 px-4">Live Link</th>
                       <th className="text-right pb-6 px-4">Action</th>
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                   {filteredPlans.map((plan, i) => (
+                   {sortedPlans.map((plan, i) => (
                      <tr key={i} className={`group hover:bg-amethyst-light/10 transition-all cursor-pointer ${plan.status?.toLowerCase() === 'uploaded' ? 'opacity-60 hover:opacity-100' : ''}`} onClick={() => onSelectContent(plan)}>
                         <td className="py-8 px-4">
                            <div className="space-y-1">
@@ -733,23 +800,23 @@ const AruneekaContentPlan = ({
                         </td>
                         <td className="py-8 px-4 text-right">
                            <div className="flex items-center justify-end gap-1 text-slate-200">
-                              {plan.status.toLowerCase() === 'uploaded' && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); onInsight(plan); }}
-                                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${
-                                    plan.metrics_updated 
-                                    ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' 
-                                    : 'bg-[#9333EA] text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] hover:scale-105 active:scale-95'
-                                  }`}
-                                  title={plan.metrics_updated ? 'View Insights' : 'Input Metrics Insight'}
-                                >
-                                  <TrendingUp size={12}/> {plan.metrics_updated ? 'Insights' : 'Add Metrics'}
-                                  {/* Metrics Status Indicator */}
-                                  {!plan.metrics_updated && (
-                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-white animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"/>
-                                  )}
-                                </button>
-                              )}
+                               {plan.status.toLowerCase() === 'uploaded' && (
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); onInsight(plan); }}
+                                   className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${
+                                     plan.metrics_updated 
+                                     ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' 
+                                     : 'bg-[#9333EA] text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] hover:scale-105 active:scale-95'
+                                   }`}
+                                   title={plan.metrics_updated ? 'View Insights' : 'Input Metrics Insight'}
+                                 >
+                                   <TrendingUp size={12}/> {plan.metrics_updated ? 'Insights' : 'Add Metrics'}
+                                   {/* Metrics Status Indicator */}
+                                   {!plan.metrics_updated && (
+                                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-white animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"/>
+                                   )}
+                                 </button>
+                               )}
                               <button 
                                 onClick={(e) => { e.stopPropagation(); onEdit(plan); }}
                                 className="p-2 hover:text-amethyst-dark transition-colors text-amethyst-primary/60"
