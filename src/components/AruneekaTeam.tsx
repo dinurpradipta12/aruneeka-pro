@@ -289,7 +289,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
         {filteredMembers.map((member, i) => (
           <motion.div 
             layout 
@@ -297,51 +297,46 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             key={member.id} 
-            className="bg-white rounded-[40px] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 relative group hover:shadow-2xl hover:shadow-amethyst-primary/10 transition-all flex flex-col justify-between min-h-[280px]"
+            className="bg-white rounded-[44px] p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.03)] border border-slate-50/50 relative group hover:shadow-[0_30px_70px_-10px_rgba(145,109,213,0.15)] transition-all flex flex-col items-center text-center gap-6"
           >
-            <div className={`absolute top-0 left-0 w-full h-1 ${member.role === 'Admin' || member.role === 'Owner' ? 'bg-amethyst-primary' : 'bg-blue-400'}`} />
-            
-            <div className="space-y-6">
-              <div className="flex items-start justify-between">
-                <div className="w-20 h-20 flex items-center justify-center relative">
-                   {member.avatar_url ? (
-                     <img src={member.avatar_url} className="w-full h-full object-contain" />
-                   ) : (
-                     <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-xl font-black text-amethyst-dark">
-                        {member.full_name?.charAt(0) || 'U'}
-                     </div>
-                   )}
-                   <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white bg-emerald-500 shadow-sm" />
-                </div>
-                
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => handleOpenEdit(member)} className="p-2 text-slate-300 hover:text-amethyst-primary hover:bg-amethyst-light/10 rounded-xl transition-all">
-                    <Settings size={14} />
-                  </button>
-                  <button onClick={() => handleDeleteMember(member.id, member.full_name)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+            <div className="relative">
+              <div className="w-24 h-24 flex items-center justify-center">
+                 {member.avatar_url ? (
+                   <img src={member.avatar_url} className="w-full h-full object-contain" />
+                 ) : (
+                   <div className="w-20 h-20 rounded-3xl bg-amethyst-light/10 flex items-center justify-center text-2xl font-black text-amethyst-dark">
+                      {member.full_name?.charAt(0) || 'U'}
+                   </div>
+                 )}
               </div>
-
-              <div className="space-y-1">
-                <h4 className="text-xl font-black text-slate-800 tracking-tight">{member.full_name}</h4>
-                <div className="flex items-center gap-2">
-                  <span className="p-1 px-2.5 bg-slate-50 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400 border border-slate-100/50">
-                    {member.displayRole || member.role}
-                  </span>
-                </div>
-              </div>
+              <div className="absolute top-1 right-1 w-5 h-5 rounded-full border-4 border-white bg-emerald-500 shadow-sm" />
             </div>
 
-            <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
-               <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300">
-                    <Mail size={12} />
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-400">@{member.username}</span>
-               </div>
-               <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Active Access</span>
+            <div className="space-y-2">
+              <h4 className="text-xl font-black text-slate-800 tracking-tight leading-none">{member.full_name}</h4>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-amethyst-primary bg-amethyst-light/10 py-1 px-3 rounded-full inline-block">
+                {member.displayRole || member.role}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl w-full justify-center">
+               <Mail size={12} className="text-slate-300" />
+               <span className="text-[11px] font-bold text-slate-400">@{member.username}</span>
+            </div>
+
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
+              <button 
+                onClick={() => handleOpenEdit(member)} 
+                className="w-10 h-10 bg-white border border-slate-100 shadow-sm flex items-center justify-center text-slate-400 hover:text-amethyst-primary hover:border-amethyst-primary/30 rounded-2xl transition-all"
+              >
+                <Settings size={14} />
+              </button>
+              <button 
+                onClick={() => handleDeleteMember(member.id, member.full_name)} 
+                className="w-10 h-10 bg-white border border-slate-100 shadow-sm flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-500/30 rounded-2xl transition-all"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           </motion.div>
         ))}

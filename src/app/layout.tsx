@@ -15,6 +15,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Aruneeka Planner Pro | Editorial Plan System",
   description: "Next-gen editorial planning for content creators",
+  icons: {
+    icon: '/assets/aruneeka.png',
+    apple: '/assets/aruneeka.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Aruneeka Pro",
+  },
 };
 
 import AruneekaUpdateDetector from "@/components/AruneekaUpdateDetector";
