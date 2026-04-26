@@ -27,6 +27,7 @@ interface AppUser {
   username: string;
   role: string;
   status: string;
+  workspace_id?: string;
   avatar_url?: string;
   created_at: string;
   subscription_expiry?: string;
@@ -148,23 +149,49 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     if (!userToDelete) return;
     setIsDeletingUser(true);
     try {
-      // DONT DELETE: Use status 'Disabled' to block access forever
-      // This avoids foreign key constraint errors with workspaces
-      const { error } = await supabase
-        .from('v2_agency_users')
-        .update({ status: 'Disabled' })
-        .eq('id', userToDelete.id);
+      const workspaceId = (userToDelete as any).workspace_id;
+      const isOwner = userToDelete.role === 'Owner';
 
-      if (error) throw error;
-      
-      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      if (isOwner && workspaceId) {
+        // 1. Delete the Workspace first (breaks the FK constraint)
+        const { error: wsError } = await supabase
+          .from('v2_agency_workspaces')
+          .delete()
+          .eq('id', workspaceId);
+
+        if (wsError) throw wsError;
+
+        // 2. Delete all users belonging to this workspace (this also deletes the owner)
+        const { error: usersError } = await supabase
+          .from('v2_agency_users')
+          .delete()
+          .eq('workspace_id', workspaceId);
+
+        if (usersError) throw usersError;
+      } else {
+        // Just delete this specific user (Member/Admin)
+        const { error } = await supabase
+          .from('v2_agency_users')
+          .delete()
+          .eq('id', userToDelete.id);
+
+        if (error) throw error;
+      }
+
+      // Update local state
+      if (isOwner && workspaceId) {
+        setUsers(prev => prev.filter(u => (u as any).workspace_id !== workspaceId));
+      } else {
+        setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      }
+
       setShowDeleteConfirm(false);
       setUserToDelete(null);
       setShowSuccessModal({ show: true, type: 'delete' });
       
       setTimeout(() => setShowSuccessModal({ show: false, type: 'delete' }), 3000);
     } catch (e: any) {
-      alert("Gagal memblokir akses user: " + e.message);
+      alert("Gagal menghapus data: " + e.message);
     } finally {
       setIsDeletingUser(false);
     }
