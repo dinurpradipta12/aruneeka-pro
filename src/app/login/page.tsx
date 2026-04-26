@@ -208,7 +208,7 @@ const LoginPage = () => {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="w-full max-w-6xl min-h-[700px] bg-white/90 backdrop-blur-md rounded-[48px] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.3)] border border-white/20 overflow-hidden flex flex-col md:flex-row relative z-10 my-10"
+        className="w-full max-w-6xl min-h-[600px] bg-white/90 backdrop-blur-md rounded-[48px] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.3)] border border-white/20 overflow-hidden flex flex-col md:flex-row relative z-10 my-10"
       >
         
         {/* LEFT COLUMN: VISUAL HERO (FLAT AMETHYST) */}
@@ -236,11 +236,11 @@ const LoginPage = () => {
         </div>
 
         {/* RIGHT COLUMN: LOGIN FORM */}
-        <div className="flex-1 bg-white py-20 px-12 md:py-32 md:px-20 flex flex-col justify-center relative">
-          <div className="max-w-md mx-auto w-full space-y-16">
+        <div className="flex-1 bg-white py-12 px-12 md:py-20 md:px-20 flex flex-col justify-center relative">
+          <div className="max-w-md mx-auto w-full space-y-10">
             
             <div className="space-y-6">
-              <div className="flex flex-col items-center gap-6 mb-16">
+              <div className="flex flex-col items-center gap-6 mb-10">
                  <img src="/assets/aruneeka.png" alt="Aruneeka Logo" className="h-16 w-auto object-contain" />
                  <div className="text-center space-y-2">
                     <h2 className="text-3xl font-black text-slate-800 tracking-tight">Hallo, Welcome Back!</h2>
