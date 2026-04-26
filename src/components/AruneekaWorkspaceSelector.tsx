@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock, UserPlus } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock, UserPlus, Share2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import AruneekaUpgradeModal from './AruneekaUpgradeModal';
@@ -35,6 +35,9 @@ export const AruneekaWorkspaceSelector = ({
   const [isInviting, setIsInviting] = useState(false);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [showInviteSuccess, setShowInviteSuccess] = useState(false);
+  const [lastInvitedUser, setLastInvitedUser] = useState<any>(null);
+  const [userDeleting, setUserDeleting] = useState<any>(null);
 
   const categories = ['F&B', 'Fashion', 'Beauty', 'Tech', 'Service', 'Education', 'Personal Branding', 'Other'];
   const [isCustomCategory, setIsCustomCategory] = useState(false);
@@ -245,15 +248,30 @@ export const AruneekaWorkspaceSelector = ({
         await supabase.from('v2_agency_workspace_members').insert(memberships);
       }
 
-      alert("Personel berhasil diundang ke semua brand Anda!");
+      setLastInvitedUser({
+        fullName: inviteForm.fullName,
+        username: inviteForm.username,
+        password: inviteForm.password
+      });
       setIsInviteOpen(false);
       setInviteForm({ fullName: '', username: '', password: '' });
+      setShowInviteSuccess(true);
       fetchWorkspaces();
     } catch (e: any) {
       alert("Gagal mengundang: " + e.message);
     } finally {
       setIsInviting(false);
     }
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userDeleting) return;
+    try {
+      const { error } = await supabase.from('v2_agency_users').delete().eq('id', userDeleting.id);
+      if (error) throw error;
+      setUserDeleting(null);
+      fetchWorkspaces();
+    } catch (e: any) { alert("Gagal menghapus: " + e.message); }
   };
 
   const handleUpdateWorkspace = async () => {
@@ -781,7 +799,15 @@ export const AruneekaWorkspaceSelector = ({
                                        <p className="text-[9px] font-bold text-slate-400">@{member.username}</p>
                                     </div>
                                  </div>
-                                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                 <div className="flex items-center gap-3">
+                                    <button 
+                                      onClick={() => setUserDeleting(member)}
+                                      className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all rounded-lg"
+                                    >
+                                       <Trash2 size={14} />
+                                    </button>
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                 </div>
                               </motion.div>
                             )) : (
                               <div className="py-10 text-center space-y-3 opacity-30 grayscale">
@@ -835,14 +861,31 @@ export const AruneekaWorkspaceSelector = ({
                           >
                             {isInviting ? 'Inviting...' : 'Confirm Invitation'}
                           </button>
-                        ) : (
-                          <button 
-                            onClick={() => setIsAddingNew(true)}
-                            className="w-full py-4 bg-amethyst-primary text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amethyst-primary/20 hover:bg-amethyst-dark transition-all"
-                          >
-                            Invite new personnel
-                          </button>
-                        )}
+                        ) : (() => {
+                          const isLimitReached = (currentUser?.subscription_tier === 'free' || !currentUser?.subscription_tier) && 
+                                                teamMembers.length >= 2 && 
+                                                !(['Superuser', 'developer'].includes(currentUser?.role));
+                          
+                          if (isLimitReached) {
+                            return (
+                              <button 
+                                onClick={() => setIsUpgradeOpen(true)}
+                                className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                              >
+                                <Lock size={12} /> Limit Reached — Upgrade Langganan
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <button 
+                              onClick={() => setIsAddingNew(true)}
+                              className="w-full py-4 bg-amethyst-primary text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amethyst-primary/20 hover:bg-amethyst-dark transition-all"
+                            >
+                              Invite new personnel
+                            </button>
+                          );
+                        })()}
                         <button 
                           onClick={() => isAddingNew ? setIsAddingNew(false) : setIsInviteOpen(false)} 
                           className="w-full py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500 transition-all"
@@ -883,6 +926,102 @@ export const AruneekaWorkspaceSelector = ({
         onClose={() => setIsUpgradeOpen(false)} 
         user={currentUser}
       />
+
+      {/* Invite Success Modal */}
+      <AnimatePresence>
+        {showInviteSuccess && lastInvitedUser && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                className="bg-white w-full max-w-md rounded-[50px] shadow-2xl p-10 text-center space-y-8 relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-500" />
+                
+                <div className="space-y-3">
+                    <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[30px] flex items-center justify-center mx-auto mb-6 shadow-inner">
+                      <ShieldCheck size={40} />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Berhasil Diundang!</h3>
+                    <p className="text-xs font-bold text-slate-400 leading-relaxed px-4">
+                      Akun untuk <b>{lastInvitedUser.fullName}</b> telah aktif dan terdaftar di semua brand Anda.
+                    </p>
+                </div>
+
+                <div className="bg-slate-50 rounded-3xl p-6 space-y-4 border border-slate-100 text-left">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Username</p>
+                      <p className="text-sm font-black text-amethyst-dark">{lastInvitedUser.username}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Initial Password</p>
+                      <p className="text-sm font-black text-amethyst-dark">{lastInvitedUser.password}</p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                    <button 
+                      onClick={() => {
+                        const text = `Halo ${lastInvitedUser.fullName}!\n\nSelamat bergabung di tim! Ini adalah akses untuk masuk ke Aruneeka Pro Anda:\n\nLogin Area: https://aruneeka.my.id/login\nUsername: *${lastInvitedUser.username}*\nPassword: *${lastInvitedUser.password}*\n\nSilakan login dan selamat berkolaborasi! 🚀`;
+                        navigator.clipboard.writeText(text);
+                        alert("Pesan berhasil disalin! Silakan paste di WhatsApp.");
+                      }}
+                      className="w-full py-5 bg-emerald-500 text-white rounded-[24px] font-black text-[11px] uppercase tracking-[2px] shadow-xl shadow-emerald-500/20 hover:bg-emerald-600 transition-all flex items-center justify-center gap-3"
+                    >
+                      <Share2 size={16} /> Copy for WhatsApp
+                    </button>
+                    <button 
+                      onClick={() => setShowInviteSuccess(false)}
+                      className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500 transition-all"
+                    >
+                      Done & Close
+                    </button>
+                </div>
+              </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete User Warning Modal */}
+      <AnimatePresence>
+        {userDeleting && (
+          <div className="fixed inset-0 z-[11000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 30 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 30 }}
+               className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl p-10 text-center space-y-8 relative overflow-hidden"
+             >
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[30px] flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <AlertCircle size={40} />
+                </div>
+                
+                <div className="space-y-3">
+                   <h3 className="text-xl font-black text-slate-800 tracking-tight leading-tight">Hapus Akses Personel?</h3>
+                   <p className="text-[11px] font-bold text-slate-400 leading-relaxed px-4">
+                      Tindakan ini akan membuat <b>{userDeleting.full_name}</b> tidak bisa login kembali selamanya dan harus didaftarkan ulang nantinya.
+                   </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                   <button 
+                     onClick={handleConfirmDeleteUser}
+                     className="w-full py-5 bg-rose-500 text-white rounded-[24px] font-black text-[11px] uppercase tracking-[2px] shadow-xl shadow-rose-500/20 hover:bg-rose-600 transition-all active:scale-95"
+                   >
+                      Ya, Hapus Akses
+                   </button>
+                   <button 
+                     onClick={() => setUserDeleting(null)}
+                     className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500 transition-all"
+                   >
+                      Batalkan
+                   </button>
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

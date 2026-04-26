@@ -48,6 +48,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [newExpiry, setNewExpiry] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const handleUpdateTier = async (userId: string, newTier: string) => {
     setIsUpdating(true);
     try {
