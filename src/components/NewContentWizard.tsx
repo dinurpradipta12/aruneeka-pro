@@ -53,13 +53,6 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
 
   const [formData, setFormData] = useState(defaultValues);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
-  const selectedAccount = profiles.find(p => p.id === formData.target_account);
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchProfiles();
-    }
-  }, [isOpen]);
 
   const fetchProfiles = async () => {
     try {
@@ -86,6 +79,12 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
   };
 
   useEffect(() => {
+    if (isOpen) {
+      fetchProfiles();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (editData && isOpen) {
       setFormData({
         ...defaultValues,
@@ -93,7 +92,6 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
         due_date: editData.due_date ? new Date(editData.due_date).toISOString().split('T')[0] : defaultValues.due_date
       });
     } else if (!editData && isOpen) {
-      // Saat form baru dibuka, cek apakah ada profil yang sedang aktif di Shell
       let initialTarget = '';
       let initialPlatform = '';
       
@@ -118,207 +116,120 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
     setFormData({
       ...formData,
       target_account: id,
-      platform: selected?.platform || formData.platform
+      platform: selected?.platform || ''
     });
+    setIsAccountOpen(false);
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    onClose();
-  };
+  const selectedAccount = profiles.find(p => p.id === formData.target_account);
+
+  if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[99]"
-          />
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[720px] z-[100] p-4"
-          >
-            <div className="bg-white rounded-[48px] shadow-2xl border border-amethyst-light/20 overflow-hidden flex flex-col p-10">
-               <div className="flex items-start justify-between mb-8">
-                  <div>
-                    <p className="text-[9px] font-bold text-amethyst-primary uppercase tracking-[0.2em] mb-1">Production Workflow</p>
-                    <h2 className="text-3xl font-bold text-amethyst-dark tracking-tight">New Content Task</h2>
-                  </div>
-                  <button onClick={onClose} className="w-10 h-10 bg-amethyst-light/10 hover:bg-amethyst-light/30 rounded-full flex items-center justify-center text-amethyst-primary transition-all">
-                    <X size={20}/>
-                  </button>
-               </div>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden border border-white/20 flex flex-col max-h-[90vh]">
+        <div className="p-10 border-b border-slate-50 flex items-center justify-between">
+           <div className="space-y-1">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">{editData ? 'Edit Content Project' : 'New Strategic Content'}</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Phase: Pre-Production & Ideation</p>
+           </div>
+           <button onClick={onClose} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all"><X size={24}/></button>
+        </div>
 
-               <div className="space-y-6 max-h-[60vh] overflow-y-auto px-1 no-scrollbar text-amethyst-dark">
-                  <div className="space-y-1.5">
-                     <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Content Headline</label>
-                     <input 
-                        value={formData.headline || formData.title || ''}
-                        onChange={e => setFormData({...formData, headline: e.target.value, title: e.target.value})}
-                        placeholder="E.g. Tips and tricks for Instagram marketing"
-                        className="w-full h-14 bg-amethyst-light/10 rounded-2xl px-6 text-xs font-bold text-amethyst-dark border border-transparent focus:border-amethyst-primary/20 transition-all outline-none placeholder:text-slate-200"
-                     />
-                  </div>
+        <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+           <div className="grid grid-cols-2 gap-10">
+              <div className="space-y-8">
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Project Title</label>
+                    <input autoFocus value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Masterclass Series Part 1" className="w-full h-18 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+                 </div>
+                 
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">The Headline (Hook)</label>
+                    <input value={formData.headline} onChange={e => setFormData({...formData, headline: e.target.value})} placeholder="Grab attention in 3 seconds..." className="w-full h-18 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+                 </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Pillar</label>
-                        <input 
-                          value={formData.content_pillar || ''}
-                          onChange={e => setFormData({...formData, content_pillar: e.target.value})}
-                          placeholder="E.g. Educational"
-                          className="w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold text-amethyst-dark border border-transparent outline-none focus:border-amethyst-primary/20 transition-all placeholder:text-slate-200"
-                        />
-                     </div>
-                      <div className="space-y-1.5 relative">
-                         <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Account</label>
-                         <div className="relative">
-                            <button 
-                              onClick={() => setIsAccountOpen(!isAccountOpen)}
-                              className="w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold text-amethyst-dark border border-transparent outline-none flex items-center justify-between hover:bg-amethyst-light/20 transition-all pointer-events-auto"
-                            >
-                               <div className="flex items-center gap-2">
-                                  {selectedAccount ? (
-                                    <>
-                                      <div className="opacity-60">{platformIcons[selectedAccount.platform?.toLowerCase()] || <User size={12}/>}</div>
-                                      <span>{selectedAccount.name}</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-slate-300">Select target account...</span>
-                                  )}
-                               </div>
-                               {isAccountOpen ? <ChevronUp size={12} className="text-slate-300"/> : <ChevronDown size={12} className="text-slate-300"/>}
-                            </button>
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Concept Brief</label>
+                    <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the visual flow and purpose of this content..." className="w-full h-40 bg-slate-50 border-none rounded-3xl p-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all resize-none" />
+                 </div>
+              </div>
 
-                            <AnimatePresence>
-                               {isAccountOpen && (
-                                 <>
-                                   <div className="fixed inset-0 z-[110]" onClick={() => setIsAccountOpen(false)}/>
-                                   <motion.div 
-                                     initial={{ opacity: 0, y: -10 }}
-                                     animate={{ opacity: 1, y: 0 }}
-                                     exit={{ opacity: 0, y: -10 }}
-                                     className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-amethyst-light/20 overflow-hidden z-[111] py-1.5"
-                                   >
-                                      <div className="max-h-[200px] overflow-y-auto no-scrollbar">
-                                         {profiles.map(p => (
-                                           <button
-                                             key={p.id}
-                                             onClick={() => { handleAccountChange(p.id); setIsAccountOpen(false); }}
-                                             className={`w-full px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest flex items-center justify-between transition-all ${formData.target_account === p.id ? 'bg-amethyst-light/30 text-amethyst-dark' : 'text-slate-400 hover:bg-slate-50'}`}
-                                           >
-                                              <div className="flex items-center gap-3">
-                                                 <div className="w-5 h-5 rounded-md flex items-center justify-center bg-slate-50 shadow-sm">
-                                                    {platformIcons[p.platform?.toLowerCase()] || <User size={10}/>}
-                                                 </div>
-                                                 <span className="truncate max-w-[120px]">{p.name}</span>
-                                              </div>
-                                           </button>
-                                         ))}
-                                         {profiles.length === 0 && <div className="p-4 text-[10px] text-slate-300 italic text-center">No profiles found</div>}
-                                      </div>
-                                   </motion.div>
-                                 </>
-                               )}
-                            </AnimatePresence>
-                         </div>
-                      </div>
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Platform</label>
-                         <input 
-                           value={formData.platform || ''}
-                           readOnly
-                           placeholder="Auto-detected from account..."
-                           className="w-full h-12 bg-amethyst-light/5 rounded-xl px-4 text-xs font-bold text-slate-300 border border-transparent outline-none select-none italic placeholder:text-slate-200"
-                        />
-                     </div>
-                  </div>
+              <div className="space-y-8">
+                 <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Account</label>
+                       <div className="relative">
+                          <button onClick={() => setIsAccountOpen(!isAccountOpen)} className="w-full h-18 bg-slate-50 rounded-2xl px-6 flex items-center justify-between text-sm font-black group">
+                             <div className="flex items-center gap-3">
+                                {selectedAccount ? platformIcons[selectedAccount.platform] : <User size={14}/>}
+                                <span className={selectedAccount ? 'text-slate-800' : 'text-slate-300'}>{selectedAccount ? selectedAccount.name : 'Select Profile'}</span>
+                             </div>
+                             <ChevronDown size={14} className={`text-slate-300 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <AnimatePresence>
+                             {isAccountOpen && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute z-50 top-20 left-0 w-full bg-white rounded-3xl shadow-2xl border border-slate-50 p-3 max-h-60 overflow-y-auto">
+                                   {profiles.map(p => (
+                                      <button key={p.id} onClick={() => handleAccountChange(p.id)} className="w-full p-4 rounded-xl flex items-center gap-3 hover:bg-slate-50 transition-all text-left">
+                                         <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">{platformIcons[p.platform]}</div>
+                                         <div className="flex flex-col">
+                                            <span className="text-xs font-black text-slate-800 leading-none">{p.name}</span>
+                                            <span className="text-[9px] font-bold text-slate-400 mt-1">{p.platform}</span>
+                                         </div>
+                                      </button>
+                                   ))}
+                                </motion.div>
+                             )}
+                          </AnimatePresence>
+                       </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Execution Date</label>
+                       <div className="relative">
+                          <input type="date" value={formData.due_date} onChange={e => setFormData({...formData, due_date: e.target.value})} className="w-full h-18 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all text-slate-800" />
+                          <Calendar size={14} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                       </div>
+                    </div>
+                 </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Due Date</label>
-                        <input 
-                          type="date"
-                          value={formData.due_date || ''}
-                          onChange={e => setFormData({...formData, due_date: e.target.value})}
-                          className="w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold text-amethyst-dark border border-transparent outline-none"
-                        />
-                     </div>
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Script Link</label>
-                        <input 
-                          value={formData.script_link || ''}
-                          onChange={e => setFormData({...formData, script_link: e.target.value})}
-                          placeholder="Docs/Notion link"
-                          className="w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold text-amethyst-dark border border-transparent outline-none placeholder:text-slate-200"
-                        />
-                     </div>
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">File Link</label>
-                        <input 
-                          value={formData.content_link || ''}
-                          onChange={e => setFormData({...formData, content_link: e.target.value})}
-                          placeholder="Drive/Dropbox link"
-                          className="w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold text-amethyst-dark border border-transparent outline-none placeholder:text-slate-200"
-                        />
-                     </div>
-                  </div>
+                 <div className="space-y-6">
+                    {[{ id: 'script_link', label: 'Script Link', icon: <FileText size={14}/>, color: 'text-amber-500' },
+                      { id: 'content_link', label: 'Production Link (RAW)', icon: <Video size={14}/>, color: 'text-blue-500' },
+                      { id: 'post_link', label: 'Final URL (IG/TT)', icon: <LinkIcon size={14}/>, color: 'text-rose-500' }
+                    ].map(field => (
+                       <div key={field.id} className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{field.label}</label>
+                          <div className="relative group">
+                             <input value={(formData as any)[field.id]} onChange={e => setFormData({...formData, [field.id]: e.target.value})} placeholder="https://..." className="w-full h-16 bg-slate-50 border-none rounded-2xl pl-14 pr-6 text-xs font-bold outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+                             <div className={`absolute left-5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white shadow-sm border border-slate-50 ${field.color}`}>{field.icon}</div>
+                          </div>
+                       </div>
+                    ))}
+                 </div>
+              </div>
+           </div>
+        </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Live Link</label>
-                        <input 
-                          value={formData.post_link || ''}
-                          onChange={e => setFormData({...formData, post_link: e.target.value})}
-                          placeholder="Instagram/TikTok URL"
-                          className="w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold text-amethyst-dark border border-transparent outline-none placeholder:text-slate-200"
-                        />
-                     </div>
-                     <div className="space-y-1.5">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Status</label>
-                        <select 
-                          value={formData.status || ''}
-                          onChange={e => setFormData({...formData, status: e.target.value})}
-                          className={`w-full h-12 bg-amethyst-light/10 rounded-xl px-4 text-xs font-bold ${formData.status ? 'text-amethyst-dark' : 'text-slate-300'} border border-transparent outline-none appearance-none cursor-pointer`}
-                        >
-                           <option value="" disabled>Select status...</option>
-                           <option value="Draft">Draft</option>
-                           <option value="In Progress">In Progress</option>
-                           <option value="Review">Review</option>
-                           <option value="Approved">Approved</option>
-                           <option value="Uploaded">Uploaded</option>
-                        </select>
-                     </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                     <label className="text-[9px] font-bold text-slate-300 uppercase tracking-widest px-2 italic">Content Description</label>
-                     <textarea 
-                        value={formData.description || ''}
-                        onChange={e => setFormData({...formData, description: e.target.value})}
-                        rows={4}
-                        placeholder="Detailed brief for the content creator..."
-                        className="w-full bg-amethyst-light/10 rounded-2xl p-6 text-xs font-bold text-amethyst-dark border border-transparent focus:border-amethyst-primary/20 transition-all outline-none resize-none placeholder:text-slate-200"
-                     />
-                  </div>
-               </div>
-
-               <motion.button 
-                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                  onClick={handleSave}
-                  className="mt-10 w-full h-16 bg-amethyst-dark text-white rounded-3xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:bg-amethyst-primary transition-all"
-               >
-                  Create Content Task
-               </motion.button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+        <div className="p-10 bg-slate-50 flex items-center justify-between">
+           <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                 <div className="w-2 h-2 rounded-full bg-amethyst-primary animate-pulse" />
+                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Ready for review</span>
+              </div>
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Saved in Workspace: {selectedWorkspaceId || 'Active'}</div>
+           </div>
+           
+           <div className="flex gap-4">
+              <button onClick={onClose} className="px-10 py-5 bg-white text-slate-400 rounded-[28px] font-black text-[11px] hover:bg-slate-100 transition-all">Cancel</button>
+              <button onClick={() => onSave(formData)} className="px-12 py-5 bg-amethyst-dark text-white rounded-[28px] font-black text-[11px] shadow-2xl shadow-amethyst-dark/20 hover:bg-black transition-all">
+                {editData ? 'Update Strategic Content' : 'Launch New Content'}
+              </button>
+           </div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

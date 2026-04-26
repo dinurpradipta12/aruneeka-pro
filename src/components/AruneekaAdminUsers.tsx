@@ -45,33 +45,10 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  useEffect(() => {
-    fetchUsers();
-    
-    const userStr = localStorage.getItem('aruneeka_user');
-    if (userStr) setCurrentUser(JSON.parse(userStr));
-
-    // AKTIVASI REAL-TIME: Hemat Bandwidth & Instan
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'v2_agency_users'
-        },
-        () => {
-          // Re-fetch data hanya jika ada perubahan (Hemat Server)
-          fetchUsers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [newExpiry, setNewExpiry] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleUpdateExpiry = async () => {
     if (!editingUser || !newExpiry) return;
@@ -111,10 +88,34 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     }
   };
 
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [newExpiry, setNewExpiry] = useState<string>('');
-  const [isUpdating, setIsUpdating] = useState(false);
+  useEffect(() => {
+    fetchUsers();
+    
+    const userStr = localStorage.getItem('aruneeka_user');
+    if (userStr) setCurrentUser(JSON.parse(userStr));
+
+    // AKTIVASI REAL-TIME: Hemat Bandwidth & Instan
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'v2_agency_users'
+        },
+        () => {
+          // Re-fetch data hanya jika ada perubahan (Hemat Server)
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const handleApprove = async (userId: string) => {

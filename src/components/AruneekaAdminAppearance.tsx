@@ -32,9 +32,6 @@ const AruneekaAdminAppearance = () => {
     agency_name: 'Aruneeka Pro'
   });
 
-  useEffect(() => {
-    if (selectedWorkspaceId) fetchSettings();
-  }, [selectedWorkspaceId]);
 
   const fetchSettings = async () => {
     setIsLoading(true);
@@ -67,6 +64,10 @@ const AruneekaAdminAppearance = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (selectedWorkspaceId) fetchSettings();
+  }, [selectedWorkspaceId]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -403,7 +404,7 @@ const AruneekaAdminAppearance = () => {
             <div className="space-y-3">
               <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Identity Synced!</h3>
               <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-2">
-                "Seluruh sistem kini telah menggunakan identitas visual terbaru yang Anda tentukan."
+                &quot;Seluruh sistem kini telah menggunakan identitas visual terbaru yang Anda tentukan.&quot;
               </p>
             </div>
             <button 

@@ -64,9 +64,6 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     setPopup({ isOpen: true, title, message, onConfirm, type, confirmLabel });
   };
 
-  useEffect(() => { 
-    if (selectedWorkspaceId) fetchMembers(); 
-  }, [selectedWorkspaceId]);
 
   const fetchMembers = async () => {
     if (!selectedWorkspaceId) return;
@@ -132,9 +129,13 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
      } catch (e: any) {
         alert("Gagal menyimpan: " + e.message);
      } finally {
-        setIsSaving(false);
-     }
+      setIsSaving(false);
+    }
   };
+
+  useEffect(() => { 
+    if (selectedWorkspaceId) fetchMembers(); 
+  }, [selectedWorkspaceId]);
 
   const handleRegisterMember = async () => {
     if (isLimitReached) {

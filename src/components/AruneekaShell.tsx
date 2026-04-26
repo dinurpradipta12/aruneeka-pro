@@ -147,6 +147,7 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
       </AnimatePresence>
    );
 });
+MotivationBubble.displayName = 'MotivationBubble';
 
 
 const navItems = [
@@ -839,7 +840,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                         <div className="space-y-3">
                            <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Upgrade Successful!</h3>
                            <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-4">
-                              "Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!"
+                              &quot;Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!&quot;
                            </p>
                         </div>
                         <button onClick={() => setShowRealtimeSuccess(false)} className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all">

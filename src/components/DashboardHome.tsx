@@ -45,89 +45,14 @@ const DashboardHome = ({
   const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
   const isLocked = subscriptionTier === 'free' && !isPowerUser;
 
-  useEffect(() => {
-    fetchDashboardIntelligence();
-  }, [selectedProfileId, selectedWorkspaceId]);
-
-    const fetchDashboardIntelligence = async () => {
-    try {
-      const workspaceId = selectedWorkspaceId;
-      if (!workspaceId) return;
-
-      // START PARALLEL FETCHING (Much faster than sequential)
-      const [
-        kpiResponse,
-        contentResponse,
-        strategyResponse,
-        profileResponse,
-        recentResponse
-      ] = await Promise.all([
-         // 1. KPI Targets
-         supabase.from('v2_agency_kpi_targets').select('*').eq('workspace_id', workspaceId).eq(selectedProfileId ? 'profile_id' : '', selectedProfileId || ''),
-         
-         // 2. Content Plans Distribution
-         supabase.from('v2_agency_content_plans').select('status, due_date, title, platform, target_account').eq('workspace_id', workspaceId).eq(selectedProfileId ? 'target_account' : '', selectedProfileId || ''),
-         
-         // 3. Strategy Completion
-         supabase.from('v2_agency_strategy_checklist').select('status, is_completed').eq('workspace_id', workspaceId),
-         
-         // 4. Active Profiles Count
-         supabase.from('v2_agency_social_profiles').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-         
-         // 5. Recent Output
-         supabase.from('v2_agency_content_plans').select('*').eq('workspace_id', workspaceId).eq(selectedProfileId ? 'target_account' : '', selectedProfileId || '').order('created_at', { ascending: false }).limit(3)
-      ]);
-
-      // Processing KPI
-      let kpiAvg = 0;
-      if (kpiResponse.data && kpiResponse.data.length > 0) {
-        const totalProgress = kpiResponse.data.reduce((acc: number, kpi: any) => {
-          const current = kpi.current_value || kpi.actual_value || 0;
-          const target = kpi.target_value || 1;
-          return acc + Math.min((current / target) * 100, 100);
-        }, 0);
-        kpiAvg = Math.round(totalProgress / kpiResponse.data.length);
-      }
-
-      // Processing Content & Distribution
-      const statusCounts: any = {};
-      let closestContent: any = null;
-      if (contentResponse.data) {
-        contentResponse.data.forEach((item: any) => {
-          statusCounts[item.status] = (statusCounts[item.status] || 0) + 1;
-          if (item.status !== 'Uploaded' && item.status !== 'Approved' && item.due_date) {
-            const dueDate = new Date(item.due_date);
-            if (!closestContent || dueDate < new Date(closestContent.due_date)) {
-               closestContent = item;
-            }
-          }
-        });
-      }
-
-      // Processing Strategy
-      let strategyProgress = 0;
-      if (strategyResponse.data && strategyResponse.data.length > 0) {
-        const completed = strategyResponse.data.filter((s: any) => s.is_completed).length;
-        strategyProgress = Math.round((completed / strategyResponse.data.length) * 100);
-      }
-
-      setStats({
-        kpiProgress: kpiAvg,
-        totalContent: contentResponse.data?.length || 0,
-        strategyCompletion: strategyProgress,
-        activeProfiles: profileResponse.count || 0
-      });
-
-      setStatusDistribution(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
-      setNextToPost(closestContent);
-      setRecentOutput(recentResponse.data || []);
-
-    } catch (e) {
-      console.error("Dashboard Intelligence Error:", e);
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDashboardIntelligence();
+  }, [selectedProfileId, selectedWorkspaceId]);
 
   const platformIcons: any = {
     instagram: <img src="https://cdn.simpleicons.org/instagram/slate-400" className="w-3.5 h-3.5 group-hover:filter group-hover:invert transition-all" alt="IG" />,

@@ -152,14 +152,14 @@ const AruneekaUpgradeModal = ({ isOpen, onClose, user }: AruneekaUpgradeModalPro
                               
                               <div className="space-y-2.5 border-t border-slate-50 pt-5 text-left">
                                 {(() => {
-                                  let list = [];
+                                  let list: string[] = [];
                                   try {
                                     if (typeof pkg.features === 'string' && pkg.features.trim().startsWith('[')) {
                                       list = JSON.parse(pkg.features);
                                     } else if (Array.isArray(pkg.features)) {
                                       list = pkg.features;
                                     } else if (typeof pkg.features === 'string') {
-                                      list = pkg.features.split(',').map(f => f.trim());
+                                      list = pkg.features.split(',').map((f: string) => f.trim());
                                     }
                                   } catch (e) {
                                     list = [];

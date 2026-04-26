@@ -175,7 +175,7 @@ const AruneekaAnalytics = ({
 
   // Global Metric Calculations - OPTIMIZED SINGLE PASS
   const metrics = useMemo(() => {
-    let totals = {
+    const totals = {
       views: 0, reach: 0, interactions: 0, reposts: 0,
       retentionSum: 0, uploadedCount: 0, followers: 0
     };
@@ -212,7 +212,7 @@ const AruneekaAnalytics = ({
     const targetProfiles = selectedProfileId ? profiles.filter(p => p.id === selectedProfileId) : profiles;
 
     const initialFollowers = targetProfiles.reduce((acc, curr) => {
-      let val = curr.followers ? String(curr.followers) : '0';
+      const val = curr.followers ? String(curr.followers) : '0';
       const multiplier = val.toLowerCase().includes('k') ? 1000 : val.toLowerCase().includes('m') ? 1000000 : 1;
       const cleanVal = val.replace(/[^0-9.]/g, '');
       return acc + ((val.toLowerCase().includes('k') || val.toLowerCase().includes('m')) ? (parseFloat(cleanVal) * multiplier) : (parseInt(val.replace(/\D/g, '')) || 0));
@@ -336,7 +336,7 @@ const AruneekaAnalytics = ({
       <div className="flex items-start justify-between">
          <div className="space-y-1">
             <h2 className="text-4xl font-extrabold text-amethyst-dark tracking-tight">Content Performance</h2>
-            <p className="text-sm text-slate-400 font-medium italic">Measurable impact of your agency's published content.</p>
+            <p className="text-sm text-slate-400 font-medium italic">Measurable impact of your agency&apos;s published content.</p>
          </div>
 
          <div className="flex items-center gap-4">
@@ -876,7 +876,7 @@ const AruneekaAnalytics = ({
                        
                        const views = get(['views', 'impressions']);
                        const reach = get(['reach']) || views;
-                       let interactions = get(['interactions']) || (get(['likes']) + get(['comments']) + get(['shares', 'reposts']) + get(['saves', 'bookmarks']));
+                       const interactions = get(['interactions']) || (get(['likes']) + get(['comments']) + get(['shares', 'reposts']) + get(['saves', 'bookmarks']));
                        const profile_visits = get(['profilevisits', 'profilevisit', 'visits', 'profilevis']);
                        const followers = get(['newfollowers', 'followers', 'follows', 'newfollows']);
                        const er = views > 0 ? ((interactions / views) * 100).toFixed(2) : '0';

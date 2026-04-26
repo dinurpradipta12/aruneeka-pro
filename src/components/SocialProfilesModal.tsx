@@ -81,13 +81,6 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
     followers: '0'
   });
 
-  useEffect(() => {
-    if (isOpen && selectedWorkspaceId) {
-       fetchProfiles();
-       setView('list');
-    }
-  }, [isOpen, selectedWorkspaceId]);
-
   const fetchProfiles = async () => {
     try {
       const workspaceId = selectedWorkspaceId;
@@ -108,6 +101,13 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (isOpen && selectedWorkspaceId) {
+       fetchProfiles();
+       setView('list');
+    }
+  }, [isOpen, selectedWorkspaceId]);
+
   const handleEdit = (profile: SocialProfile, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(profile.id);
@@ -127,7 +127,6 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
     try {
       let workspaceId = selectedWorkspaceId;
       
-      // Safety Fallback
       if (!workspaceId) {
         const savedWs = localStorage.getItem('aruneeka_selected_workspace');
         if (savedWs) workspaceId = JSON.parse(savedWs).id;
@@ -194,7 +193,6 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
             className="relative w-full max-w-2xl bg-white rounded-[50px] shadow-2xl overflow-hidden border border-white/20"
           >
              <div className="p-12 space-y-10">
-                {/* Header Toggle */}
                 <div className="flex items-center justify-between">
                    <div className="space-y-1">
                       <h2 className="text-3xl font-black text-slate-800 tracking-tight">
@@ -250,7 +248,7 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
                                      <span className="text-[11px] font-black block uppercase tracking-widest">Upgrade to Pro</span>
                                      <span className="text-[9px] font-bold opacity-60">Limit 2 akun tercapai. Unlock untuk member tak terbatas!</span>
                                   </div>
-                               </button>
+                                </button>
                             ) : (
                                <button 
                                  onClick={() => { setEditingId(null); setFormData({ name: '', platform: 'tiktok', handle: '', followers: '0' }); setView('form'); }}

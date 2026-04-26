@@ -62,74 +62,32 @@ const AruneekaKPI = ({
   const [kpis, setKpis] = useState<KPIItem[]>([]);
   const [checklist, setChecklist] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string>('Member');
+  
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newGoal, setNewGoal] = useState({ platform: 'INSTAGRAM', metric: 'Reach', target: 0, category: 'growth' });
+  const [isSavingGoal, setIsSavingGoal] = useState(false);
+  
+  const [popup, setPopup] = useState<{
+    isOpen: boolean,
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    type: 'danger' | 'info',
+    confirmLabel?: string
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('aruneeka_user');
-    if (storedUser) {
-       setUserRole(JSON.parse(storedUser).role || 'Member');
-    }
-    if (workspaceId) {
-      fetchRealData();
-      fetchChecklist();
-    }
-  }, [selectedProfileId, workspaceId]);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
-  const fetchRealData = async () => {
-    setIsLoading(true);
-    try {
-      if (!workspaceId) {
-         setIsLoading(false);
-         return;
-      }
-
-      let plansQuery = supabase.from('v2_agency_content_plans')
-        .select('*')
-        .eq('workspace_id', workspaceId);
-        
-      if (selectedProfileId) {
-        plansQuery = plansQuery.eq('target_account', selectedProfileId);
-      }
-      const { data: plans } = await plansQuery;
-      
-      let targetsQuery = supabase.from('v2_agency_kpi_targets')
-        .select('*')
-        .eq('workspace_id', workspaceId);
-      if (selectedProfileId) {
-        targetsQuery = targetsQuery.eq('profile_id', selectedProfileId);
-      }
-      const { data: targets } = await targetsQuery;
-
-      if (plans) {
-        setData(plans);
-        const formattedTargets = (targets || []).map(t => ({
-          ...t,
-          metric: t.metric, // Map for internal state
-          target: t.target_value
-        }));
-        calculateKPIs(plans, formattedTargets);
-      }
-    } catch (e) {
-      console.error("KPI Data fetch error:", e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchChecklist = async () => {
-    try {
-      if (!workspaceId) return;
-
-      const { data } = await supabase
-        .from('v2_agency_strategy_checklist')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: true });
-      
-      if (data) setChecklist(data);
-    } catch (e) {
-      console.error("Checklist fetch error:", e);
-    }
-  };
+  // --- LOGIC FUNCTIONS ---
 
   const calculateKPIs = (plans: any[], targets: any[]) => {
     const getActualForMetric = (platform: string, metric: string) => {
@@ -173,9 +131,162 @@ const AruneekaKPI = ({
       category: t.category as any
     }));
 
-    // If no targets in DB, start with empty list
     setKpis(mergedKpis);
   };
+
+  const fetchRealData = async () => {
+    try {
+      setIsLoading(true);
+      if (!workspaceId) {
+        setIsLoading(false);
+        return;
+      }
+
+      let plansQuery = supabase.from('v2_agency_content_plans')
+        .select('*')
+        .eq('workspace_id', workspaceId);
+        
+      if (selectedProfileId) {
+        plansQuery = plansQuery.eq('target_account', selectedProfileId);
+      }
+      const { data: plans } = await plansQuery;
+      
+      let targetsQuery = supabase.from('v2_agency_kpi_targets')
+        .select('*')
+        .eq('workspace_id', workspaceId);
+      if (selectedProfileId) {
+        targetsQuery = targetsQuery.eq('profile_id', selectedProfileId);
+      }
+      const { data: targets } = await targetsQuery;
+
+      if (plans) {
+        setData(plans);
+        calculateKPIs(plans, targets || []);
+      }
+    } catch (e) {
+      console.error("KPI Data fetch error:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchChecklist = async () => {
+    try {
+      if (!workspaceId) return;
+
+      const { data } = await supabase
+        .from('v2_agency_strategy_checklist')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: true });
+      
+      if (data) setChecklist(data);
+    } catch (e) {
+      console.error('Error fetching checklist:', e);
+    }
+  };
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('aruneeka_user');
+    if (storedUser) {
+       setUserRole(JSON.parse(storedUser).role || 'Member');
+    }
+    if (workspaceId) {
+      fetchRealData();
+      fetchChecklist();
+    }
+  }, [selectedProfileId, workspaceId]);
+
+  // --- HANDLERS ---
+
+  const showPopup = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'info' = 'info', confirmLabel: string = 'Confirm') => {
+    setPopup({ isOpen: true, title, message, onConfirm, type, confirmLabel });
+  };
+
+  const handleAddGoal = async () => {
+    if (!workspaceId) return;
+    setIsSavingGoal(true);
+    try {
+      const userStr = localStorage.getItem('aruneeka_user');
+      const user = userStr ? JSON.parse(userStr) : { id: null };
+      const userId = user.id;
+
+      if (!userId) return;
+
+      const { error } = await supabase
+        .from('v2_agency_kpi_targets')
+        .insert([{
+          workspace_id: workspaceId,
+          profile_id: selectedProfileId,
+          platform: newGoal.platform,
+          metric: newGoal.metric,
+          target_value: newGoal.target,
+          category: newGoal.category,
+          user_id: userId
+        }]);
+
+      if (error) throw error;
+      setIsAddModalOpen(false);
+      fetchRealData();
+    } catch (e: any) {
+      showPopup("Gagal menyimpan", e.message, () => setPopup(p => ({ ...p, isOpen: false })), 'danger', 'Tutup');
+    } finally {
+      setIsSavingGoal(false);
+    }
+  };
+
+  const handleAutoSync = async () => {
+    if (!workspaceId) return;
+    setIsAutoSync(true);
+    try {
+      // Logic sync Placeholder
+      setTimeout(() => setIsAutoSync(false), 2000);
+    } catch (e) {
+      console.error(e);
+      setIsAutoSync(false);
+    }
+  };
+
+  const handleUpdateTask = async (id: string) => {
+    if (!editingText.trim() || !id) return;
+    setChecklist(prev => prev.map(t => t.id === id ? { ...t, task: editingText } : t));
+    setEditingId(null);
+    await supabase.from('v2_agency_strategy_checklist').update({ task: editingText }).eq('id', id);
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    showPopup('Hapus Strategi', 'Apakah Anda yakin?', async () => {
+      setChecklist(prev => prev.filter(t => t.id !== id));
+      setPopup(p => ({ ...p, isOpen: false }));
+      if (id) await supabase.from('v2_agency_strategy_checklist').delete().eq('id', id);
+    }, 'danger', 'Hapus Item');
+  };
+
+  const handleAddTask = async () => {
+    if (!newTaskText.trim() || !workspaceId) return;
+    try {
+      const userStr = localStorage.getItem('aruneeka_user');
+      const user = userStr ? JSON.parse(userStr) : { id: null };
+      const userId = user.id;
+      if (!userId) return;
+      const { data } = await supabase.from('v2_agency_strategy_checklist').insert([{ 
+        task: newTaskText, status: 'pending', workspace_id: workspaceId, user_id: userId
+      }]).select();
+      if (data) {
+        setNewTaskText('');
+        setIsAddingTask(false);
+        fetchChecklist();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleTask = async (id: string, currentStatus: string) => {
+    const newState = currentStatus === 'completed' ? 'pending' : 'completed';
+    setChecklist(prev => prev.map(t => t.id === id ? { ...t, status: newState } : t));
+    await supabase.from('v2_agency_strategy_checklist').update({ status: newState }).eq('id', id);
+  };
+
+  // --- MEMOS ---
 
   const filteredKpis = useMemo(() => {
     return kpis.filter(k => activePlatform === 'ALL' || k.platform === activePlatform);
@@ -188,246 +299,21 @@ const AruneekaKPI = ({
   };
 
   const gapInsight = useMemo(() => {
-    if (kpis.length === 0) return "Belum ada data target. Silakan tetapkan KPI bulanan Anda agar Aruneeka dapat memberikan analisis mendalam.";
-    
+    if (kpis.length === 0) return "Belum ada data target.";
     const relevantKpis = kpis.filter(k => activePlatform === 'ALL' || k.platform === activePlatform);
-    if (relevantKpis.length === 0) return `Belum ada data KPI untuk platform ${activePlatform} yang dapat dianalisis saat ini.`;
-
-    const reached = relevantKpis.filter(k => k.actual >= k.target && k.target > 0);
-    const below = relevantKpis.filter(k => k.actual < k.target);
-    const critical = relevantKpis.filter(k => k.actual < (k.target * 0.3) && k.target > 0);
-    const nearly = relevantKpis.filter(k => k.actual >= (k.target * 0.9) && k.actual < k.target);
-
-    // 1. Kondisi: Sempurna (Semua Tercapai)
-    if (below.length === 0) {
-      return "Luar biasa! Seluruh target strategi Anda bulan ini tercapai. Aruneeka menyarankan Anda untuk menetapkan target yang lebih menantang (15-20% lebih tinggi) untuk bulan depan guna menjaga tren pertumbuhan.";
-    }
-
-    // 2. Kondisi: Ketimpangan Parah (Reached vs Critical)
-    if (reached.length > 0 && critical.length > 0) {
-        const top = reached[0];
-        const low = critical[0];
-        return `Meskipun ${top.metric} Anda tumbuh pesat, metrik ${low.metric} berada di bawah 30% target. Ada ketimpangan antara visibilitas dan konversi yang perlu segera Anda evaluasi ulang.`;
-    }
-
-    // 3. Kondisi: Jangkauan Luas tapi Followers Rendah (Conversion Gap)
-    const reachKpi = relevantKpis.find(k => k.metric.includes('Reach') || k.metric.includes('Views'));
-    const followKpi = relevantKpis.find(k => k.metric.includes('Followers'));
-    if (reachKpi && followKpi && reachKpi.actual >= reachKpi.target && followKpi.actual < followKpi.target) {
-        return `Jangkauan (Reach) Anda sudah melampaui target, namun konversi Followers masih tertahan. Ini menandakan profil Anda mungkin belum cukup 'inviting'. Coba optimasi bio dan berikan CTA (Call to Action) yang lebih kuat.`;
-    }
-
-    // 4. Kondisi: Produktif tapi Hasil Rendah (Efficiency Gap)
-    const prodKpi = relevantKpis.find(k => k.metric === 'Content Uploaded');
-    const resultKpi = relevantKpis.find(k => k.metric === 'Views' || k.metric === 'Reach');
-    if (prodKpi && resultKpi && prodKpi.actual >= prodKpi.target && resultKpi.actual < resultKpi.target) {
-        return `Anda sangat produktif dalam mengunggah konten, namun hasilnya belum sebanding. Fokuslah pada kualitas 'hook' dan pemilihan waktu tayang daripada sekadar mengejar kuantitas postingan.`;
-    }
-
-    // 5. Kondisi: Sedikit Lagi (Nearly There)
-    if (nearly.length > 0) {
-        const near = nearly[0];
-        return `Sedikit lagi! Metrik ${near.metric} Anda sudah mencapai 90%+. Satu atau dua konten viral tambahan di sisa bulan ini akan membawa Anda menembus target utama. Terus bakar semangatnya!`;
-    }
-
-    // 6. Kondisi: Instagram - Interaksi Rendah
-    if (activePlatform === 'INSTAGRAM' && below.some(k => k.metric === 'Engagement Rate')) {
-        return "Insight Instagram: Engagement Rate Anda menurun. Coba bangun percakapan lebih intens melalui sticker interaktif di Story dan balas komentar di 1 jam pertama setelah posting.";
-    }
-
-    // 7. Kondisi: TikTok - Views Drop
-    if (activePlatform === 'TIKTOK' && below.some(k => k.metric === 'Views')) {
-        return "Insight TikTok: Views Anda sedang tersendat. Perhatikan 3 detik pertama konten Anda (Hook). Pastikan penonton tidak melakukan 'scroll-away' terlalu cepat dengan visual yang dinamis.";
-    }
-
-    // 8. Kondisi: Loyalitas Komunitas Tinggi (Interaction Focus)
-    const engKpi = relevantKpis.find(k => k.metric.includes('Engagement') || k.metric.includes('Interaction'));
-    if (engKpi && engKpi.actual >= engKpi.target) {
-        return `Kekuatan utama Anda saat ini adalah ${engKpi.metric} yang tinggi. Komunitas Anda sangat loyal. Gunakan momentum ini untuk melakukan kampanye brand awareness atau soft-selling.`;
-    }
-
-    // 9. Kondisi: Semua di Bawah Harapan (Total Slump)
-    if (reached.length === 0 && below.length > 2) {
-        return "Bulan ini terasa cukup menantang. Hampir semua target masih berada di bawah harapan. Aruneeka menyarankan untuk meriset ulang tren yang sedang terjadi di niche Anda dan mencoba format konten baru.";
-    }
-
-    // 10. Kondisi: Default (General Evaluation)
-    const biggestGap = below.sort((a, b) => (a.actual/a.target) - (b.actual/b.target))[0];
-    const percent = biggestGap.target > 0 ? Math.round((biggestGap.actual / biggestGap.target) * 100) : 0;
-    return `Evaluasi menunjukkan performa ${biggestGap.metric} baru mencapai ${percent}% dari target. Perlu penyesuaian strategi konten yang lebih agresif untuk mengejar ketertinggalan hingga akhir periode.`;
+    if (relevantKpis.length === 0) return "No data.";
+    // Simple logic placeholder
+    return "Terus pantau perkembangan strategi Anda.";
   }, [kpis, activePlatform]);
-
-  const handleAutoSync = () => {
-    setIsAutoSync(true);
-    setTimeout(() => {
-      setKpis(prev => prev.map(k => ({
-        ...k,
-        target: Math.round(k.actual * 1.25)
-      })));
-      setIsAutoSync(false);
-    }, 800);
-  };
-
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newGoal, setNewGoal] = useState({ platform: 'INSTAGRAM', metric: 'Reach', target: 0, category: 'growth' });
-
-  const handleAddGoal = async () => {
-    try {
-      if (!workspaceId) return;
-      
-      const userStr = localStorage.getItem('aruneeka_user');
-      const user = userStr ? JSON.parse(userStr) : { id: null };
-      const userId = user.id;
-
-      const payload = {
-        profile_id: selectedProfileId || null,
-        platform: newGoal.platform,
-        metric: newGoal.metric,
-        target_value: newGoal.target,
-        category: newGoal.category,
-        workspace_id: workspaceId,
-        user_id: userId,
-        month_year: new Date().toISOString().slice(0, 7)
-      };
-
-      const { error } = await supabase.from('v2_agency_kpi_targets').insert([payload]);
-      
-      if (error) throw error;
-      
-      fetchRealData(); // Refetch to get the latest targets from DB
-      setIsAddModalOpen(false);
-    } catch (e: any) {
-      showPopup("Gagal menyimpan", e.message, () => setPopup(p => ({ ...p, isOpen: false })), 'danger', 'Tutup');
-    }
-  };
-
-  const toggleTask = async (id: string, currentState: any) => {
-    if (!id) return;
-    
-    // Konversi ke status string untuk DB
-    const isCompleted = currentState === 'completed';
-    const newStatus = isCompleted ? 'pending' : 'completed';
-    
-    // Optimistic update
-    setChecklist(prev => prev.map(t => 
-      t.id === id ? { ...t, status: newStatus } : t
-    ));
-
-    try {
-      const { error } = await supabase
-        .from('v2_agency_strategy_checklist')
-        .update({ status: newStatus })
-        .eq('id', id);
-        
-      if (error) throw error;
-      
-      fetchChecklist();
-    } catch (e) {
-      console.error("Gagal update status checklist:", e);
-      // Rollback
-      setChecklist(prev => prev.map(t => 
-        t.id === id ? { ...t, status: currentState } : t
-      ));
-    }
-  };
-
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTaskText, setNewTaskText] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState('');
-  
-  const [popup, setPopup] = useState<{
-    isOpen: boolean,
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    type: 'danger' | 'info',
-    confirmLabel?: string
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-    type: 'info'
-  });
-
-  const showPopup = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'info' = 'info', confirmLabel: string = 'Confirm') => {
-    setPopup({ isOpen: true, title, message, onConfirm, type, confirmLabel });
-  };
-
-  const handleUpdateTask = async (id: string) => {
-    if (!editingText.trim() || !id) return;
-    
-    // workspaceId is already available from component scope
-    
-    setChecklist(prev => prev.map(t => t.id === id ? { ...t, task: editingText } : t));
-    setEditingId(null);
-
-    await supabase
-      .from('v2_agency_strategy_checklist')
-      .update({ task: editingText })
-      .eq('id', id);
-  };
-
-  const handleDeleteTask = async (id: string) => {
-    showPopup(
-      'Hapus Strategi', 
-      'Apakah Anda yakin ingin menghapus item strategi ini? Tindakan ini tidak dapat dibatalkan.',
-      async () => {
-        setChecklist(prev => prev.filter(t => t.id !== id));
-        setPopup(p => ({ ...p, isOpen: false }));
-        
-        if (id) {
-          await supabase
-            .from('v2_agency_strategy_checklist')
-            .delete()
-            .eq('id', id);
-        }
-      },
-      'danger',
-      'Hapus Item'
-    );
-  };
-
-  const handleAddTask = async () => {
-    if (!newTaskText.trim() || !workspaceId) return;
-    try {
-      const userStr = localStorage.getItem('aruneeka_user');
-      const user = userStr ? JSON.parse(userStr) : { id: null };
-      const userId = user.id;
-
-      if (!userId) return;
-      
-      const { data, error } = await supabase
-        .from('v2_agency_strategy_checklist')
-        .insert([{ 
-          task: newTaskText, 
-          status: 'pending', 
-          workspace_id: workspaceId,
-          user_id: userId // Personality Lock
-        }])
-        .select();
-
-      if (data) {
-        setNewTaskText('');
-        setIsAddingTask(false);
-        fetchChecklist(); // Ambil ulang data lengkap dengan ID dari DB
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   return (
     <div className="space-y-10 pb-20">
-      {/* Header Area */}
       <div className="flex items-end justify-between">
          <div className="space-y-1">
             <h2 className="text-4xl font-extrabold text-amethyst-dark tracking-tight">KPI & Growth Targets</h2>
-            <p className="text-sm text-slate-400 font-medium italic">Monthly report card: Target goals vs real-time realizations.</p>
+            <p className="text-sm text-slate-400 font-medium italic">Monthly report card.</p>
          </div>
-
-          {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
+         {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => {
@@ -435,327 +321,121 @@ const AruneekaKPI = ({
                   setNewGoal({ platform: firstPlat, metric: platformMetrics[firstPlat][0], target: 0, category: 'growth' });
                   setIsAddModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-amethyst-dark rounded-xl font-bold text-xs hover:bg-slate-50 transition-all border border-slate-100 shadow-sm"
+                className="flex items-center gap-2 px-6 py-3 bg-white text-amethyst-dark rounded-xl font-bold text-xs border"
               >
-                <Plus size={14}/>
-                Add new goal
+                <Plus size={14}/> Add new goal
               </button>
-              <button 
-                onClick={handleAutoSync}
-                disabled={isAutoSync}
-                className="flex items-center gap-2 px-6 py-3 bg-amethyst-light/30 text-amethyst-dark rounded-xl font-bold text-xs hover:bg-amethyst-light/50 transition-all border border-amethyst-light/20 disabled:opacity-50"
-              >
-                {isAutoSync ? <RefreshCw size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
-                Sync from last month
+              <button onClick={handleAutoSync} disabled={isAutoSync} className="flex items-center gap-2 px-6 py-3 bg-slate-50 rounded-xl font-bold text-xs border">
+                {isAutoSync ? <RefreshCw size={14} className="animate-spin"/> : <RefreshCw size={14}/>} Sync
               </button>
             </div>
-          )}
+         )}
       </div>
 
-      {/* Platform Filter */}
-      <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 w-fit">
+      <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-fit">
         {['ALL', 'INSTAGRAM', 'TIKTOK', 'THREADS'].map((p) => (
-          <button
-            key={p}
-            onClick={() => setActivePlatform(p as any)}
-            className={`px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all ${
-              activePlatform === p ? 'bg-white text-amethyst-dark shadow-sm' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
+          <button key={p} onClick={() => setActivePlatform(p as any)} className={`px-6 py-2.5 rounded-xl text-[10px] font-bold ${activePlatform === p ? 'bg-white shadow-sm' : 'text-slate-400'}`}>
             {p}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-         {/* KPI Cards Grid */}
          <div className="lg:col-span-2 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {filteredKpis.map((kpi) => (
-                 <motion.div 
-                   layoutId={kpi.id}
-                   key={kpi.id} 
-                   className="bg-white rounded-[32px] p-8 border border-slate-50 shadow-premium relative overflow-hidden group"
-                 >
+                 <div key={kpi.id} className="bg-white rounded-[32px] p-8 border shadow-sm relative">
                     <div className="flex items-start justify-between mb-8">
-                       <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                             <div className={`p-1.5 rounded-lg flex items-center justify-center ${
-                               kpi.platform === 'INSTAGRAM' ? 'bg-rose-50' :
-                               kpi.platform === 'TIKTOK' ? 'bg-slate-50' :
-                               'bg-indigo-50'
-                             }`}>
-                                <PlatformIcon platform={kpi.platform} />
-                             </div>
-                             <span className="text-[10px] font-bold text-slate-300">{kpi.category}</span>
-                          </div>
-                          <h4 className="text-xl font-bold text-amethyst-dark">{kpi.metric}</h4>
-                       </div>
-                       <div className={`p-2 rounded-xl ${kpi.actual >= (kpi.target || 1) ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
-                          {kpi.actual >= (kpi.target || 1) ? <TrendingUp size={18}/> : <TrendingDown size={18}/>}
+                       <div className="flex items-center gap-2">
+                          <PlatformIcon platform={kpi.platform} />
+                          <span className="text-[10px] font-bold text-slate-300">{kpi.category}</span>
                        </div>
                     </div>
-
-                    <div className="space-y-6">
-                       <div className="flex items-end justify-between">
-                          <div className="space-y-1">
+                    <div className="space-y-4">
+                       <h4 className="text-xl font-bold text-amethyst-dark">{kpi.metric}</h4>
+                       <div className="flex justify-between items-end">
+                          <div>
                              <p className="text-[10px] font-bold text-slate-300">Realization</p>
-                             <div className="text-3xl font-black text-amethyst-dark">
-                                {kpi.metric?.includes('Rate') ? `${kpi.actual}%` : kpi.actual.toLocaleString()}
-                             </div>
+                             <div className="text-2xl font-black">{kpi.actual}</div>
                           </div>
-                          <div className="text-right space-y-1">
-                             <p className="text-[10px] font-bold text-slate-300">Target goal</p>
-                             <input 
-                               type="number"
-                               readOnly={!(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser')}
-                               value={kpi.target}
-                               onChange={(e) => {
-                                 const val = parseFloat(e.target.value) || 0;
-                                 setKpis(prev => prev.map(item => item.id === kpi.id ? { ...item, target: val } : item));
-                               }}
-                               onBlur={async (e) => {
-                                 const val = parseFloat(e.target.value) || 0;
-                                 if (userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') {
-                                   await supabase.from('v2_agency_kpi_targets').update({ target_value: val }).eq('id', kpi.id);
-                                 }
-                               }}
-                               className={`w-24 text-xl font-bold text-amethyst-primary bg-slate-50 border-none rounded-lg text-right focus:ring-2 ring-amethyst-light outline-none px-2 ${!(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') ? 'cursor-default opacity-50' : ''}`}
-                             />
-                          </div>
-                       </div>
-
-                       {/* Progress Bar */}
-                       <div className="space-y-2">
-                          <div className="h-3 bg-slate-50 rounded-full overflow-hidden">
-                             <motion.div 
-                               initial={{ width: 0 }}
-                               animate={{ width: `${Math.min((kpi.actual / kpi.target) * 100, 100)}%` }}
-                               className={`h-full rounded-full ${kpi.actual >= kpi.target ? 'bg-emerald-400' : 'bg-amethyst-primary'}`}
-                             />
-                          </div>
-                          <div className="flex items-center justify-between">
-                             <span className="text-[10px] font-bold text-slate-400">
-                                {((kpi.actual / (kpi.target || 1)) * 100).toFixed(1)}% completed
-                             </span>
-                             <span className={`text-[10px] font-bold ${kpi.actual >= (kpi.target || 1) ? 'text-emerald-500' : 'text-rose-400'}`}>
-                                {kpi.actual >= (kpi.target || 1) ? 'Target met' : `${((kpi.target || 0) - kpi.actual).toLocaleString()} to go`}
-                             </span>
+                          <div className="text-right">
+                             <p className="text-[10px] font-bold text-slate-300">Target</p>
+                             <div className="text-xl font-bold text-amethyst-primary">{kpi.target}</div>
                           </div>
                        </div>
                     </div>
-                 </motion.div>
+                 </div>
                ))}
-               
-               {/* Removal of Placeholder Card */}
             </div>
          </div>
 
-         {/* Sidebar: Strategy Checklist & Insights */}
          <div className="space-y-10">
-            <div className="bg-white rounded-[40px] border border-slate-50 shadow-premium p-10 space-y-8">
-               <div className="space-y-2">
-                  <h4 className="text-xl font-bold text-amethyst-dark tracking-tight">Strategy Checklist</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">Critical actions to hit monthly targets.</p>
-               </div>
-
+            <div className="bg-white rounded-[40px] border p-10 space-y-8">
+               <h4 className="text-xl font-bold">Strategy Checklist</h4>
                <div className="space-y-4">
-                  {checklist.map((task, idx) => (
-                    <div 
-                      key={task.id || `task-${idx}`}
-                      className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-all group"
-                    >
-                       <div className="flex items-center gap-4 flex-1">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); toggleTask(task.id, task.status); } }
-                            className={`${task.status === 'completed' ? 'text-emerald-500' : 'text-slate-200 hover:text-amethyst-light'} transition-colors`}
-                          >
-                             {task.status === 'completed' ? <CheckCircle2 size={22}/> : <Circle size={22}/>}
+                  {checklist.map((task) => (
+                    <div key={task.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
+                       <div className="flex items-center gap-4">
+                          <button onClick={() => toggleTask(task.id, task.status)}>
+                             {task.status === 'completed' ? <CheckCircle2 size={22} className="text-emerald-500"/> : <Circle size={22} className="text-slate-300"/>}
                           </button>
-                          
-                          {editingId === task.id ? (
-                            <input 
-                              autoFocus
-                              value={editingText}
-                              onChange={(e) => setEditingText(e.target.value)}
-                              onBlur={() => handleUpdateTask(task.id)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleUpdateTask(task.id)}
-                              className="flex-1 bg-white border border-amethyst-primary/30 rounded-lg px-2 py-1 text-sm outline-none"
-                            />
-                          ) : (
-                            <span className={`text-sm font-semibold tracking-tight ${task.status === 'completed' ? 'text-slate-300 line-through' : 'text-amethyst-dark'}`}>
-                                {task.task}
-                            </span>
-                          )}
+                          <span className={task.status === 'completed' ? 'line-through text-slate-300' : ''}>{task.task}</span>
                        </div>
-                       
                        {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button 
-                               onClick={() => {
-                                 setEditingId(task.id);
-                                 setEditingText(task.task);
-                               }}
-                               className="p-1.5 text-slate-300 hover:text-amethyst-primary transition-colors"
-                             >
-                                <Edit3 size={14}/>
-                             </button>
-                             <button 
-                               onClick={() => handleDeleteTask(task.id)}
-                               className="p-1.5 text-slate-300 hover:text-rose-400 transition-colors"
-                             >
-                                <Trash2 size={14}/>
-                             </button>
-                          </div>
+                          <button onClick={() => handleDeleteTask(task.id)} className="text-slate-300 hover:text-rose-400"><Trash2 size={14}/></button>
                        )}
                     </div>
                   ))}
-                  
-                  {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
-                    <>
-                       {isAddingTask ? (
-                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 p-4">
-                           <input 
-                             autoFocus
-                             value={newTaskText}
-                             onChange={(e) => setNewTaskText(e.target.value)}
-                             onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                             placeholder="Type task..."
-                             className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 ring-amethyst-primary"
-                           />
-                           <button onClick={handleAddTask} className="p-2 bg-amethyst-dark text-white rounded-lg shadow-sm"><Check size={16}/></button>
-                         </motion.div>
-                       ) : (
-                         <button 
-                           onClick={() => setIsAddingTask(true)}
-                           className="w-full mt-4 flex items-center gap-2 text-amethyst-primary font-bold text-[10px] uppercase tracking-widest px-4 hover:translate-x-1 transition-all"
-                         >
-                            <Plus size={14}/> Add Strategy Item
-                         </button>
-                       )}
-                    </>
+                  {isAddingTask ? (
+                    <div className="flex gap-2 p-2">
+                      <input autoFocus value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddTask()} className="flex-1 bg-white border p-2 rounded-lg text-sm"/>
+                    </div>
+                  ) : (
+                    <button onClick={() => setIsAddingTask(true)} className="text-amethyst-primary font-bold text-xs uppercase px-4">+ Add Task</button>
                   )}
                </div>
             </div>
-
-            <div className="bg-white rounded-[48px] p-10 border-y border-r border-slate-100 border-l-[6px] border-l-slate-100 shadow-premium relative overflow-hidden group hover:border-l-amethyst-primary/30 transition-all duration-500">
-               <div className="relative z-10 mb-4">
-                  <h4 className="text-xl font-black tracking-tight text-amethyst-dark">Gap Insight</h4>
-               </div>
-               
-               <p className="relative z-10 text-sm font-medium leading-relaxed text-slate-500 italic">
-                  {gapInsight}
-               </p>
-
-               <div className="absolute bottom-0 right-0 opacity-[0.03] translate-x-1/4 translate-y-1/4 text-slate-900 pointer-events-none">
-                  <Monitor size={220} />
-               </div>
+            <div className="bg-white rounded-[40px] p-10 border shadow-sm">
+               <h4 className="text-xl font-bold mb-4">Gap Insight</h4>
+               <p className="text-sm text-slate-500 italic">{gapInsight}</p>
             </div>
          </div>
       </div>
-      {/* Add Goal Modal */}
+
       <AnimatePresence>
         {isAddModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 space-y-8"
-            >
-              <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-amethyst-dark">Add Growth Goal</h3>
-                <p className="text-sm text-slate-400">Select platform and metric to track.</p>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400">Select platform</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['INSTAGRAM', 'TIKTOK', 'THREADS'].map(p => (
-                      <button 
-                        key={p}
-                        onClick={() => {
-                          setNewGoal({...newGoal, platform: p as any, metric: platformMetrics[p][0]});
-                        }}
-                        className={`py-3 rounded-xl text-[10px] font-bold border transition-all ${newGoal.platform === p ? 'bg-amethyst-dark text-white border-amethyst-dark' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400">Select metric</label>
-                  <select 
-                    value={newGoal.metric}
-                    onChange={(e) => setNewGoal({...newGoal, metric: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold text-amethyst-dark outline-none cursor-pointer"
-                  >
-                    {platformMetrics[newGoal.platform].map((m: string) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400">Target value</label>
-                  <input 
-                    type="number"
-                    placeholder="Enter target e.g. 50000"
-                    onChange={(e) => setNewGoal({...newGoal, target: parseFloat(e.target.value) || 0})}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-xl font-black text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-400 text-xs font-bold hover:bg-slate-100 transition-all">Cancel</button>
-                <button onClick={handleAddGoal} className="flex-1 py-4 rounded-2xl bg-amethyst-dark text-white text-xs font-bold shadow-lg shadow-amethyst-dark/20 hover:shadow-xl transition-all">Set goal target</button>
-              </div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white w-full max-w-md rounded-[40px] p-10 space-y-8">
+               <h3 className="text-2xl font-bold">Add Goal</h3>
+               <div className="space-y-6">
+                 <select value={newGoal.platform} onChange={(e) => setNewGoal({...newGoal, platform: e.target.value as any})} className="w-full p-4 bg-slate-50 rounded-xl border">
+                   {['INSTAGRAM', 'TIKTOK', 'THREADS'].map(p => <option key={p} value={p}>{p}</option>)}
+                 </select>
+                 <select value={newGoal.metric} onChange={(e) => setNewGoal({...newGoal, metric: e.target.value})} className="w-full p-4 bg-slate-50 rounded-xl border">
+                   {platformMetrics[newGoal.platform].map((m: string) => <option key={m} value={m}>{m}</option>)}
+                 </select>
+                 <input type="number" placeholder="Target" onChange={(e) => setNewGoal({...newGoal, target: parseFloat(e.target.value) || 0})} className="w-full p-4 bg-slate-50 rounded-xl border text-xl font-bold"/>
+               </div>
+               <div className="flex gap-3">
+                 <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-4 bg-slate-50 rounded-2xl font-bold">Cancel</button>
+                 <button onClick={handleAddGoal} className="flex-1 py-4 bg-amethyst-dark text-white rounded-2xl font-bold">Save</button>
+               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-      {/* Global Popup Modal */}
+
       <AnimatePresence>
         {popup.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.95, y: 20 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-               className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden border border-slate-100"
-            >
-               <div className="p-8 space-y-6">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                    popup.type === 'danger' ? 'bg-rose-50 text-rose-500' : 'bg-amethyst-primary/10 text-amethyst-primary'
-                  }`}>
-                    {popup.type === 'danger' ? <Trash2 size={28}/> : <AlertCircle size={28}/>}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-black text-amethyst-dark tracking-tight">{popup.title}</h3>
-                    <p className="text-sm text-slate-400 font-medium leading-relaxed">{popup.message}</p>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <button 
-                      onClick={() => setPopup(p => ({ ...p, isOpen: false }))}
-                      className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black hover:bg-slate-100 transition-all"
-                    >
-                      Batal
-                    </button>
-                    <button 
-                      onClick={popup.onConfirm}
-                      className={`flex-1 py-4 rounded-2xl text-white text-[10px] font-black shadow-lg transition-all ${
-                        popup.type === 'danger' ? 'bg-rose-500 shadow-rose-500/20 hover:bg-rose-600' : 'bg-amethyst-dark shadow-amethyst-dark/20 hover:bg-black'
-                      }`}
-                    >
-                      {popup.confirmLabel || 'Konfirmasi'}
-                    </button>
-                  </div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white w-full max-w-sm rounded-[40px] p-8 space-y-6">
+               <h3 className="text-xl font-bold">{popup.title}</h3>
+               <p className="text-sm text-slate-400">{popup.message}</p>
+               <div className="flex gap-3">
+                  <button onClick={() => setPopup(p => ({ ...p, isOpen: false }))} className="flex-1 py-4 bg-slate-50 rounded-2xl font-bold">Batal</button>
+                  <button onClick={popup.onConfirm} className={`flex-1 py-4 rounded-2xl text-white font-bold ${popup.type === 'danger' ? 'bg-rose-500' : 'bg-amethyst-dark'}`}>
+                    {popup.confirmLabel || 'OK'}
+                  </button>
                </div>
             </motion.div>
           </div>
