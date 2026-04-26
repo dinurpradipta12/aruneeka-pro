@@ -9,41 +9,42 @@ const AruneekaUpdateDetector = () => {
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    // 1. Fetch initial version
-    const fetchInitialVersion = async () => {
+    const checkVersion = async () => {
       try {
         const res = await fetch('/version.json?t=' + Date.now());
         if (!res.ok) return;
         const data = await res.json();
-        setCurrentVersion(data.version);
+        const serverVersion = data.version;
+        
+        // 1. Get previously matched version from storage
+        const savedVersion = localStorage.getItem('aruneeka_app_version');
+        
+        // 2. If it's a first run, or if server version is higher/different
+        if (!savedVersion) {
+            localStorage.setItem('aruneeka_app_version', serverVersion);
+            setCurrentVersion(serverVersion);
+        } else if (savedVersion !== serverVersion) {
+            setHasUpdate(true);
+            setCurrentVersion(serverVersion);
+        } else {
+            setCurrentVersion(serverVersion);
+        }
       } catch (e) {
-        // Silent error for development or first run
+        // Silent error
       }
     };
 
-    fetchInitialVersion();
+    checkVersion();
 
-    // 2. Poll for updates every 2 minutes
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch('/version.json?t=' + Date.now());
-        if (!res.ok) return;
-        const data = await res.json();
-        
-        if (currentVersion && data.version !== currentVersion) {
-            setHasUpdate(true);
-            // Optional: prevent multiple popups or unnecessary intervals
-            clearInterval(interval);
-        }
-      } catch (e) {
-        // Silent error for polling
-      }
-    }, 120000); // 120 seconds
-
+    // Poll every 30 seconds for faster detection
+    const interval = setInterval(checkVersion, 30000);
     return () => clearInterval(interval);
-  }, [currentVersion]);
+  }, []);
 
   const handleReload = () => {
+    if (currentVersion) {
+      localStorage.setItem('aruneeka_app_version', currentVersion);
+    }
     window.location.reload();
   };
 
@@ -56,28 +57,31 @@ const AruneekaUpdateDetector = () => {
           exit={{ opacity: 0, x: -50, scale: 0.9 }}
           className="fixed bottom-8 left-8 z-[1000]"
         >
-          <div className="bg-slate-900 border border-white/10 rounded-[32px] p-2 pr-6 shadow-2xl shadow-amethyst-primary/20 backdrop-blur-xl flex items-center gap-6 overflow-hidden">
-             <div className="w-14 h-14 bg-amethyst-primary rounded-3xl flex items-center justify-center text-white relative flex-shrink-0 group">
+          <div className="bg-white/70 border border-white/60 rounded-[32px] p-2 pr-6 shadow-[0_20px_50px_rgba(145,109,213,0.2)] backdrop-blur-2xl flex items-center gap-6 overflow-hidden">
+             <div className="w-14 h-14 bg-gradient-to-br from-amethyst-primary to-amethyst-dark rounded-3xl flex items-center justify-center text-white relative flex-shrink-0 group shadow-lg shadow-amethyst-primary/30">
                 <Zap size={24} className="group-hover:scale-125 transition-transform" />
-                <div className="absolute inset-0 bg-white/20 animate-ping rounded-3xl" />
+                <div className="absolute inset-0 bg-white/20 animate-pulse rounded-3xl" />
              </div>
              
              <div className="space-y-0.5">
-                <h4 className="text-sm font-black text-white tracking-tight">System Update</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap italic">Build v2.0.4 - Freshly Deployed</p>
+                <h4 className="text-sm font-black text-amethyst-dark tracking-tight">System Update</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap italic">Build v{currentVersion || '...'} - Ready to Ship</p>
              </div>
 
              <button 
                onClick={handleReload}
-               className="h-12 px-6 bg-white text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-amethyst-primary hover:text-white transition-all flex items-center gap-2 active:scale-95"
+               className="h-12 px-6 bg-amethyst-primary text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-amethyst-dark transition-all flex items-center gap-2 active:scale-95 shadow-md shadow-amethyst-primary/20"
              >
                 <RefreshCw size={14} className="animate-spin-slow" />
                 Reload
              </button>
 
              <button 
-               onClick={() => setHasUpdate(false)}
-               className="p-2 text-slate-500 hover:text-white transition-colors"
+               onClick={() => {
+                 if (currentVersion) localStorage.setItem('aruneeka_app_version', currentVersion);
+                 setHasUpdate(false);
+               }}
+               className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
              >
                 <X size={16} />
              </button>
