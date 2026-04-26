@@ -45,11 +45,22 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
   const [regMember, setRegMember] = useState({ full_name: '', username: '', password: '', role: 'Member' as const });
   
   const [popup, setPopup] = useState<{
-    isOpen: boolean, title: string, message: string, onConfirm: () => void, type: 'danger' | 'info'
-  }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, type: 'info' });
+    isOpen: boolean,
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    type: 'danger' | 'info',
+    confirmLabel?: string
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
 
-  const showPopup = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'info' = 'info') => {
-    setPopup({ isOpen: true, title, message, onConfirm, type });
+  const showPopup = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'info' = 'info', confirmLabel: string = 'Konfirmasi') => {
+    setPopup({ isOpen: true, title, message, onConfirm, type, confirmLabel });
   };
 
   useEffect(() => { 
@@ -344,7 +355,12 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
                <div className="p-8 space-y-6">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${popup.type === 'danger' ? 'bg-rose-50 text-rose-500' : 'bg-amethyst-primary/10 text-amethyst-primary'}`}>{popup.type === 'danger' ? <Trash2 size={28}/> : <AlertCircle size={28}/>}</div>
                   <div className="space-y-2"><h3 className="text-xl font-black text-amethyst-dark tracking-tight">{popup.title}</h3><p className="text-sm text-slate-400 font-medium leading-relaxed">{popup.message}</p></div>
-                  <div className="flex gap-3 pt-2"><button onClick={() => setPopup(p => ({ ...p, isOpen: false }))} className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button><button onClick={popup.onConfirm} className={`flex-1 py-4 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all ${popup.type === 'danger' ? 'bg-rose-500 shadow-rose-500/20 hover:bg-rose-600' : 'bg-amethyst-dark shadow-amethyst-dark/20 hover:bg-black'}`}>Konfirmasi</button></div>
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={() => setPopup(p => ({ ...p, isOpen: false }))} className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button>
+                    <button onClick={popup.onConfirm} className={`flex-1 py-4 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all ${popup.type === 'danger' ? 'bg-rose-500 shadow-rose-500/20 hover:bg-rose-600' : 'bg-amethyst-dark shadow-amethyst-dark/20 hover:bg-black'}`}>
+                      {popup.confirmLabel || 'Konfirmasi'}
+                    </button>
+                  </div>
                </div>
             </motion.div>
           </div>
