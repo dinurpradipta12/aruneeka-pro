@@ -15,7 +15,8 @@ import {
   XCircle,
   AlertCircle,
   Settings,
-  Lock
+  Lock,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
