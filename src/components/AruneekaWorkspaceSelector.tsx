@@ -911,7 +911,7 @@ export const AruneekaWorkspaceSelector = ({
             }}
             className="flex items-center justify-center p-2 relative"
           >
-            <img src="/join.png" className="w-20 h-20 object-contain" />
+            <img src="/join.png?v=2" className="w-20 h-20 object-contain" />
             {teamMembers.length > 0 && (
                <div className="absolute top-2 right-2 w-7 h-7 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-black border-4 border-white">
                   {teamMembers.length}
