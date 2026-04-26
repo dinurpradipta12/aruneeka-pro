@@ -150,36 +150,80 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     setIsDeletingUser(true);
     try {
       const workspaceId = (userToDelete as any).workspace_id;
+      const targetUserId = userToDelete.id;
       
-      // 1. DULUAN: Hapus baris di v2_agency_workspaces yang merujuk user ini sebagai owner_id
-      // Ini akan memecahkan foreign key constraint
-      const { error: wsError } = await supabase
-        .from('v2_agency_workspaces')
-        .delete()
-        .eq('owner_id', userToDelete.id);
+      // --- PHASE 1: INDIVIDUAL SCRUB (Always do this for the specific user being deleted) ---
+      // Clear personal inbox
+      await supabase.from('v2_agency_inbox').delete().eq('user_id', targetUserId);
+      // Clear personal workspace memberships
+      await supabase.from('v2_agency_workspace_members').delete().eq('user_id', targetUserId);
 
-      if (wsError) throw wsError;
-
-      // 2. Hapus seluruh user yang terkait dengan workspace tersebut (pemilik + yang diundang)
+      // --- PHASE 2: SQUAD SCRUB (If Workspace Owner) ---
       if (workspaceId) {
-        const { error: usersError } = await supabase
-          .from('v2_agency_users')
-          .delete()
-          .eq('workspace_id', workspaceId);
+        // Find if this user is an owner of this workspace
+        const { data: wsOwner } = await supabase
+          .from('v2_agency_workspaces')
+          .select('id')
+          .eq('owner_id', targetUserId)
+          .maybeSingle();
 
-        if (usersError) throw usersError;
-        
-        // Update state lokal untuk menghapus semua user sesquad
-        setUsers(prev => prev.filter(u => (u as any).workspace_id !== workspaceId));
+        if (wsOwner) {
+          // THIS IS AN OWNER: Wipe the entire agency ecosystem
+          const squadWS = workspaceId;
+
+          // Scrub related data tables
+          await Promise.all([
+            supabase.from('v2_agency_content_plans').delete().eq('workspace_id', squadWS),
+            supabase.from('v2_agency_kpi_targets').delete().eq('workspace_id', squadWS),
+            supabase.from('v2_agency_strategy_checklist').delete().eq('workspace_id', squadWS),
+            supabase.from('v2_agency_accounts').delete().eq('workspace_id', squadWS),
+            supabase.from('v2_agency_intelligence').delete().eq('workspace_id', squadWS),
+            supabase.from('v2_agency_social_profiles').delete().eq('workspace_id', squadWS)
+          ]);
+
+          // Scrub all squad members' personal data (Inbox & Memberships)
+          const { data: squadMembers } = await supabase
+             .from('v2_agency_users')
+             .select('id')
+             .eq('workspace_id', squadWS);
+          
+          if (squadMembers && squadMembers.length > 0) {
+             const memberIds = squadMembers.map(m => m.id);
+             await supabase.from('v2_agency_inbox').delete().in('user_id', memberIds);
+             await supabase.from('v2_agency_workspace_members').delete().in('user_id', memberIds);
+          }
+
+          // Finally, delete the workspace row
+          await supabase.from('v2_agency_workspaces').delete().eq('owner_id', targetUserId);
+
+          // Delete all users in this squad
+          const { error: usersError } = await supabase
+            .from('v2_agency_users')
+            .delete()
+            .eq('workspace_id', squadWS);
+
+          if (usersError) throw usersError;
+          
+          setUsers(prev => prev.filter(u => (u as any).workspace_id !== squadWS));
+        } else {
+          // NOT AN OWNER: Just a single user removal
+          const { error: userError } = await supabase
+            .from('v2_agency_users')
+            .delete()
+            .eq('id', targetUserId);
+
+          if (userError) throw userError;
+          setUsers(prev => prev.filter(u => u.id !== targetUserId));
+        }
       } else {
-        // Fallback jika tidak ada workspace_id, hapus user spesifik saja
+        // NO WORKSPACE ID: Safety delete by ID only
         const { error: userError } = await supabase
           .from('v2_agency_users')
           .delete()
-          .eq('id', userToDelete.id);
+          .eq('id', targetUserId);
 
         if (userError) throw userError;
-        setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+        setUsers(prev => prev.filter(u => u.id !== targetUserId));
       }
 
       setShowDeleteConfirm(false);
@@ -188,7 +232,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       
       setTimeout(() => setShowSuccessModal({ show: false, type: 'delete' }), 3000);
     } catch (e: any) {
-      alert("Gagal menghapus data secara total: " + e.message);
+      alert("Gagal menghapus total: " + e.message);
     } finally {
       setIsDeletingUser(false);
     }
