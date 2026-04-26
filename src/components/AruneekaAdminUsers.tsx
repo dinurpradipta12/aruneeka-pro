@@ -45,10 +45,15 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [newExpiry, setNewExpiry] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<{show: boolean, type: 'delete' | 'update'}>({ show: false, type: 'delete' });
+
   const handleUpdateTier = async (userId: string, newTier: string) => {
     setIsUpdating(true);
     try {
@@ -93,7 +98,6 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
         .order('created_at', { ascending: false });
       
       if (data) {
-        // Pisahkan user Aktif dan Pending
         setUsers(data.filter(u => u.status !== 'Pending'));
         setPendingUsers(data.filter(u => u.status === 'Pending'));
       }
@@ -106,25 +110,14 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
 
   useEffect(() => {
     fetchUsers();
-    
     const userStr = localStorage.getItem('aruneeka_user');
     if (userStr) setCurrentUser(JSON.parse(userStr));
 
-    // AKTIVASI REAL-TIME: Hemat Bandwidth & Instan
     const channel = supabase
       .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'v2_agency_users'
-        },
-        () => {
-          // Re-fetch data hanya jika ada perubahan (Hemat Server)
-          fetchUsers();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, () => {
+        fetchUsers();
+      })
       .subscribe();
 
     return () => {
@@ -139,21 +132,39 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     try {
       const { error } = await supabase
         .from('v2_agency_users')
-        .update({ 
-          status: 'Active', 
-          is_verified: true 
-        })
+        .update({ status: 'Active', is_verified: true })
         .eq('id', userId);
 
       if (error) throw error;
-      
-      // Optimistic UI update for snappiness
       setPendingUsers(prev => prev.filter(u => u.id !== userId));
-      // fetchUsers() will still be called via real-time channel to sync everything
     } catch (e: any) {
       alert("Gagal menyetujui user: " + e.message);
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
+    try {
+      const { error } = await supabase
+        .from('v2_agency_users')
+        .delete()
+        .eq('id', userToDelete.id);
+
+      if (error) throw error;
+      
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      setShowDeleteConfirm(false);
+      setUserToDelete(null);
+      setShowSuccessModal({ show: true, type: 'delete' });
+      
+      setTimeout(() => setShowSuccessModal({ show: false, type: 'delete' }), 3000);
+    } catch (e: any) {
+      alert("Gagal menghapus user: " + e.message);
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -269,12 +280,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       {/* Manual Expiry Edit Modal */}
       <AnimatePresence>
         {editingUser && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setEditingUser(null)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
-            />
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -434,26 +440,26 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                         </td>
                        <td className="px-8 py-6">
                            <div className="flex items-center gap-3">
-                              <div className="space-y-0.5 min-w-[80px]">
-                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Started</p>
-                                 <p className="text-[10px] font-black text-slate-700">
-                                    {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                                 </p>
-                              </div>
-                              <div className="w-4 h-px bg-slate-200" />
-                              <div className="space-y-0.5 min-w-[80px]">
-                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expires</p>
-                                 <button 
-                                   onClick={() => {
-                                      setEditingUser(user);
-                                      setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
-                                   }}
-                                   className={`text-[10px] font-black text-left hover:text-amethyst-primary transition-all flex items-center gap-1 group ${isExpired ? 'text-rose-500' : 'text-slate-700'}`}
-                                 >
-                                    {expiryStr}
-                                    <Calendar size={10} className="opacity-0 group-hover:opacity-100 transition-all text-amethyst-primary" />
-                                 </button>
-                              </div>
+                               <div className="space-y-0.5 min-w-[80px]">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Started</p>
+                                  <p className="text-[10px] font-black text-slate-700">
+                                     {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                  </p>
+                               </div>
+                               <div className="w-4 h-px bg-slate-200" />
+                               <div className="space-y-0.5 min-w-[80px]">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expires</p>
+                                  <button 
+                                    onClick={() => {
+                                       setEditingUser(user);
+                                       setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
+                                    }}
+                                    className={`text-[10px] font-black text-left hover:text-amethyst-primary transition-all flex items-center gap-1 group ${isExpired ? 'text-rose-500' : 'text-slate-700'}`}
+                                  >
+                                     {expiryStr}
+                                     <Calendar size={10} className="opacity-0 group-hover:opacity-100 transition-all text-amethyst-primary" />
+                                  </button>
+                               </div>
                            </div>
                        </td>
                        <td className="px-8 py-6">
@@ -493,11 +499,23 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                           )}
                        </td>
                        <td className="px-8 py-6 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                             <button className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100">
+                          <div className="flex items-center justify-end gap-2">
+                             <button 
+                               onClick={() => {
+                                  setEditingUser(user);
+                                  setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
+                               }}
+                               className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100"
+                             >
                                 <Edit3 size={14} />
                              </button>
-                             <button className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent">
+                             <button 
+                               onClick={() => {
+                                  setUserToDelete(user);
+                                  setShowDeleteConfirm(true);
+                               }}
+                               className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent"
+                             >
                                 <Trash2 size={14} />
                              </button>
                           </div>
@@ -515,6 +533,77 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
            </div>
          )}
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showDeleteConfirm && userToDelete && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 30 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 30 }}
+               className="bg-white w-full max-w-sm rounded-[50px] shadow-2xl p-10 text-center space-y-8 relative overflow-hidden"
+             >
+                <div className="absolute top-0 left-0 w-full h-2 bg-rose-500" />
+                
+                <div className="space-y-3">
+                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[30px] flex items-center justify-center mx-auto mb-6 shadow-inner">
+                      <AlertCircle size={40} />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Hapus Akun User?</h3>
+                    <p className="text-xs font-bold text-slate-400 leading-relaxed px-4">
+                      Tindakan ini akan membuat <b>{userToDelete.full_name || userToDelete.username}</b> kehilangan seluruh akses ke Aruneeka selamanya.
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                    <button 
+                      onClick={confirmDelete}
+                      disabled={isDeletingUser}
+                      className="w-full py-5 bg-rose-500 text-white rounded-[24px] font-black text-[11px] uppercase tracking-[2px] shadow-xl shadow-rose-500/20 hover:bg-rose-600 transition-all flex items-center justify-center gap-3"
+                    >
+                      {isDeletingUser ? <Clock size={16} className="animate-spin" /> : 'Ya, Hapus Selama-lamanya'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!isDeletingUser) {
+                           setShowDeleteConfirm(false);
+                           setUserToDelete(null);
+                        }
+                      }}
+                      className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500 transition-all"
+                    >
+                      Batalkan
+                    </button>
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SUCCESS NOTIFICATION MODAL */}
+      <AnimatePresence>
+        {showSuccessModal.show && (
+          <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[10000]">
+             <motion.div 
+               initial={{ opacity: 0, y: -50, scale: 0.9 }}
+               animate={{ opacity: 1, y: 0, scale: 1 }}
+               exit={{ opacity: 0, y: -50, scale: 0.9 }}
+               className="bg-white px-8 py-5 rounded-full shadow-2xl border border-emerald-100 flex items-center gap-4"
+             >
+                <div className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center">
+                   <CheckCircle2 size={24} />
+                </div>
+                <div>
+                   <p className="text-xs font-black text-slate-800 uppercase tracking-widest leading-none">Berhasil!</p>
+                   <p className="text-[10px] font-bold text-slate-400 mt-1">
+                      User telah berhasil {showSuccessModal.type === 'delete' ? 'dihapus dari sistem' : 'diperbarui'}.
+                   </p>
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
