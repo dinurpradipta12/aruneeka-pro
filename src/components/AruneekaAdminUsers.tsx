@@ -152,77 +152,82 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       const workspaceId = (userToDelete as any).workspace_id;
       const targetUserId = userToDelete.id;
       
-      // --- PHASE 1: INDIVIDUAL SCRUB (Always do this for the specific user being deleted) ---
-      // Clear personal inbox
+      console.log("Starting Nuclear Scrub for user:", targetUserId);
+
+      // --- PHASE 1: INDIVIDUAL PERSONAL DATA ---
+      // Clear personal inbox & memberships
       await supabase.from('v2_agency_inbox').delete().eq('user_id', targetUserId);
-      // Clear personal workspace memberships
       await supabase.from('v2_agency_workspace_members').delete().eq('user_id', targetUserId);
 
-      // --- PHASE 2: SQUAD SCRUB (If Workspace Owner) ---
-      if (workspaceId) {
-        // Find if this user is an owner of this workspace
-        const { data: wsOwner } = await supabase
-          .from('v2_agency_workspaces')
-          .select('id')
-          .eq('owner_id', targetUserId)
-          .maybeSingle();
+      // --- PHASE 2: WORKSPACE & DEPENDENCIES ---
+      // Find all workspaces owned by this user
+      const { data: workspaces } = await supabase
+        .from('v2_agency_workspaces')
+        .select('id')
+        .eq('owner_id', targetUserId);
 
-        if (wsOwner) {
-          // THIS IS AN OWNER: Wipe the entire agency ecosystem
-          const squadWS = workspaceId;
-
-          // Scrub related data tables
+      if (workspaces && workspaces.length > 0) {
+        for (const ws of workspaces) {
+          const wsId = ws.id;
+          
+          // Clear all dependent tables for this workspace
           await Promise.all([
-            supabase.from('v2_agency_content_plans').delete().eq('workspace_id', squadWS),
-            supabase.from('v2_agency_kpi_targets').delete().eq('workspace_id', squadWS),
-            supabase.from('v2_agency_strategy_checklist').delete().eq('workspace_id', squadWS),
-            supabase.from('v2_agency_accounts').delete().eq('workspace_id', squadWS),
-            supabase.from('v2_agency_intelligence').delete().eq('workspace_id', squadWS),
-            supabase.from('v2_agency_social_profiles').delete().eq('workspace_id', squadWS)
+            supabase.from('v2_agency_content_plans').delete().eq('workspace_id', wsId),
+            supabase.from('v2_agency_kpi_targets').delete().eq('workspace_id', wsId),
+            supabase.from('v2_agency_strategy_checklist').delete().eq('workspace_id', wsId),
+            supabase.from('v2_agency_accounts').delete().eq('workspace_id', wsId),
+            supabase.from('v2_agency_intelligence').delete().eq('workspace_id', wsId),
+            supabase.from('v2_agency_social_profiles').delete().eq('workspace_id', wsId)
           ]);
 
-          // Scrub all squad members' personal data (Inbox & Memberships)
+          // Clear all squad members personal data for this workspace
           const { data: squadMembers } = await supabase
-             .from('v2_agency_users')
-             .select('id')
-             .eq('workspace_id', squadWS);
-          
+            .from('v2_agency_users')
+            .select('id')
+            .eq('workspace_id', wsId);
+
           if (squadMembers && squadMembers.length > 0) {
-             const memberIds = squadMembers.map(m => m.id);
-             await supabase.from('v2_agency_inbox').delete().in('user_id', memberIds);
-             await supabase.from('v2_agency_workspace_members').delete().in('user_id', memberIds);
+            const memberIds = squadMembers.map(m => m.id);
+            await supabase.from('v2_agency_inbox').delete().in('user_id', memberIds);
+            await supabase.from('v2_agency_workspace_members').delete().in('user_id', memberIds);
           }
 
-          // Finally, delete the workspace row
-          await supabase.from('v2_agency_workspaces').delete().eq('owner_id', targetUserId);
-
-          // Delete all users in this squad
-          const { error: usersError } = await supabase
-            .from('v2_agency_users')
+          // BREAK THE LINK: Nullify or Delete the workspace
+          // We'll try to delete it directly first as it's cleaner
+          const { error: wsDelError } = await supabase
+            .from('v2_agency_workspaces')
             .delete()
-            .eq('workspace_id', squadWS);
+            .eq('id', wsId);
 
-          if (usersError) throw usersError;
-          
-          setUsers(prev => prev.filter(u => (u as any).workspace_id !== squadWS));
-        } else {
-          // NOT AN OWNER: Just a single user removal
-          const { error: userError } = await supabase
-            .from('v2_agency_users')
-            .delete()
-            .eq('id', targetUserId);
-
-          if (userError) throw userError;
-          setUsers(prev => prev.filter(u => u.id !== targetUserId));
+          if (wsDelError) {
+             // If delete fails, try to nullify the owner_id so we can at least delete the user
+             await supabase.from('v2_agency_workspaces').update({ owner_id: null }).eq('id', wsId);
+          }
         }
+      }
+
+      // --- PHASE 3: FINAL SQUAD & USER PURGE ---
+      if (workspaceId) {
+        // Delete all users in that workspace_id (including the owner)
+        const { error: finalUsersError } = await supabase
+          .from('v2_agency_users')
+          .delete()
+          .eq('workspace_id', workspaceId);
+
+        if (finalUsersError) {
+           // Fallback: Just delete the target user if the squad wipe fails
+           await supabase.from('v2_agency_users').delete().eq('id', targetUserId);
+        }
+        
+        setUsers(prev => prev.filter(u => (u as any).workspace_id !== workspaceId));
       } else {
-        // NO WORKSPACE ID: Safety delete by ID only
-        const { error: userError } = await supabase
+        // Just delete the target user
+        const { error: finalUserError } = await supabase
           .from('v2_agency_users')
           .delete()
           .eq('id', targetUserId);
 
-        if (userError) throw userError;
+        if (finalUserError) throw finalUserError;
         setUsers(prev => prev.filter(u => u.id !== targetUserId));
       }
 
