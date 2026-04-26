@@ -150,38 +150,35 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     setIsDeletingUser(true);
     try {
       const workspaceId = (userToDelete as any).workspace_id;
-      const isOwner = userToDelete.role === 'Owner';
+      
+      // 1. DULUAN: Hapus baris di v2_agency_workspaces yang merujuk user ini sebagai owner_id
+      // Ini akan memecahkan foreign key constraint
+      const { error: wsError } = await supabase
+        .from('v2_agency_workspaces')
+        .delete()
+        .eq('owner_id', userToDelete.id);
 
-      if (isOwner && workspaceId) {
-        // 1. Delete the Workspace first (breaks the FK constraint)
-        const { error: wsError } = await supabase
-          .from('v2_agency_workspaces')
-          .delete()
-          .eq('id', workspaceId);
+      if (wsError) throw wsError;
 
-        if (wsError) throw wsError;
-
-        // 2. Delete all users belonging to this workspace (this also deletes the owner)
+      // 2. Hapus seluruh user yang terkait dengan workspace tersebut (pemilik + yang diundang)
+      if (workspaceId) {
         const { error: usersError } = await supabase
           .from('v2_agency_users')
           .delete()
           .eq('workspace_id', workspaceId);
 
         if (usersError) throw usersError;
+        
+        // Update state lokal untuk menghapus semua user sesquad
+        setUsers(prev => prev.filter(u => (u as any).workspace_id !== workspaceId));
       } else {
-        // Just delete this specific user (Member/Admin)
-        const { error } = await supabase
+        // Fallback jika tidak ada workspace_id, hapus user spesifik saja
+        const { error: userError } = await supabase
           .from('v2_agency_users')
           .delete()
           .eq('id', userToDelete.id);
 
-        if (error) throw error;
-      }
-
-      // Update local state
-      if (isOwner && workspaceId) {
-        setUsers(prev => prev.filter(u => (u as any).workspace_id !== workspaceId));
-      } else {
+        if (userError) throw userError;
         setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
       }
 
@@ -191,7 +188,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       
       setTimeout(() => setShowSuccessModal({ show: false, type: 'delete' }), 3000);
     } catch (e: any) {
-      alert("Gagal menghapus data: " + e.message);
+      alert("Gagal menghapus data secara total: " + e.message);
     } finally {
       setIsDeletingUser(false);
     }
