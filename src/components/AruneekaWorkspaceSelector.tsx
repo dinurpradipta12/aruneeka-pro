@@ -51,25 +51,12 @@ export const AruneekaWorkspaceSelector = ({
     try {
       setLoading(true);
 
-      // Administrative Realtime Listeners (Superuser / Developer Only)
-      if (['Superuser', 'developer'].includes(currentUser?.role)) {
-         // 1. Initial Fetch
+      // Administrative Realtime Initial Data (Superuser / Developer Only)
+      if (['Superuser', 'developer'].includes(currentUser?.role) || currentUser?.username === 'arunika') {
          const { count: uCount } = await supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
          const { count: iCount } = await supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
          setPendingUsersCount(uCount || 0);
          setPendingInboxCount(iCount || 0);
-
-         // 2. Realtime
-         supabase.channel('admin-selector-realtime')
-           .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload) => {
-              supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
-                .then(({ count }) => setPendingUsersCount(count || 0));
-           })
-           .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload) => {
-              supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
-                .then(({ count }) => setPendingInboxCount(count || 0));
-           })
-           .subscribe();
       }
       
       // 1. Find all user records with the same username
@@ -144,6 +131,27 @@ export const AruneekaWorkspaceSelector = ({
   useEffect(() => {
     fetchWorkspaces();
   }, []);
+
+  // Separate Realtime Listener for Admin Tasks
+  useEffect(() => {
+     const isDeveloper = ['Superuser', 'developer'].includes(currentUser?.role) || currentUser?.username === 'arunika';
+     if (!isDeveloper) return;
+
+     const channel = supabase.channel('admin-selector-realtime-' + Math.random().toString(36).substr(2, 9))
+       .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, () => {
+          supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
+            .then(({ count }) => setPendingUsersCount(count || 0));
+       })
+       .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, () => {
+          supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
+            .then(({ count }) => setPendingInboxCount(count || 0));
+       })
+       .subscribe();
+
+     return () => {
+        supabase.removeChannel(channel);
+     };
+  }, [currentUser]);
 
   const handleCreateWorkspace = async () => {
     if (!newBrandName.trim()) return;
@@ -505,41 +513,50 @@ export const AruneekaWorkspaceSelector = ({
                 )}
               </Link>
 
-              {(['developer', 'Superuser'].includes(currentUser?.role) || currentUser?.username === 'arunika') && (
-                  <Link prefetch={false} href="/admin/appearance" className="group flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-rose-500/30 transition-all duration-300">
-                        <Palette size={24} />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-700 tracking-tight">System styling</h4>
-                        <p className="text-[11px] text-slate-400 font-medium">Configure interface and theme rules</p>
-                      </div>
-                    </div>
-                  </Link>
-               )}
+              {(() => {
+                const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
+                const isDeveloper = ['developer', 'Superuser'].includes(currentUser?.role) || currentUser?.username === 'arunika' || ['developer', 'Superuser'].includes(storedUser?.role) || storedUser?.username === 'arunika';
+                
+                if (!isDeveloper) return null;
 
-              <Link prefetch={false} href="/admin/inbox" className="group relative flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-indigo-500/30 transition-all duration-300">
-                    <Inbox size={24} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-700 tracking-tight">Inbox center</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Subscription requests and support</p>
-                  </div>
-                </div>
-                {pendingInboxCount > 0 && (
-                   <motion.div 
-                     animate={{ scale: [1, 1.15, 1], opacity: [1, 0.7, 1] }}
-                     transition={{ repeat: Infinity, duration: 2.5 }}
-                     className="px-4 py-1.5 bg-emerald-500 text-white rounded-full flex items-center gap-2 shadow-lg shadow-emerald-500/20"
-                   >
-                      <Inbox size={10} />
-                      <span className="text-[10px] font-black">{pendingInboxCount} Requests</span>
-                   </motion.div>
-                )}
-              </Link>
+                return (
+                  <>
+                    <Link prefetch={false} href="/admin/appearance" className="group flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-rose-500/30 transition-all duration-300">
+                          <Palette size={24} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700 tracking-tight">System styling</h4>
+                          <p className="text-[11px] text-slate-400 font-medium">Configure interface and theme rules</p>
+                        </div>
+                      </div>
+                    </Link>
+
+                    <Link prefetch={false} href="/admin/inbox" className="group relative flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40_rgba(145,109,213,0.15)] transition-all duration-300">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-indigo-500/30 transition-all duration-300">
+                          <Inbox size={24} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700 tracking-tight">Inbox center</h4>
+                          <p className="text-[11px] text-slate-400 font-medium">Subscription requests and support</p>
+                        </div>
+                      </div>
+                      {pendingInboxCount > 0 && (
+                         <motion.div 
+                           animate={{ scale: [1, 1.15, 1], opacity: [1, 0.7, 1] }}
+                           transition={{ repeat: Infinity, duration: 2.5 }}
+                           className="px-4 py-1.5 bg-emerald-500 text-white rounded-full flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                         >
+                            <Inbox size={10} />
+                            <span className="text-[10px] font-black">{pendingInboxCount} Requests</span>
+                         </motion.div>
+                      )}
+                    </Link>
+                  </>
+                );
+              })()}
             </div>
           </motion.div>
         )}

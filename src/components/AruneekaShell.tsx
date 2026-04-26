@@ -696,7 +696,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                             const isStyling = item.href === '/admin/appearance';
                             const count = isUserAdmin ? pendingUsersCount : (isStyling ? 0 : pendingInboxCount);
                             
-                            const isDeveloper = ['developer', 'Superuser'].includes(user?.role) || user?.username === 'arunika';
+                            const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
+                            const isDeveloper = ['developer', 'Superuser'].includes(user?.role) || user?.username === 'arunika' || ['developer', 'Superuser'].includes(storedUser?.role) || storedUser?.username === 'arunika';
                             
                             // Specific restriction: System Styling ONLY for dev/superuser
                             if (isStyling && !isDeveloper) return null;

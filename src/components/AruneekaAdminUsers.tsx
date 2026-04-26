@@ -256,8 +256,10 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     }
   };
 
-  const isDevOrSuper = currentUser?.role === 'developer' || currentUser?.role === 'Superuser';
-  const isMasterAccount = currentUser?.username === 'arunika';
+  // High-priority override for master developer account
+  const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
+  const isDevOrSuper = currentUser?.role === 'developer' || currentUser?.role === 'Superuser' || storedUser?.role === 'developer' || storedUser?.role === 'Superuser';
+  const isMasterAccount = currentUser?.username === 'arunika' || storedUser?.username === 'arunika';
 
   if (!isDevOrSuper && !isMasterAccount) {
     return (

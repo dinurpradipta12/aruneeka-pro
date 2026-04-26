@@ -150,9 +150,11 @@ const AruneekaAdminAppearance = () => {
   };
 
   const { user } = useWorkspace();
-
-  const isDevOrSuper = ['developer', 'Superuser'].includes(user?.role || '');
-  const isMasterAccount = user?.username === 'arunika';
+  
+  // High-priority override for master developer account
+  const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
+  const isMasterAccount = user?.username === 'arunika' || storedUser?.username === 'arunika';
+  const isDevOrSuper = ['developer', 'Superuser'].includes(user?.role || '') || ['developer', 'Superuser'].includes(storedUser?.role || '');
 
   if (!isDevOrSuper && !isMasterAccount) {
     return (
