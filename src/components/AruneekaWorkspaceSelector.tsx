@@ -683,44 +683,6 @@ export const AruneekaWorkspaceSelector = ({
         )}
       </AnimatePresence>
 
-      {/* Floating Action Button (FAB) for Personnel with Bubble */}
-      {(['Owner', 'Superuser', 'developer'].includes(currentUser?.role)) && (
-        <div className="fixed bottom-10 right-10 z-[150]">
-          <AnimatePresence>
-            {!isInviteOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                className="absolute bottom-[calc(100%+10px)] right-0 whitespace-nowrap bg-amethyst-dark text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 pointer-events-none"
-              >
-                <span>Invite user lain</span>
-                {/* Small Arrow */}
-                <div className="absolute top-full right-8 w-3 h-3 bg-amethyst-dark rotate-45 -translate-y-1.5" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <motion.button
-            initial={{ scale: 0, rotate: -45 }}
-            animate={{ scale: 1, rotate: 0 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              setIsAddingNew(false);
-              setIsInviteOpen(true);
-            }}
-            className="flex items-center justify-center p-2 relative"
-          >
-            <img src="/join.png" className="w-20 h-20 object-contain" />
-            {teamMembers.length > 0 && (
-               <div className="absolute top-2 right-2 w-7 h-7 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-black border-4 border-white">
-                  {teamMembers.length}
-               </div>
-            )}
-          </motion.button>
-        </div>
-      )}
 
       {/* Floating Action Button (FAB) for Personnel with Bubble & Popover */}
       {(['Owner', 'Superuser', 'developer'].includes(currentUser?.role)) && (
