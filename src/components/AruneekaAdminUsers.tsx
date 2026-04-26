@@ -148,9 +148,11 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     if (!userToDelete) return;
     setIsDeletingUser(true);
     try {
+      // DONT DELETE: Use status 'Disabled' to block access forever
+      // This avoids foreign key constraint errors with workspaces
       const { error } = await supabase
         .from('v2_agency_users')
-        .delete()
+        .update({ status: 'Disabled' })
         .eq('id', userToDelete.id);
 
       if (error) throw error;
@@ -162,7 +164,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       
       setTimeout(() => setShowSuccessModal({ show: false, type: 'delete' }), 3000);
     } catch (e: any) {
-      alert("Gagal menghapus user: " + e.message);
+      alert("Gagal memblokir akses user: " + e.message);
     } finally {
       setIsDeletingUser(false);
     }

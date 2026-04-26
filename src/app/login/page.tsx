@@ -169,6 +169,10 @@ const LoginPage = () => {
       // Pick the first record as the primary identity (for avatar/full_name)
       const data = userRecords[0];
 
+      if (data.status === 'Disabled' || data.status === 'Blocked') {
+         throw new Error('Akses akun Anda telah dicabut selamanya oleh Administrator.');
+      }
+
       if (!data.avatar_url) {
          setLoggedInUser(data);
          setShowIdentitySetup(true);
