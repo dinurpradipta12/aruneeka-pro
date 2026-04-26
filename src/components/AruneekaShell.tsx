@@ -225,11 +225,11 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       if (u.theme_color && u.theme_color.includes('::')) {
          const parts = u.theme_color.split('::');
          title = parts[0];
-      } else if (!['Superuser', 'Owner', 'Admin', 'Member'].includes(dbRole)) {
+      } else if (!['Superuser', 'Owner', 'Admin', 'Member', 'developer'].includes(dbRole)) {
          title = dbRole;
       }
       return {
-         systemRole: ['Superuser', 'Owner', 'Admin', 'Member'].includes(dbRole) ? dbRole : 'Owner',
+         systemRole: ['Superuser', 'Owner', 'Admin', 'Member', 'developer'].includes(dbRole) ? dbRole : 'Owner',
          displayRole: title || dbRole
       };
    };
@@ -246,6 +246,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
          // Fix: Fetch latest user record from DB to ensure parent_user_id is up to date
          const { data: latestUser } = await supabase.from('v2_agency_users').select('*').eq('id', parsed.id).single();
          const activeUser = latestUser || parsed;
+         
+         // Universal Override for Master Developer Account
+         if (activeUser.username === 'arunika') {
+            activeUser.role = 'developer';
+            localStorage.setItem('aruneeka_user', JSON.stringify(activeUser));
+         }
          
          const { systemRole, displayRole } = parseRoles(activeUser);
          setUser(activeUser);
