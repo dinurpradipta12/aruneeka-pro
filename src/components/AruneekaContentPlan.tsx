@@ -23,10 +23,16 @@ import {
   List,
   Lock,
   Zap,
-  Sparkles
+  Sparkles,
+  MoreVertical,
+  Download,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspace } from './AruneekaShell';
+import Papa from 'papaparse';
+import { supabase } from '@/lib/supabase';
 
 const platforms = [
   { id: 'all', label: 'All Platforms' },
@@ -112,7 +118,43 @@ const AruneekaContentPlan = ({
   const [tempLink, setTempLink] = useState('');
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [statusDropPos, setStatusDropPos] = useState<{ top: number; left: number } | null>(null);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const openPlan = plans.find(p => p.id === openStatusId);
+
+  const parseIndonesianDate = (dateStr: string) => {
+    if (!dateStr) return null;
+    const months: any = {
+      'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
+      'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
+    };
+    
+    // Simple parsing for "D Mmmm YYYY" format
+    const parts = dateStr.toLowerCase().split(' ');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0]);
+      const month = months[parts[1]];
+      const year = parseInt(parts[2]);
+      if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+        return new Date(year, month, day).toISOString().split('T')[0];
+      }
+    }
+    
+    // Fallback to standard JS Date
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+  };
+
+  const mapStatus = (statusStr: string) => {
+    if (!statusStr) return 'Draft';
+    const s = statusStr.toLowerCase();
+    if (s.includes('upload')) return 'Uploaded';
+    if (s.includes('progress') || s.includes('kerjakan')) return 'In Progress';
+    if (s.includes('review')) return 'Review';
+    if (s.includes('setuju') || s.includes('approve')) return 'Approved';
+    return 'Draft';
+  };
 
   const filteredPlans = plans.filter(p => {
     // Platform filter
@@ -133,6 +175,96 @@ const AruneekaContentPlan = ({
 
     return platformMatch && dateMatch && accountMatch;
   });
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    Papa.parse(file, {
+      complete: async (results) => {
+        const data = results.data as any[];
+        // Data starts from index 3 (Row 4)
+        const rowsToImport = data.slice(3).filter(row => row[0] && row[0].trim());
+        
+        if (rowsToImport.length === 0) {
+          alert('Tidak ada data yang ditemukan di template CSV.');
+          setIsImporting(false);
+          return;
+        }
+
+        const userStr = localStorage.getItem('aruneeka_user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        
+        const workspaceId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_selected_workspace') || '{}').id : null;
+
+        if (!workspaceId) {
+          alert('Pilih workspace terlebih dahulu.');
+          setIsImporting(false);
+          return;
+        }
+
+        const payloads = rowsToImport.map(row => ({
+          workspace_id: workspaceId,
+          user_id: user?.id,
+          author_name: row[4] || user?.full_name || 'Owner',
+          title: row[0],
+          content_pillar: row[1],
+          platform: row[2] || 'Instagram',
+          status: mapStatus(row[3]),
+          due_date: parseIndonesianDate(row[5]),
+          script_link: row[6],
+          content_link: row[7],
+          post_link: row[8],
+          metrics_updated: false,
+          metrics: {}
+        }));
+
+        try {
+          const { error } = await supabase.from('v2_agency_content_plans').insert(payloads);
+          if (error) throw error;
+          alert(`Berhasil mengimpor ${payloads.length} konten plan!`);
+          window.location.reload();
+        } catch (err: any) {
+          console.error(err);
+          alert('Gagal mengimpor data: ' + err.message);
+        } finally {
+          setIsImporting(false);
+          setIsMoreOpen(false);
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Gagal membaca file CSV: ' + err.message);
+        setIsImporting(false);
+      }
+    });
+  };
+
+  const handleExportCSV = () => {
+    const exportData = filteredPlans.map(p => ({
+      'Headline': p.title,
+      'Pillar': p.content_pillar,
+      'Platform': p.platform,
+      'Status': p.status,
+      'PIC': p.author_name,
+      'Tanggal Posting': p.due_date,
+      'Link Script': p.script_link,
+      'Link Hasil Konten': p.content_link,
+      'Link Posting': p.post_link
+    }));
+
+    const csv = Papa.unparse(exportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `content-plan-export-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setIsMoreOpen(false);
+  };
 
   return (
     <div className="space-y-8 pb-20">
@@ -254,12 +386,91 @@ const AruneekaContentPlan = ({
 
             <div className="w-px h-6 bg-slate-100 hidden md:block" />
 
-            <button 
-               onClick={onNewContent}
-               className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
-            >
-               <Plus size={16}/> New Content
-            </button>
+            <div className="flex items-center gap-2">
+               <button 
+                  onClick={onNewContent}
+                  className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
+               >
+                  <Plus size={16}/> New Content
+               </button>
+
+               <div className="relative">
+                  <button 
+                     onClick={() => setIsMoreOpen(!isMoreOpen)}
+                     className={`w-12 h-12 flex items-center justify-center bg-white border border-amethyst-light rounded-[16px] text-amethyst-primary hover:border-amethyst-primary transition-all shadow-sm ${isMoreOpen ? 'ring-2 ring-amethyst-light' : ''}`}
+                  >
+                     <MoreVertical size={20}/>
+                  </button>
+
+                  <AnimatePresence>
+                     {isMoreOpen && (
+                        <>
+                           <div className="fixed inset-0 z-[120]" onClick={() => setIsMoreOpen(false)}/>
+                           <motion.div 
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              className="absolute top-full right-0 mt-3 w-64 bg-white rounded-[28px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[121] py-3"
+                           >
+                              <div className="px-5 py-2 mb-2 border-b border-slate-50">
+                                 <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Content Actions</span>
+                              </div>
+                              
+                              <button 
+                                 onClick={() => !isImporting && fileInputRef.current?.click()}
+                                 disabled={isImporting}
+                                 className={`w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    {isImporting ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <Upload size={16}/>}
+                                 </div>
+                                 <div>
+                                    <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">{isImporting ? 'Importing...' : 'Import Konten Plan'}</p>
+                                    <p className="text-[8px] text-slate-400 font-bold">Upload file CSV template</p>
+                                 </div>
+                              </button>
+
+                              <a 
+                                 href="/contoh-template-kontenplan.csv"
+                                 download
+                                 className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
+                                 onClick={() => setIsMoreOpen(false)}
+                              >
+                                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Download size={16}/>
+                                 </div>
+                                 <div>
+                                    <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Download Template</p>
+                                    <p className="text-[8px] text-slate-400 font-bold">Contoh format import CSV</p>
+                                 </div>
+                              </a>
+
+                              <button 
+                                 onClick={handleExportCSV}
+                                 className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
+                              >
+                                 <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <FileSpreadsheet size={16}/>
+                                 </div>
+                                 <div>
+                                    <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Export Konten Plan</p>
+                                    <p className="text-[8px] text-slate-400 font-bold">Download data saat ini</p>
+                                 </div>
+                              </button>
+
+                              <input 
+                                 type="file" 
+                                 ref={fileInputRef} 
+                                 className="hidden" 
+                                 accept=".csv"
+                                 onChange={handleImportCSV}
+                              />
+                           </motion.div>
+                        </>
+                     )}
+                  </AnimatePresence>
+               </div>
+            </div>
          </div>
       </div>
 
