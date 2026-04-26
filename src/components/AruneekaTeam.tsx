@@ -286,58 +286,65 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search squad..." className="pl-10 pr-6 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold focus:ring-2 ring-amethyst-light/30 outline-none transition-all w-64 shadow-sm" />
           </div>
-
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMembers.map((member) => (
-            <motion.div layout key={member.id} className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-premium relative group overflow-hidden">
-              <div className={`absolute top-0 left-0 w-1.5 h-full ${member.role === 'Admin' || member.role === 'Owner' ? 'bg-amethyst-primary/30' : member.role === 'Sub Admin' ? 'bg-blue-400/30' : 'bg-slate-100'}`} />
-              <div className="flex items-start justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 flex items-center justify-center text-xl font-black text-amethyst-dark overflow-hidden">
-                    {member.avatar_url ? (
-                      <img src={member.avatar_url} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="w-full h-full rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
+        {filteredMembers.map((member, i) => (
+          <motion.div 
+            layout 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            key={member.id} 
+            className="bg-white rounded-[40px] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 relative group hover:shadow-2xl hover:shadow-amethyst-primary/10 transition-all flex flex-col justify-between min-h-[280px]"
+          >
+            <div className={`absolute top-0 left-0 w-full h-1 ${member.role === 'Admin' || member.role === 'Owner' ? 'bg-amethyst-primary' : 'bg-blue-400'}`} />
+            
+            <div className="space-y-6">
+              <div className="flex items-start justify-between">
+                <div className="w-20 h-20 flex items-center justify-center relative">
+                   {member.avatar_url ? (
+                     <img src={member.avatar_url} className="w-full h-full object-contain" />
+                   ) : (
+                     <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-xl font-black text-amethyst-dark">
                         {member.full_name?.charAt(0) || 'U'}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-lg font-black text-amethyst-dark tracking-tight">{member.full_name}</h4>
-                    <div className="flex items-center gap-2">
-                      {getRoleIcon(member.role)}
-                      <span className="text-[10px] font-bold text-slate-400">{member.displayRole || member.role}</span>
-                    </div>
-                  </div>
+                     </div>
+                   )}
+                   <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white bg-emerald-500 shadow-sm" />
                 </div>
+                
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => handleDeleteMember(member.id, member.full_name)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                  <button onClick={() => handleOpenEdit(member)} className="p-2 text-slate-300 hover:text-amethyst-primary hover:bg-amethyst-light/10 rounded-xl transition-all">
+                    <Settings size={14} />
+                  </button>
+                  <button onClick={() => handleDeleteMember(member.id, member.full_name)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-              <div className="mt-8 pt-8 border-t border-slate-50 space-y-4">
-                <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
-                  <span>Account Status</span>
-                  <span className={member.status === 'Active' ? 'text-emerald-500' : 'text-orange-400'}>{member.status}</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                  <Mail size={12} className="text-slate-300" />
-                  <span className="text-xs font-semibold text-slate-500 truncate">@{member.username}</span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleOpenEdit(member)} className="flex-1 mt-6 py-3 rounded-xl border border-slate-100 text-[10px] font-bold text-amethyst-dark hover:bg-slate-50 transition-all">
-                  Role Settings
-                </button>
-                <button onClick={() => handleOpenAccessControl(member)} className="flex-1 mt-6 py-3 rounded-xl border border-amethyst-light/30 bg-amethyst-light/5 text-[10px] font-bold text-amethyst-primary hover:bg-amethyst-light/20 transition-all flex items-center justify-center gap-2">
-                  <Building2 size={12} /> Access Brand
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
 
+              <div className="space-y-1">
+                <h4 className="text-xl font-black text-slate-800 tracking-tight">{member.full_name}</h4>
+                <div className="flex items-center gap-2">
+                  <span className="p-1 px-2.5 bg-slate-50 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400 border border-slate-100/50">
+                    {member.displayRole || member.role}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+               <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300">
+                    <Mail size={12} />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400">@{member.username}</span>
+               </div>
+               <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Active Access</span>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* EDIT ROLE MODAL */}
