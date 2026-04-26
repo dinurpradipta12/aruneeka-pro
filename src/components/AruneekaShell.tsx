@@ -160,6 +160,7 @@ const navItems = [
 const adminItems = [
    { label: 'User Management', icon: <ShieldCheck size={16} />, href: '/admin/users' },
    { label: 'System Styling', icon: <Palette size={16} />, href: '/admin/appearance' },
+   { label: 'Inbox Center', icon: <Inbox size={16} />, href: '/admin/inbox' },
 ];
 
 // Multi-Tenant Context for global access
@@ -209,6 +210,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [selectedProfile, setSelectedProfile] = useState<any>(null);
    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
    const [showRealtimeSuccess, setShowRealtimeSuccess] = useState(false);
+
+   // Administrative Realtime States
+   const [pendingUsersCount, setPendingUsersCount] = useState(0);
+   const [pendingInboxCount, setPendingInboxCount] = useState(0);
+   const [lastNotification, setLastNotification] = useState<{ type: 'user' | 'inbox', message: string } | null>(null);
+   const [showDynamicIsland, setShowDynamicIsland] = useState(false);
 
    const avatars = Array.from({ length: 12 }, (_, i) => `/assets/avatars/avatar${i + 1}.svg`);
 
@@ -325,11 +332,54 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              }
            )
            .subscribe();
+
+         // Administrative Realtime Listeners (Superuser / Developer Only)
+         let adminChannel: any = null;
+         if (['Superuser', 'developer'].includes(user.role)) {
+            // 1. Initial Fetch for counts
+            const fetchAdminCounts = async () => {
+               const { count: uCount } = await supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
+               const { count: iCount } = await supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
+               setPendingUsersCount(uCount || 0);
+               setPendingInboxCount(iCount || 0);
+            };
+            fetchAdminCounts();
+
+            // 2. Setup Realtime
+            adminChannel = supabase.channel('system-admin-alerts')
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload) => {
+                 if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
+                    setPendingUsersCount(prev => prev + 1);
+                    setLastNotification({ type: 'user', message: 'Ada User baru butuh verifikasi!' });
+                    setShowDynamicIsland(true);
+                 } else if (payload.eventType === 'UPDATE') {
+                    fetchAdminCounts(); // Refresh on updates to be sure
+                 }
+              })
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload) => {
+                 if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
+                    setPendingInboxCount(prev => prev + 1);
+                    setLastNotification({ type: 'inbox', message: 'Permintaan perpanjangan / upgrade baru!' });
+                    setShowDynamicIsland(true);
+                 } else if (payload.eventType === 'UPDATE') {
+                    fetchAdminCounts();
+                 }
+              })
+              .subscribe();
+            
+            // Auto hide dynamic island
+            let timer: any;
+            if (showDynamicIsland) {
+              timer = setTimeout(() => setShowDynamicIsland(false), 8000);
+            }
+         }
+
          return () => {
            supabase.removeChannel(channel);
+           if (adminChannel) supabase.removeChannel(adminChannel);
          };
       }
-   }, [user, subscriptionTier]);
+   }, [user, subscriptionTier, showDynamicIsland]);
    const fetchTeamCount = async () => {
       try {
          const wsId = selectedWorkspace?.id;
@@ -488,6 +538,35 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
         user
       }}>
          <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
+            {/* DYNAMIC ISLAND SYSTEM NOTIFICATION */}
+            <AnimatePresence>
+               {showDynamicIsland && lastNotification && (
+                  <motion.div 
+                     initial={{ y: -100, x: '-50%', opacity: 0, scale: 0.8 }}
+                     animate={{ y: 0, x: '-50%', opacity: 1, scale: 1 }}
+                     exit={{ y: -100, x: '-50%', opacity: 0, scale: 0.8 }}
+                     className="fixed top-8 left-1/2 z-[10000] min-w-[320px]"
+                  >
+                     <Link 
+                        href={lastNotification.type === 'user' ? '/admin/users' : '/admin/inbox'}
+                        onClick={() => setShowDynamicIsland(false)}
+                        className="bg-slate-950/95 backdrop-blur-2xl border border-white/10 rounded-[40px] p-2 flex items-center gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] group hover:scale-[1.02] transition-transform"
+                     >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg ${lastNotification.type === 'user' ? 'bg-amethyst-primary text-white' : 'bg-emerald-500 text-white'}`}>
+                           {lastNotification.type === 'user' ? <ShieldCheck size={20} /> : <Inbox size={20} />}
+                        </div>
+                        <div className="flex-1 pr-6 py-2">
+                           <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">System Alert</p>
+                           <p className="text-[11px] font-bold text-white tracking-tight">{lastNotification.message}</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 mr-2 group-hover:text-white transition-colors">
+                           <ChevronRight size={16} />
+                        </div>
+                     </Link>
+                  </motion.div>
+               )}
+            </AnimatePresence>
+
             <AnimatePresence>
                {user?.status === 'Pending' && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xl p-4">
@@ -591,17 +670,45 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                </div>
             </header>
 
-            <div className="px-8 max-w-[1600px] mx-auto mt-4 relative z-20">
-               <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
-                  <div className="flex items-center gap-1">
-                     {navItems.map((item) => (
-                        <Link key={item.href} href={item.href} className={`px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-amethyst-dark text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-amethyst-primary hover:bg-slate-50'}`}>
-                           {item.icon} <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                        </Link>
-                     ))}
-                  </div>
-               </nav>
-            </div>
+             <div className="px-8 max-w-[1600px] mx-auto mt-4 relative z-20 flex items-center justify-between">
+                <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
+                   <div className="flex items-center gap-1">
+                      {navItems.map((item) => (
+                         <Link key={item.href} href={item.href} className={`px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-amethyst-dark text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-amethyst-primary hover:bg-slate-50'}`}>
+                            {item.icon} <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                         </Link>
+                      ))}
+                   </div>
+                </nav>
+
+                {/* Administrative Fast Actions / Alerts */}
+                {['Superuser', 'developer'].includes(user?.role) && (
+                   <nav className="bg-slate-900/5 backdrop-blur-lg border border-slate-200/50 rounded-2xl p-1.5 inline-flex items-center">
+                      <div className="flex items-center gap-1">
+                         {adminItems.map((item) => {
+                            const isUserAdmin = item.href === '/admin/users';
+                            const count = isUserAdmin ? pendingUsersCount : pendingInboxCount;
+                            
+                            return (
+                               <Link key={item.href} href={item.href} className={`relative px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:bg-white hover:text-amethyst-primary shadow-sm'}`}>
+                                  {item.icon} 
+                                  <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                                  {count > 0 && (
+                                     <motion.div 
+                                       animate={{ scale: [1, 1.2, 1], opacity: [1, 0.8, 1] }}
+                                       transition={{ repeat: Infinity, duration: 2 }}
+                                       className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg"
+                                     >
+                                        {count}
+                                     </motion.div>
+                                  )}
+                               </Link>
+                            );
+                         })}
+                      </div>
+                   </nav>
+                )}
+             </div>
 
             <main className="px-8 max-w-[1600px] mx-auto mt-10">
                {React.Children.map(children, child => React.isValidElement(child) ? React.cloneElement(child as any, { 

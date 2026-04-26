@@ -232,12 +232,6 @@ const LoginPage = () => {
             />
           )}
 
-          {/* Abstract Geometry Ornaments (Optional) */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none">
-             <div className="absolute top-20 right-20 w-64 h-64 border-[40px] border-white/20 rounded-full" />
-             <div className="absolute bottom-[-10%] left-[-10%] w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-          </div>
-
           {/* Sisi kiri sekarang sengaja dikosongkan agar fokus pada gambar hero */}
         </div>
 

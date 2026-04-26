@@ -333,13 +333,7 @@ const AruneekaAdminAppearance = () => {
                         style={{ backgroundImage: `url(${config.login_hero_image})` }}
                      />
                    )}
-                   <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                      <div className="w-6 h-6 bg-white/20 rounded-lg" />
-                      <div className="space-y-2">
-                         <div className="w-12 h-1 bg-white/40 rounded-full" />
-                         <div className="w-10 h-1 bg-white/20 rounded-full" />
-                      </div>
-                   </div>
+                   <div className="absolute inset-0 p-6 flex flex-col justify-between" />
                 </div>
                 {/* Right Side Form */}
                 <div className="flex-1 bg-white p-8 flex flex-col justify-center gap-4">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock, UserPlus, Share2, AlertCircle } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock, UserPlus, Share2, AlertCircle, Inbox } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import AruneekaUpgradeModal from './AruneekaUpgradeModal';
@@ -39,6 +39,10 @@ export const AruneekaWorkspaceSelector = ({
   const [lastInvitedUser, setLastInvitedUser] = useState<any>(null);
   const [userDeleting, setUserDeleting] = useState<any>(null);
 
+  // Administrative Realtime States
+  const [pendingUsersCount, setPendingUsersCount] = useState(0);
+  const [pendingInboxCount, setPendingInboxCount] = useState(0);
+
   const categories = ['F&B', 'Fashion', 'Beauty', 'Tech', 'Service', 'Education', 'Personal Branding', 'Other'];
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryName, setCustomCategoryName] = useState('');
@@ -46,6 +50,27 @@ export const AruneekaWorkspaceSelector = ({
   const fetchWorkspaces = async () => {
     try {
       setLoading(true);
+
+      // Administrative Realtime Listeners (Superuser / Developer Only)
+      if (['Superuser', 'developer'].includes(currentUser?.role)) {
+         // 1. Initial Fetch
+         const { count: uCount } = await supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
+         const { count: iCount } = await supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
+         setPendingUsersCount(uCount || 0);
+         setPendingInboxCount(iCount || 0);
+
+         // 2. Realtime
+         supabase.channel('admin-selector-realtime')
+           .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload) => {
+              supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
+                .then(({ count }) => setPendingUsersCount(count || 0));
+           })
+           .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload) => {
+              supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
+                .then(({ count }) => setPendingInboxCount(count || 0));
+           })
+           .subscribe();
+      }
       
       // 1. Find all user records with the same username
       const { data: userRecords } = await supabase
@@ -458,7 +483,7 @@ export const AruneekaWorkspaceSelector = ({
               <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">System Administration</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Link prefetch={false} href="/admin/users" className="group flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
+              <Link prefetch={false} href="/admin/users" className="group relative flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
                 <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-emerald-500/30 transition-all duration-300">
                     <ShieldCheck size={24} />
@@ -468,6 +493,16 @@ export const AruneekaWorkspaceSelector = ({
                     <p className="text-[11px] text-slate-400 font-medium">Monitor and maintain system access</p>
                   </div>
                 </div>
+                {pendingUsersCount > 0 && (
+                   <motion.div 
+                     animate={{ scale: [1, 1.15, 1], opacity: [1, 0.7, 1] }}
+                     transition={{ repeat: Infinity, duration: 2.5 }}
+                     className="px-4 py-1.5 bg-rose-500 text-white rounded-full flex items-center gap-2 shadow-lg shadow-rose-500/20"
+                   >
+                      <AlertCircle size={10} />
+                      <span className="text-[10px] font-black">{pendingUsersCount} Pending</span>
+                   </motion.div>
+                )}
               </Link>
 
               <Link prefetch={false} href="/admin/appearance" className="group flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
@@ -482,16 +517,26 @@ export const AruneekaWorkspaceSelector = ({
                 </div>
               </Link>
 
-              <Link prefetch={false} href="/admin/inbox" className="group flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
+              <Link prefetch={false} href="/admin/inbox" className="group relative flex items-center justify-between bg-white/60 backdrop-blur-sm border border-amethyst-light/30 rounded-[32px] p-6 hover:bg-white hover:border-amethyst-primary/40 hover:shadow-[0_15px_40px_rgba(145,109,213,0.15)] transition-all duration-300">
                 <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-indigo-500/30 transition-all duration-300">
-                    <Mail size={24} />
+                    <Inbox size={24} />
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-slate-700 tracking-tight">Inbox center</h4>
                     <p className="text-[11px] text-slate-400 font-medium">Subscription requests and support</p>
                   </div>
                 </div>
+                {pendingInboxCount > 0 && (
+                   <motion.div 
+                     animate={{ scale: [1, 1.15, 1], opacity: [1, 0.7, 1] }}
+                     transition={{ repeat: Infinity, duration: 2.5 }}
+                     className="px-4 py-1.5 bg-emerald-500 text-white rounded-full flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                   >
+                      <Inbox size={10} />
+                      <span className="text-[10px] font-black">{pendingInboxCount} Requests</span>
+                   </motion.div>
+                )}
               </Link>
             </div>
           </motion.div>
