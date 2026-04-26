@@ -23,25 +23,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AruneekaMetricsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, metrics: any) => void;
+  onSave: (id: string, metrics: any) => Promise<any>;
   content: any;
 }
 
 const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onClose, onSave, content }) => {
   const platform = useMemo(() => content?.platform?.toLowerCase() || 'instagram', [content]);
   const [metrics, setMetrics] = React.useState<any>({});
-  const [showWarning, setShowWarning] = React.useState(false);
+  const [warningDismissed, setWarningDismissed] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
       setMetrics(content?.metrics || {});
-      if (!content?.metrics_updated) {
-        setShowWarning(true);
-      } else {
-        setShowWarning(false);
-      }
+      setWarningDismissed(false); // Reset dismissal state every time modal opens
     }
   }, [content, isOpen]);
+
+  const showWarning = isOpen && !content?.metrics_updated && !warningDismissed;
 
   const engagementRate = useMemo(() => {
     const v = parseInt(metrics.views) || 0;
@@ -62,9 +60,15 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
     return 0;
   }, [metrics, platform]);
 
-  const handleSave = () => {
-    onSave(content.id, { ...metrics, engagementRate });
-    onClose();
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const error = await onSave(content.id, { ...metrics, engagementRate });
+    setIsSaving(false);
+    if (!error) {
+      onClose();
+    }
   };
 
   const renderInput = (key: string, label: string, icon: React.ReactNode, placeholder = '0') => (
@@ -133,7 +137,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
-            onClick={showWarning ? () => { onClose(); setShowWarning(false); } : onClose}
+            onClick={showWarning ? () => { onClose(); setWarningDismissed(false); } : onClose}
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99]"
           />
           <AnimatePresence>
@@ -155,13 +159,13 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
                   </p>
                   <div className="flex items-center gap-3 w-full">
                     <button 
-                      onClick={() => { onClose(); setShowWarning(false); }}
+                      onClick={() => { onClose(); setWarningDismissed(false); }}
                       className="flex-1 py-3.5 bg-slate-50 text-slate-400 font-bold uppercase tracking-widest text-[9px] rounded-2xl hover:bg-slate-100 transition-colors"
                     >
                       Kembali
                     </button>
                     <button 
-                      onClick={() => setShowWarning(false)}
+                      onClick={() => setWarningDismissed(true)}
                       className="flex-1 py-3.5 bg-amethyst-primary text-white font-bold uppercase tracking-widest text-[9px] rounded-2xl hover:bg-amethyst-dark transition-colors shadow-lg shadow-amethyst-primary/20"
                     >
                       Oke
@@ -225,9 +229,15 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
                   </button>
                   <button 
                     onClick={handleSave}
-                    className="flex-[2] py-6 bg-amethyst-dark text-white rounded-[28px] font-black text-xs uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    disabled={isSaving}
+                    className={`flex-[2] py-6 bg-amethyst-dark text-white rounded-[28px] font-black text-xs uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 transition-all ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
                   >
-                    Simpan Statistik Performa
+                    {isSaving ? (
+                      <div className="flex items-center justify-center gap-3">
+                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                         Menyimpan...
+                      </div>
+                    ) : 'Simpan Statistik Performa'}
                   </button>
                </div>
                 </div>

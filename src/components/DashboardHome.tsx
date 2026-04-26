@@ -127,10 +127,10 @@ const DashboardHome = ({
   return (
     <div className="space-y-8 pb-20">
       <section className="py-2">
-         <div className="space-y-1 max-w-4xl">
-            <h2 className="text-4xl font-black text-slate-800 tracking-tight">Selamat Datang, <span className="text-amethyst-primary">{user?.full_name?.split(' ')[0]}!</span></h2>
-            <p className="text-sm text-slate-400 font-medium leading-relaxed">Dashboard pusat operasional Aruneeka Pro.</p>
-         </div>
+          <div className="space-y-1 max-w-4xl">
+             <h2 className="text-4xl font-black text-amethyst-primary tracking-tight">Selamat Datang, {user?.full_name?.split(' ')[0]}!</h2>
+             <p className="text-[13px] text-slate-400 font-medium italic leading-relaxed">Dashboard pusat operasional Aruneeka Pro.</p>
+          </div>
       </section>
 
       <section className="grid grid-cols-4 gap-6 relative">
@@ -235,6 +235,56 @@ const DashboardHome = ({
            </div>
         </div>
       </div>
+
+      {/* RECENT OUTPUT SECTION - Restoration */}
+      <section className="space-y-6">
+         <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black text-slate-800 tracking-tight">Recent Content Output</h3>
+            <button onClick={() => window.location.href = '/content'} className="text-[10px] font-black uppercase text-amethyst-primary tracking-widest hover:underline px-4">View All Plans</button>
+         </div>
+         <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 scrollbar-hide">
+            {recentOutput.length > 0 ? recentOutput.map((item, i) => (
+               <motion.div 
+                 initial={{ opacity: 0, x: 20 }} 
+                 animate={{ opacity: 1, x: 0 }} 
+                 transition={{ delay: i * 0.1 }} 
+                 key={i} 
+                 className="flex-shrink-0 w-[350px] bg-white p-8 rounded-[48px] border border-slate-100 shadow-sm space-y-6 group hover:shadow-xl transition-all relative overflow-hidden"
+               >
+                  <div className="flex items-center justify-between relative z-10">
+                     <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                        item.status === 'Uploaded' || item.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
+                     }`}>
+                        {item.status}
+                     </span>
+                     <div className="bg-slate-50 p-2 rounded-xl text-slate-400 group-hover:text-amethyst-primary transition-colors">
+                        {platformIcons[item.platform?.toLowerCase()] || <Share2 size={14}/>}
+                     </div>
+                  </div>
+                  <h4 className="text-xl font-black text-slate-800 leading-tight line-clamp-2 h-14">{item.title}</h4>
+                  <div className="pt-4 flex items-center justify-between border-t border-slate-50 relative z-10">
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amethyst-light/20 flex items-center justify-center text-[10px] font-bold text-amethyst-dark border border-amethyst-light/30">
+                           {item.platform?.charAt(0)}
+                        </div>
+                        <div>
+                           <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Platform</p>
+                           <p className="text-[10px] font-bold text-slate-500">{item.platform}</p>
+                        </div>
+                     </div>
+                     <div className="text-right">
+                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Due Date</p>
+                        <p className="text-[10px] font-bold text-slate-400">{new Date(item.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
+                     </div>
+                  </div>
+               </motion.div>
+            )) : (
+                <div className="w-full py-16 text-center bg-slate-50/30 rounded-[48px] border-2 border-dashed border-slate-100">
+                   <p className="text-sm font-bold text-slate-300 italic">Belum ada konten terbaru untuk ditampilkan.</p>
+                </div>
+            )}
+         </div>
+      </section>
     </div>
   );
 };

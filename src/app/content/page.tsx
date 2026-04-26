@@ -175,7 +175,14 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
       .eq('id', id)
       .eq('workspace_id', workspaceId);
     
-    if (!error) fetchPlans(true);
+    if (error) {
+      console.error('Save metrics error:', error);
+      alert(`Gagal menyimpan statistik: ${error.message}`);
+      return error;
+    }
+    
+    fetchPlans(true);
+    return null;
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -218,6 +225,9 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
         view={activeTab === 'list' ? 'table' : activeTab}
         onViewChange={(v) => setActiveTab(v === 'table' ? 'list' : v)}
         subscriptionTier={subscriptionTier}
+        selectedWorkspaceId={selectedWorkspaceId}
+        selectedProfileId={selectedProfileId}
+        onRefresh={() => fetchPlans(true)}
         onSelectContent={(p) => setSelectedContent(p)}
         onNewContent={() => { setEditingContent(null); setIsWizardOpen(true); }}
         onDelete={handleDelete}

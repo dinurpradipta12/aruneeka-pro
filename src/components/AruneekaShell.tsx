@@ -119,7 +119,7 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
                initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }} 
                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} 
                exit={{ opacity: 0, scale: 0.5, y: 10, x: 10 }} 
-               className={`absolute bottom-6 right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType === "subscribe" ? "bg-amethyst-primary text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
+               className={`absolute bottom-6 right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType === "subscribe" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
             >
                {bubbleType === "subscribe" && (
                   <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-400 text-white rounded-full flex items-center justify-center shadow-lg animate-bounce">
@@ -132,14 +132,14 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
                {bubbleType === "subscribe" && (
                   <button 
                     onClick={() => { setShowBubble(false); openUpgrade(); }}
-                    className="mt-4 w-full py-2.5 bg-white text-amethyst-primary rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-105 active:scale-95 transition-all"
+                    className="mt-4 w-full py-2.5 bg-white text-slate-900 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-105 active:scale-95 transition-all"
                   >
                      Upgrade Now
                   </button>
                )}
                {/* Side Tail pointing to avatar */}
                <div 
-                  className={`absolute top-[65%] -right-2.5 w-6 h-6 ${bubbleType === "subscribe" ? "bg-amethyst-primary" : "bg-white/90"} -z-10`}
+                  className={`absolute top-[65%] -right-2.5 w-6 h-6 ${bubbleType === "subscribe" ? "bg-[#AC8BEE]" : "bg-white/90"} -z-10`}
                   style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }}
                />
             </motion.div>
@@ -151,10 +151,9 @@ MotivationBubble.displayName = 'MotivationBubble';
 
 
 const navItems = [
-   { label: 'Dashboard', icon: <Layout size={16} />, href: '/' },
+   { label: 'Performance Dashboard', icon: <TrendingUp size={16} />, href: '/analytics' },
    { label: 'KPI Section', icon: <Target size={16} />, href: '/strategy' },
    { label: 'Content Plan', icon: <Calendar size={16} />, href: '/content' },
-   { label: 'Performance', icon: <TrendingUp size={16} />, href: '/analytics' },
    { label: 'Team Squad', icon: <Users size={16} />, href: '/manage' },
 ];
 

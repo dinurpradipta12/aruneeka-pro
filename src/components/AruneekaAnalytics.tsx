@@ -173,6 +173,12 @@ const AruneekaAnalytics = ({
     })).sort((a, b) => a.date.localeCompare(b.date));
   }, [data, activeRange, customStart, customEnd]);
 
+  const activePlatform = useMemo(() => {
+    if (!selectedProfileId) return 'all';
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    return profile?.platform?.toLowerCase() || 'all';
+  }, [selectedProfileId, profiles]);
+
   // Global Metric Calculations - OPTIMIZED SINGLE PASS
   const metrics = useMemo(() => {
     const totals = {
@@ -181,8 +187,15 @@ const AruneekaAnalytics = ({
     };
 
     data.forEach(curr => {
-      const m = curr.metrics || {};
       const platform = curr.platform?.toLowerCase() || '';
+      
+      // Safety: If a profile is selected, only count contents matching that platform
+      // to avoid data pollution from misassigned account IDs
+      if (activePlatform !== 'all' && platform !== activePlatform) {
+        return;
+      }
+
+      const m = curr.metrics || {};
 
       // Views & Reach
       const v = Number(m.views || m.Views || m.impressions || m.Impressions || 0);
@@ -202,12 +215,12 @@ const AruneekaAnalytics = ({
 
       // Reposts & Others
       totals.reposts += Number(m.reposts || m.shares || m.Reposts || m.Shares || 0);
-      totals.retentionSum += Number(m.avg_retention || m.retention || 0);
+      totals.retentionSum += Number(m.avg_watch || m.avg_retention || m.retention || 0);
       if (curr.status?.toLowerCase() === 'uploaded') totals.uploadedCount++;
       totals.followers += Number(m.new_followers || m.follower_gain || m.Followers || m.follows || m.new_follows || 0);
     });
 
-    const avgRetention = data.length > 0 ? totals.retentionSum / data.length : 0;
+    const avgRetention = totals.uploadedCount > 0 ? totals.retentionSum / totals.uploadedCount : 0;
     
     const targetProfiles = selectedProfileId ? profiles.filter(p => p.id === selectedProfileId) : profiles;
 
@@ -231,11 +244,6 @@ const AruneekaAnalytics = ({
     };
   }, [data, profiles, selectedProfileId]);
 
-  const activePlatform = useMemo(() => {
-    if (!selectedProfileId) return 'all';
-    const profile = profiles.find(p => p.id === selectedProfileId);
-    return profile?.platform?.toLowerCase() || 'all';
-  }, [selectedProfileId, profiles]);
 
   const stats = useMemo(() => {
     const common = {
@@ -248,7 +256,7 @@ const AruneekaAnalytics = ({
         trend: '100%', 
         icon: <Layout size={16} className="text-emerald-500"/>, 
         bg: 'bg-emerald-50',
-        subValue: `${(metrics.contentUploaded / (dailyMetrics.length || 1)).toFixed(2)} content / hari`
+        subValue: `${Math.round(metrics.contentUploaded / (dailyMetrics.length || 1))} content / hari`
       } as any,
       follows: { 
         label: 'New Followers', 

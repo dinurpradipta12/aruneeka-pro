@@ -10,7 +10,7 @@
   --radius-5xl: 3rem;
   --radius-6xl: 4rem;
   
-  --shadow-premium: 0 4px 20px -2px rgba(145, 109, 213, 0.05); /* Made much lighter */
+  --shadow-premium: 0 4px 20px -2px rgba(145, 109, 213, 0.05);
 }
 
 :root {

@@ -88,6 +88,8 @@ const AruneekaContentPlan = ({
   onStatusChange,
   onInlineUpdate,
   selectedProfileId,
+  selectedWorkspaceId,
+  onRefresh,
   view = 'table',
   onViewChange,
   subscriptionTier = 'free'
@@ -101,6 +103,8 @@ const AruneekaContentPlan = ({
   onStatusChange?: (id: string, status: string) => void,
   onInlineUpdate?: (id: string, field: string, value: string) => void,
   selectedProfileId?: string,
+  selectedWorkspaceId?: string,
+  onRefresh?: () => void,
   view?: 'table' | 'kanban' | 'calendar',
   onViewChange?: (view: any) => void,
   subscriptionTier?: string
@@ -110,8 +114,8 @@ const AruneekaContentPlan = ({
   const [lockedFeature, setLockedFeature] = useState({ title: '', desc: '', icon: <Kanban/> });
   const [filter, setFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ 
-    start: `${new Date().getFullYear()}-01-01`, 
-    end: `${new Date().getFullYear()}-12-31` 
+    start: `${new Date().getFullYear() - 1}-01-01`, 
+    end: `${new Date().getFullYear() + 1}-12-31` 
   });
   const [isRangeOpen, setIsRangeOpen] = useState(false);
 
@@ -166,6 +170,10 @@ const AruneekaContentPlan = ({
     
     // Date Range filter
     let dateMatch = true;
+    if (filter === 'unscheduled') {
+      return !p.due_date;
+    }
+
     if (p.due_date) {
       const pDate = new Date(p.due_date).toISOString().split('T')[0];
       dateMatch = pDate >= dateRange.start && pDate <= dateRange.end;
@@ -188,14 +196,20 @@ const AruneekaContentPlan = ({
     Papa.parse(file, {
       complete: async (results) => {
         const data = results.data as any[];
-        // Data starts from index 3 (Row 4)
-        const rowsToImport = data.slice(3).filter(row => row[0] && row[0].trim());
+        // Data starts from Row 3 (index 2) according to user mention "A3 and B3"
+        const rowsToImport = data.slice(2).filter(row => {
+          if (!row[0] || !row[0].trim()) return false;
+          // Skip header placeholders
+          const title = row[0].toLowerCase();
+          if (title === 'headline' || title === 'title' || title === 'headline (hook)') return false;
+          return true;
+        });
         
         if (rowsToImport.length === 0) {
           setFeedbackModal({
             isOpen: true,
             title: 'File Kosong',
-            message: 'Tidak ada data yang ditemukan di template CSV yang Anda unggah.',
+            message: 'Tidak ada data yang ditemukan di template CSV (mulai baris ke-3) yang Anda unggah.',
             type: 'info'
           });
           setIsImporting(false);
@@ -205,7 +219,7 @@ const AruneekaContentPlan = ({
         const userStr = localStorage.getItem('aruneeka_user');
         const user = userStr ? JSON.parse(userStr) : null;
         
-        const workspaceId = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_selected_workspace') || '{}').id : null;
+        const workspaceId = selectedWorkspaceId;
 
         if (!workspaceId) {
           setFeedbackModal({
@@ -221,16 +235,16 @@ const AruneekaContentPlan = ({
         const payloads = rowsToImport.map(row => ({
           workspace_id: workspaceId,
           user_id: user?.id,
-          target_account: selectedProfileId || null, // Auto-assign to selected social profile
-          author_name: row[4] || user?.full_name || 'Owner',
-          title: row[0],
-          content_pillar: row[1],
-          platform: row[2] || 'Instagram',
-          status: mapStatus(row[3]),
-          due_date: parseIndonesianDate(row[5]),
-          script_link: row[6],
-          content_link: row[7],
-          post_link: row[8],
+          target_account: selectedProfileId || null, 
+          author_name: row[4] || user?.full_name || 'Owner', // Col E (PIC)
+          title: row[0], // Col A (Headline)
+          content_pillar: row[1], // Col B (Pillar)
+          platform: row[2] || 'Instagram', // Col C (Platform)
+          status: mapStatus(row[3]), // Col D (Status/Phase)
+          due_date: parseIndonesianDate(row[5]), // Col F (Due Date)
+          script_link: row[6], // Col G (Script Link)
+          content_link: row[7], // Col H (Content Folder Link)
+          post_link: row[8], // Col I (Live Post Link)
           metrics_updated: false,
           metrics: {}
         }));
@@ -244,6 +258,7 @@ const AruneekaContentPlan = ({
             message: `Berhasil mengimpor ${payloads.length} konten plan ke dalam workspace Anda.`,
             type: 'success'
           });
+          if (onRefresh) onRefresh();
         } catch (err: any) {
           console.error(err);
           setFeedbackModal({
@@ -554,7 +569,7 @@ const AruneekaContentPlan = ({
                         </td>
                         <td className="py-8 px-4">
                            <div className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-xl">
-                              {platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>}
+                              {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : '-'}
                            </div>
                         </td>
                         <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
@@ -571,14 +586,19 @@ const AruneekaContentPlan = ({
                                   statusStyles[plan.status?.toLowerCase()] || 'bg-slate-50 text-slate-400'
                                 }`}
                               >
-                                {plan.status}
+                                {plan.status || 'Draft'}
                                 <ChevronDown size={10} className={`transition-transform ${openStatusId === plan.id ? 'rotate-180' : ''}`}/>
                               </button>
                            </div>
                         </td>
-                        <td className="py-8 px-4 text-xs font-normal text-amethyst-dark/60">{plan.author_name || "Owner"}</td>
+                        <td className="py-8 px-4 text-xs font-normal text-amethyst-dark/60">{plan.author_name || "-"}</td>
                         <td className="py-8 px-4">
-                           <div className="text-xs font-bold text-amethyst-dark/80">{new Date(plan.due_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                           <div className="text-xs font-bold text-amethyst-dark/80">
+                             {plan.due_date 
+                               ? new Date(plan.due_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
+                               : 'Unscheduled'
+                             }
+                           </div>
                         </td>
                         <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3">

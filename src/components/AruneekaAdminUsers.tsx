@@ -48,7 +48,22 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [newExpiry, setNewExpiry] = useState<string>('');
-  const [isUpdating, setIsUpdating] = useState(false);
+  const handleUpdateTier = async (userId: string, newTier: string) => {
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('v2_agency_users')
+        .update({ subscription_tier: newTier })
+        .eq('id', userId);
+
+      if (error) throw error;
+      fetchUsers();
+    } catch (e: any) {
+      alert("Gagal update package: " + e.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleUpdateExpiry = async () => {
     if (!editingUser || !newExpiry) return;
@@ -391,16 +406,31 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                           <span className={getRoleStyle(user.role)}>{user.role}</span>
                        </td>
                        <td className="px-8 py-6">
-                          <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all ${
-                             user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : 
-                             user.subscription_tier === 'pro' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'
-                          }`}>
-                             {user.subscription_tier === 'agency' ? <Sparkles size={12} className="animate-pulse" /> : user.subscription_tier === 'pro' ? <Zap size={12} /> : <Clock size={12} />}
-                             <span className="text-[10px] font-black uppercase tracking-widest">
-                                {isUnlimited ? 'Developer Pro' : (user.subscription_tier || 'Free Starter')}
-                             </span>
-                          </div>
-                       </td>
+                           {isUnlimited ? (
+                              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border bg-black text-white border-black transition-all">
+                                 <ShieldCheck size={12} className="animate-pulse" />
+                                 <span className="text-[10px] font-black uppercase tracking-widest">Developer Pro</span>
+                              </div>
+                           ) : (
+                              <select 
+                                value={user.subscription_tier || 'free'}
+                                onChange={(e) => handleUpdateTier(user.id, e.target.value)}
+                                disabled={isUpdating}
+                                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md active:scale-95 disabled:opacity-50 appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${
+                                   user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : 
+                                   user.subscription_tier === 'pro' || user.subscription_tier === 'single_creator' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'
+                                }`}
+                                style={{
+                                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                                   backgroundSize: '12px'
+                                }}
+                              >
+                                 <option value="free">Free Starter</option>
+                                 <option value="pro">Single Creator</option>
+                                 <option value="agency">Agency Pro</option>
+                              </select>
+                           )}
+                        </td>
                        <td className="px-8 py-6">
                            <div className="flex items-center gap-3">
                               <div className="space-y-0.5 min-w-[80px]">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils, Shirt, Sparkles, Cpu, Briefcase, GraduationCap, User, ShieldCheck, Palette, Code2, Mail, Lock, UserPlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import AruneekaUpgradeModal from './AruneekaUpgradeModal';
@@ -30,6 +30,11 @@ export const AruneekaWorkspaceSelector = ({
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [editBrandName, setEditBrandName] = useState('');
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ fullName: '', username: '', password: '' });
+  const [isInviting, setIsInviting] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
   const categories = ['F&B', 'Fashion', 'Beauty', 'Tech', 'Service', 'Education', 'Personal Branding', 'Other'];
   const [isCustomCategory, setIsCustomCategory] = useState(false);
@@ -69,6 +74,14 @@ export const AruneekaWorkspaceSelector = ({
       }));
 
       setWorkspaces(formatted);
+
+      // 3. Fetch Global Team Members
+      const { data: team } = await supabase
+        .from('v2_agency_users')
+        .select('*')
+        .eq('parent_user_id', currentUser.id);
+      
+      if (team) setTeamMembers(team);
     } catch (e) {
       console.error(e);
     } finally {
@@ -184,6 +197,63 @@ export const AruneekaWorkspaceSelector = ({
     setEditBrandName(ws.name);
     setBrandCategory(ws.category || 'F&B'); // Ganti kategori sementara untuk edit
     setIsEditOpen(true);
+  };
+
+  const handleGlobalInvite = async () => {
+    if (!inviteForm.fullName || !inviteForm.username || !inviteForm.password) return;
+    setIsInviting(true);
+    try {
+      // 0. Check Limit for FREE Users
+      if (currentUser?.subscription_tier === 'free' && !(['Superuser', 'developer'].includes(currentUser?.role))) {
+        const { count, error: countError } = await supabase
+          .from('v2_agency_users')
+          .select('*', { count: 'exact', head: true })
+          .eq('parent_user_id', currentUser.id);
+        
+        if (countError) throw countError;
+        if (count && count >= 2) {
+          setIsInviteOpen(false);
+          setIsUpgradeOpen(true);
+          return;
+        }
+      }
+
+      // 1. Create the User Record
+      const { data: newUser, error: userError } = await supabase
+        .from('v2_agency_users')
+        .insert([{
+          full_name: inviteForm.fullName,
+          username: inviteForm.username,
+          password: inviteForm.password,
+          role: 'Member',
+          status: 'Active',
+          is_verified: true,
+          parent_user_id: currentUser.id // Link to owner
+        }])
+        .select()
+        .single();
+      
+      if (userError) throw userError;
+
+      // 2. Add to ALL existing workspaces
+      if (workspaces.length > 0) {
+        const memberships = workspaces.map(ws => ({
+          workspace_id: ws.id,
+          user_id: newUser.id,
+          role: 'Member'
+        }));
+        await supabase.from('v2_agency_workspace_members').insert(memberships);
+      }
+
+      alert("Personel berhasil diundang ke semua brand Anda!");
+      setIsInviteOpen(false);
+      setInviteForm({ fullName: '', username: '', password: '' });
+      fetchWorkspaces();
+    } catch (e: any) {
+      alert("Gagal mengundang: " + e.message);
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const handleUpdateWorkspace = async () => {
@@ -594,6 +664,220 @@ export const AruneekaWorkspaceSelector = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Floating Action Button (FAB) for Personnel with Bubble */}
+      {(['Owner', 'Superuser', 'developer'].includes(currentUser?.role)) && (
+        <div className="fixed bottom-10 right-10 z-[150]">
+          <AnimatePresence>
+            {!isInviteOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                className="absolute bottom-[calc(100%+10px)] right-0 whitespace-nowrap bg-amethyst-dark text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 pointer-events-none"
+              >
+                <span>Invite user lain</span>
+                {/* Small Arrow */}
+                <div className="absolute top-full right-8 w-3 h-3 bg-amethyst-dark rotate-45 -translate-y-1.5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            initial={{ scale: 0, rotate: -45 }}
+            animate={{ scale: 1, rotate: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setIsAddingNew(false);
+              setIsInviteOpen(true);
+            }}
+            className="flex items-center justify-center p-2 relative"
+          >
+            <img src="/join.png" className="w-20 h-20 object-contain" />
+            {teamMembers.length > 0 && (
+               <div className="absolute top-2 right-2 w-7 h-7 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-black border-4 border-white">
+                  {teamMembers.length}
+               </div>
+            )}
+          </motion.button>
+        </div>
+      )}
+
+      {/* Floating Action Button (FAB) for Personnel with Bubble & Popover */}
+      {(['Owner', 'Superuser', 'developer'].includes(currentUser?.role)) && (
+        <div className="fixed bottom-10 right-10 z-[200]">
+          <AnimatePresence>
+            {!isInviteOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                className="absolute bottom-[calc(100%+10px)] right-0 whitespace-nowrap bg-amethyst-dark text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 pointer-events-none"
+              >
+                <span>Invite user lain</span>
+                <div className="absolute top-full right-8 w-3 h-3 bg-amethyst-dark rotate-45 -translate-y-1.5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isInviteOpen && (
+              <>
+                {/* Backdrop for click-outside-to-close */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsInviteOpen(false)}
+                  className="fixed inset-0 z-[205] bg-slate-900/5 backdrop-blur-[2px]"
+                />
+                
+                <div className="absolute bottom-full right-0 mb-6 z-[210]">
+                   <motion.div 
+                     initial={{ opacity: 0, y: 20, scale: 0.9, originY: 'bottom', originX: 'right' }}
+                     animate={{ opacity: 1, y: 0, scale: 1 }}
+                     exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                     className="bg-white w-[400px] rounded-[40px] p-8 shadow-[0_20px_70px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-slate-100"
+                   >
+                    <div className="space-y-6 flex-1 flex flex-col">
+                      <div className="text-center space-y-1">
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Team Management</h2>
+                        <div className="flex flex-col items-center gap-1.5">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                             {isAddingNew ? 'Invite New Personnel' : `${teamMembers.length} Global Members`}
+                           </p>
+                           <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-[0.15em] shadow-sm ${
+                              currentUser?.subscription_tier === 'free' ? 'bg-slate-50 text-slate-400 border border-slate-100' : 'bg-emerald-50 text-emerald-500 border border-emerald-100'
+                           }`}>
+                              {currentUser?.subscription_tier === 'free' ? 'Standard Tier' : 'Subscribed Account'}
+                           </span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1">
+                        {!isAddingNew ? (
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                            {teamMembers.length > 0 ? teamMembers.map((member, i) => (
+                              <motion.div 
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                key={member.id} 
+                                className="bg-slate-50 p-4 rounded-2xl flex items-center justify-between group"
+                              >
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 flex items-center justify-center text-amethyst-primary font-black text-xs overflow-hidden">
+                                       {member.avatar_url ? (
+                                         <img src={member.avatar_url} className="w-full h-full object-contain" />
+                                       ) : (
+                                         <div className="bg-slate-50 w-full h-full rounded-xl flex items-center justify-center text-[10px]">
+                                            {member.full_name?.[0]}
+                                         </div>
+                                       )}
+                                    </div>
+                                    <div>
+                                       <p className="font-bold text-slate-800 text-xs">{member.full_name}</p>
+                                       <p className="text-[9px] font-bold text-slate-400">@{member.username}</p>
+                                    </div>
+                                 </div>
+                                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                              </motion.div>
+                            )) : (
+                              <div className="py-10 text-center space-y-3 opacity-30 grayscale">
+                                 <Users className="mx-auto" size={40} />
+                                 <p className="text-[9px] font-black uppercase tracking-widest">No team members</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3 py-2">
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1">Full Name</label>
+                              <input 
+                                type="text" placeholder="e.g. John Doe"
+                                value={inviteForm.fullName}
+                                onChange={(e) => setInviteForm({...inviteForm, fullName: e.target.value})}
+                                className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 text-xs font-bold text-slate-800 focus:ring-2 ring-amethyst-primary/20 transition-all outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1">Username</label>
+                              <input 
+                                type="text" placeholder="e.g. johndoe"
+                                value={inviteForm.username}
+                                onChange={(e) => setInviteForm({...inviteForm, username: e.target.value.toLowerCase().replace(/\s/g, '')})}
+                                className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 text-xs font-bold text-slate-800 focus:ring-2 ring-amethyst-primary/20 transition-all outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1">Password</label>
+                              <input 
+                                type="password" placeholder="••••••••"
+                                value={inviteForm.password}
+                                onChange={(e) => setInviteForm({...inviteForm, password: e.target.value})}
+                                className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 text-xs font-bold text-slate-800 focus:ring-2 ring-amethyst-primary/20 transition-all outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2 pt-4 border-t border-slate-50">
+                        {isAddingNew ? (
+                          <button 
+                            onClick={async () => {
+                              await handleGlobalInvite();
+                              fetchWorkspaces();
+                            }}
+                            disabled={isInviting || !inviteForm.fullName || !inviteForm.username || !inviteForm.password}
+                            className="w-full py-4 bg-emerald-500 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all"
+                          >
+                            {isInviting ? 'Inviting...' : 'Confirm Invitation'}
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => setIsAddingNew(true)}
+                            className="w-full py-4 bg-amethyst-primary text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amethyst-primary/20 hover:bg-amethyst-dark transition-all"
+                          >
+                            Invite new personnel
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => isAddingNew ? setIsAddingNew(false) : setIsInviteOpen(false)} 
+                          className="w-full py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500 transition-all"
+                        >
+                          {isAddingNew ? 'Back to list' : 'Close Menu'}
+                        </button>
+                      </div>
+                    </div>
+                 </motion.div>
+              </div>
+            </>
+          )}
+          </AnimatePresence>
+
+          <motion.button
+            initial={{ scale: 0, rotate: -45 }}
+            animate={{ scale: 1, rotate: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setIsAddingNew(false);
+              setIsInviteOpen(!isInviteOpen);
+            }}
+            className="flex items-center justify-center p-2 relative"
+          >
+            <img src="/join.png" className="w-20 h-20 object-contain" />
+            {teamMembers.length > 0 && (
+               <div className="absolute top-2 right-2 w-7 h-7 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] font-black border-4 border-white">
+                  {teamMembers.length}
+               </div>
+            )}
+          </motion.button>
+        </div>
+      )}
+
       <AruneekaUpgradeModal 
         isOpen={isUpgradeOpen} 
         onClose={() => setIsUpgradeOpen(false)} 

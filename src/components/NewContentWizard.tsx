@@ -12,7 +12,10 @@ import {
   Layers,
   Activity,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Target,
+  Sparkles,
+  ClipboardCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -42,9 +45,9 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
     headline: '',
     description: '',
     platform: '',
-    content_pillar: '',
+    content_pillar: 'Education',
     target_account: '',
-    status: '',
+    status: 'Draft',
     due_date: '',
     script_link: '',
     content_link: '',
@@ -89,6 +92,8 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
       setFormData({
         ...defaultValues,
         ...editData,
+        title: editData.title || '',
+        headline: editData.headline || editData.title || '',
         due_date: editData.due_date ? new Date(editData.due_date).toISOString().split('T')[0] : defaultValues.due_date
       });
     } else if (!editData && isOpen) {
@@ -140,17 +145,45 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
            <div className="grid grid-cols-2 gap-10">
               <div className="space-y-8">
                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Project Title</label>
-                    <input autoFocus value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Masterclass Series Part 1" className="w-full h-18 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Headline (Hook)</label>
+                    <input 
+                      autoFocus 
+                      value={formData.title} 
+                      onChange={e => setFormData({...formData, title: e.target.value, headline: e.target.value})} 
+                      placeholder="Grab attention in 3 seconds..." 
+                      className="w-full h-20 bg-slate-50 border-none rounded-2xl px-6 text-base font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" 
+                    />
                  </div>
-                 
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">The Headline (Hook)</label>
-                    <input value={formData.headline} onChange={e => setFormData({...formData, headline: e.target.value})} placeholder="Grab attention in 3 seconds..." className="w-full h-18 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+
+                 <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Content Pillar</label>
+                       <select 
+                         value={formData.content_pillar} 
+                         onChange={e => setFormData({...formData, content_pillar: e.target.value})}
+                         className="w-full h-16 bg-slate-50 rounded-2xl px-6 text-sm font-black outline-none appearance-none cursor-pointer"
+                       >
+                          {['Education', 'Entertainment', 'Sales', 'Personal Branding', 'Insight', 'Behind the scene'].map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                       </select>
+                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Status / Phase</label>
+                       <select 
+                         value={formData.status} 
+                         onChange={e => setFormData({...formData, status: e.target.value})}
+                         className="w-full h-16 bg-slate-50 rounded-2xl px-6 text-sm font-black outline-none appearance-none cursor-pointer"
+                       >
+                          {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                       </select>
+                    </div>
                  </div>
 
                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Concept Brief</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Concept Brief / Description</label>
                     <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the visual flow and purpose of this content..." className="w-full h-40 bg-slate-50 border-none rounded-3xl p-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all resize-none" />
                  </div>
               </div>
@@ -160,9 +193,9 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Account</label>
                        <div className="relative">
-                          <button onClick={() => setIsAccountOpen(!isAccountOpen)} className="w-full h-18 bg-slate-50 rounded-2xl px-6 flex items-center justify-between text-sm font-black group">
+                          <button onClick={() => setIsAccountOpen(!isAccountOpen)} className="w-full h-18 bg-slate-50 rounded-2xl px-6 flex items-center justify-between text-sm font-black group text-left">
                              <div className="flex items-center gap-3">
-                                {selectedAccount ? platformIcons[selectedAccount.platform] : <User size={14}/>}
+                                {selectedAccount ? platformIcons[selectedAccount.platform?.toLowerCase()] : <User size={14}/>}
                                 <span className={selectedAccount ? 'text-slate-800' : 'text-slate-300'}>{selectedAccount ? selectedAccount.name : 'Select Profile'}</span>
                              </div>
                              <ChevronDown size={14} className={`text-slate-300 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} />
@@ -172,7 +205,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute z-50 top-20 left-0 w-full bg-white rounded-3xl shadow-2xl border border-slate-50 p-3 max-h-60 overflow-y-auto">
                                    {profiles.map(p => (
                                       <button key={p.id} onClick={() => handleAccountChange(p.id)} className="w-full p-4 rounded-xl flex items-center gap-3 hover:bg-slate-50 transition-all text-left">
-                                         <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">{platformIcons[p.platform]}</div>
+                                         <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">{platformIcons[p.platform?.toLowerCase()]}</div>
                                          <div className="flex flex-col">
                                             <span className="text-xs font-black text-slate-800 leading-none">{p.name}</span>
                                             <span className="text-[9px] font-bold text-slate-400 mt-1">{p.platform}</span>
@@ -218,7 +251,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                  <div className="w-2 h-2 rounded-full bg-amethyst-primary animate-pulse" />
                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Ready for review</span>
               </div>
-              <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Saved in Workspace: {selectedWorkspaceId || 'Active'}</div>
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest hidden md:block">Active Brand: {selectedWorkspaceId || 'Selected'}</div>
            </div>
            
            <div className="flex gap-4">
