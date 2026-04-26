@@ -534,7 +534,10 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                   <div className="relative z-10 space-y-6">
                      <div className="flex items-center gap-3">
                         <button 
-                          onClick={() => setSelectedWorkspace(null)}
+                          onClick={() => {
+                            setSelectedWorkspace(null);
+                            localStorage.removeItem('aruneeka_selected_workspace');
+                          }}
                           className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-all"
                         >
                            <ArrowLeft size={18} />

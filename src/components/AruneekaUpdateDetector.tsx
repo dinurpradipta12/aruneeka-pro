@@ -14,31 +14,43 @@ const AruneekaUpdateDetector = () => {
         const res = await fetch('/version.json?t=' + Date.now());
         if (!res.ok) return;
         const data = await res.json();
-        const serverVersion = data.version;
+        const serverVersion = data.version?.toString();
         
+        if (!serverVersion) return;
+
         // 1. Get previously matched version from storage
         const savedVersion = localStorage.getItem('aruneeka_app_version');
         
-        // 2. If it's a first run, or if server version is higher/different
+        console.log(`[Version Check] Server: ${serverVersion}, Local: ${savedVersion}`);
+
+        // 2. Performance-safe comparison
         if (!savedVersion) {
+            // Initial visit: establish baseline
             localStorage.setItem('aruneeka_app_version', serverVersion);
             setCurrentVersion(serverVersion);
         } else if (savedVersion !== serverVersion) {
+            // Version mismatch detected!
             setHasUpdate(true);
             setCurrentVersion(serverVersion);
         } else {
             setCurrentVersion(serverVersion);
         }
       } catch (e) {
-        // Silent error
+        console.error("[Version Check] Failed to fetch version.json", e);
       }
     };
 
     checkVersion();
 
-    // Poll every 30 seconds for faster detection
-    const interval = setInterval(checkVersion, 30000);
-    return () => clearInterval(interval);
+    // 3. Performance Listeners: Check on focus + Polling
+    window.addEventListener('focus', checkVersion);
+
+    const interval = setInterval(checkVersion, 15000); // 15 seconds for aggressive tracking
+    
+    return () => {
+      window.removeEventListener('focus', checkVersion);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleReload = () => {
@@ -55,9 +67,9 @@ const AruneekaUpdateDetector = () => {
           initial={{ opacity: 0, x: -50, scale: 0.9 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: -50, scale: 0.9 }}
-          className="fixed bottom-8 left-8 z-[1000]"
+          className="fixed bottom-8 left-8 z-[20000]"
         >
-          <div className="bg-white/70 border border-white/60 rounded-[32px] p-2 pr-6 shadow-[0_20px_50px_rgba(145,109,213,0.2)] backdrop-blur-2xl flex items-center gap-6 overflow-hidden">
+          <div className="bg-white/70 border border-white/60 rounded-[32px] p-2 pr-6 shadow-[0_20px_50px_rgba(145,109,213,0.3)] backdrop-blur-2xl flex items-center gap-6 overflow-hidden">
              <div className="w-14 h-14 bg-gradient-to-br from-amethyst-primary to-amethyst-dark rounded-3xl flex items-center justify-center text-white relative flex-shrink-0 group shadow-lg shadow-amethyst-primary/30">
                 <Zap size={24} className="group-hover:scale-125 transition-transform" />
                 <div className="absolute inset-0 bg-white/20 animate-pulse rounded-3xl" />
