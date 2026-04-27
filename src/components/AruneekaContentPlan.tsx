@@ -485,7 +485,7 @@ const AruneekaContentPlan = ({
              {!isPublic && (
                <div className="flex items-center gap-2">
                   <button 
-                     onClick={onNewContent}
+                     onClick={() => onNewContent?.()}
                      className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
                   >
                      <Plus size={16}/> New Content
