@@ -48,6 +48,7 @@ export const AruneekaWorkspaceSelector = ({
   const [customCategoryName, setCustomCategoryName] = useState('');
 
   const fetchWorkspaces = async () => {
+    if (!currentUser) return;
     try {
       setLoading(true);
 
@@ -129,8 +130,10 @@ export const AruneekaWorkspaceSelector = ({
   };
 
   useEffect(() => {
-    fetchWorkspaces();
-  }, []);
+    if (currentUser) {
+      fetchWorkspaces();
+    }
+  }, [currentUser]);
 
   // Separate Realtime Listener for Admin Tasks
   useEffect(() => {

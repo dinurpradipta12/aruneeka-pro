@@ -599,7 +599,17 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
          user
        }}>
            <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
-             {/* 0. SYSTEM ANNOUNCEMENT BANNER (BROADCAST) */}
+             {!selectedWorkspace ? (
+               <AruneekaWorkspaceSelector 
+                 onSelect={(ws: any) => {
+                   setSelectedWorkspace(ws);
+                   localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(ws));
+                 }}
+                 currentUser={user}
+               />
+             ) : (
+               <>
+                 {/* 0. SYSTEM ANNOUNCEMENT BANNER (BROADCAST) */}
              <AnimatePresence>
                 {systemConfig?.is_banner_active && systemConfig?.banner_message && !isDismissed && (
                    <motion.div 
@@ -1097,6 +1107,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                   </div>
                )}
             </AnimatePresence>
+                </>
+             )}
          </div>
       </WorkspaceContext.Provider>
    );
