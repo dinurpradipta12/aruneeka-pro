@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
@@ -99,11 +99,11 @@ const AruneekaContentPlan = ({
   isPublic = false
 }: { 
   plans: any[], 
-  onSelectContent: (p: any) => void, 
-  onNewContent: () => void,
-  onDelete: (id: string) => void,
-  onEdit: (p: any) => void,
-  onInsight: (p: any) => void,
+  onSelectContent?: (p: any) => void, 
+  onNewContent?: () => void,
+  onDelete?: (id: string) => void,
+  onEdit?: (p: any) => void,
+  onInsight?: (p: any) => void,
   onStatusChange?: (id: string, status: string) => void,
   onInlineUpdate?: (id: string, field: string, value: string) => void,
   selectedProfileId?: string,
@@ -114,6 +114,10 @@ const AruneekaContentPlan = ({
   subscriptionTier?: string,
   isPublic?: boolean
 }) => {
+  const [internalPlans, setInternalPlans] = useState<any[]>([]);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
+  const displayPlans = (plans && plans.length > 0) ? plans : internalPlans;
+
   const { openUpgrade, user } = useWorkspace();
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
   const [lockedFeature, setLockedFeature] = useState({ title: '', desc: '', icon: <Kanban/> });
@@ -135,7 +139,32 @@ const AruneekaContentPlan = ({
   });
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const openPlan = plans.find(p => p.id === openStatusId);
+  const openPlan = displayPlans.find(p => p.id === openStatusId);
+  
+  // Self-fetching logic for Public/Preview mode
+  useEffect(() => {
+    const fetchPlans = async () => {
+      if (!selectedWorkspaceId || (plans && plans.length > 0)) return;
+      
+      setIsLocalLoading(true);
+      try {
+        const { data: planData, error } = await supabase
+          .from('v2_agency_content_plans')
+          .select('*')
+          .eq('workspace_id', selectedWorkspaceId)
+          .order('due_date', { ascending: true });
+        
+        if (error) throw error;
+        setInternalPlans(planData || []);
+      } catch (err) {
+        console.error("ContentPlan Fetch Error:", err);
+      } finally {
+        setIsLocalLoading(false);
+      }
+    };
+
+    fetchPlans();
+  }, [selectedWorkspaceId, plans]);
 
   const parseIndonesianDate = (dateStr: string) => {
     if (!dateStr) return null;
@@ -170,7 +199,7 @@ const AruneekaContentPlan = ({
     return 'Draft';
   };
 
-  const filteredPlans = plans.filter(p => {
+  const filteredPlans = displayPlans.filter(p => {
     // Platform filter
     const platformMatch = filter === 'all' || p.platform?.toLowerCase() === filter.toLowerCase();
     
@@ -599,7 +628,20 @@ const AruneekaContentPlan = ({
 
       {/* Content View */}
       <AnimatePresence mode="wait">
-        {view === 'table' ? (
+        {isLocalLoading ? (
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="bg-white rounded-[32px] border border-amethyst-light shadow-sm p-20 flex flex-col items-center justify-center space-y-4"
+          >
+            <div className="w-12 h-12 bg-amethyst-primary/10 rounded-2xl flex items-center justify-center animate-bounce">
+              <Zap size={24} className="text-amethyst-primary" />
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Memuat Konten Rencana...</p>
+          </motion.div>
+        ) : view === 'table' ? (
           <motion.div 
             key="table"
             initial={{ opacity: 0, y: 20 }}

@@ -175,7 +175,7 @@ export default function PublicPreviewPage() {
             {activeTab === 'content' && (
               <AruneekaContentPlan 
                 isPublic={true} 
-                workspaceId={workspace.id} 
+                selectedWorkspaceId={workspace.id} 
                 subscriptionTier={ownerTier}
                 plans={[]} // Need to handle plans fetch if needed, but ContentPlan usually fetches itself if workspaceId is provided
               />
