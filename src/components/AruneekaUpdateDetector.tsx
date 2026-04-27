@@ -77,7 +77,7 @@ const AruneekaUpdateDetector = () => {
              
              <div className="space-y-0.5">
                 <h4 className="text-sm font-black text-amethyst-dark tracking-tight">System Update</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap italic">Build v{currentVersion || '...'} - Ready to Ship</p>
+                <p className="text-[10px] font-bold text-slate-400 tracking-tight leading-tight max-w-[200px]">Klik tombol reload disamping untuk mendapatkan pengalaman super seru di Aruneeka!</p>
              </div>
 
              <button 
