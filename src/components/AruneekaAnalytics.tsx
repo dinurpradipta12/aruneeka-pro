@@ -35,11 +35,13 @@ import { useWorkspace } from './AruneekaShell';
 const AruneekaAnalytics = ({ 
   selectedProfileId,
   selectedWorkspaceId,
-  subscriptionTier = 'free'
+  subscriptionTier = 'free',
+  isPublic = false
 }: { 
   selectedProfileId?: string,
   selectedWorkspaceId?: string,
-  subscriptionTier?: string
+  subscriptionTier?: string,
+  isPublic?: boolean
 }) => {
   const [activeRange, setActiveRange] = useState('This Month');
   const [customStart, setCustomStart] = useState('');
@@ -50,8 +52,12 @@ const AruneekaAnalytics = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [selectedContent, setSelectedContent] = useState<any>(null);
-  const { selectedWorkspaceId: contextWorkspaceId, subscriptionTier: currentTier, openUpgrade } = useWorkspace();
-  const workspaceId = selectedWorkspaceId || contextWorkspaceId;
+  
+  // Use context values if NOT public, otherwise use props
+  const workspaceContext = useWorkspace();
+  const currentTier = isPublic ? (subscriptionTier || 'free') : workspaceContext.subscriptionTier;
+  const openUpgrade = workspaceContext.openUpgrade;
+  const workspaceId = isPublic ? selectedWorkspaceId : (selectedWorkspaceId || workspaceContext.selectedWorkspaceId);
 
   const fetchData = async () => {
     const isInitial = data.length === 0;

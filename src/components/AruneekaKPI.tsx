@@ -24,7 +24,8 @@ import {
   Layers,
   Sparkles,
   BarChart3,
-  XCircle
+  XCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -82,12 +83,18 @@ const SmartCounter = ({ value }: { value: number }) => {
 
 const AruneekaKPI = ({ 
   selectedProfileId,
-  selectedWorkspaceId: propWorkspaceId
+  selectedWorkspaceId: propWorkspaceId,
+  isPublic = false,
+  subscriptionTier = 'free'
 }: { 
   selectedProfileId?: string,
-  selectedWorkspaceId?: string
+  selectedWorkspaceId?: string,
+  isPublic?: boolean,
+  subscriptionTier?: string
 }) => {
-  const { selectedWorkspaceId: contextWorkspaceId } = useWorkspace();
+  const workspaceContext = useWorkspace();
+  const { selectedWorkspaceId: contextWorkspaceId } = workspaceContext;
+  const currentTier = isPublic ? (subscriptionTier || 'free') : (workspaceContext as any).subscriptionTier;
   const workspaceId = propWorkspaceId || contextWorkspaceId;
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -550,7 +557,7 @@ const AruneekaKPI = ({
             <h2 className="text-4xl font-black text-amethyst-primary tracking-tight leading-none">KPI & Growth</h2>
             <p className="text-[13px] text-slate-400 font-medium italic leading-relaxed">Precision intelligence and monthly performance cycle.</p>
          </div>
-         {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
+         {!isPublic && (userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
             <div className="flex items-center gap-3">
               <motion.button 
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -634,15 +641,16 @@ const AruneekaKPI = ({
                                 <SmartCounter value={kpi.actual} />
                               </div>
                            </div>
-                           <div className="text-right space-y-1 group/target cursor-pointer" onClick={() => {
+                           <div className={`text-right space-y-1 group/target ${isPublic ? 'cursor-default' : 'cursor-pointer'}`} onClick={() => {
+                              if (isPublic) return;
                               setEditingTargetData({ id: kpi.id, metric: kpi.metric, value: kpi.target });
                               setIsEditingTarget(true);
                            }}>
                               <div className="flex items-center justify-end gap-1">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target</p>
-                                <Edit3 size={8} className="text-amethyst-primary opacity-0 group-hover/target:opacity-100 transition-all" />
+                                {!isPublic && <Edit3 size={8} className="text-amethyst-primary opacity-0 group-hover/target:opacity-100 transition-all" />}
                               </div>
-                              <div className="text-2xl font-black text-amethyst-primary group-hover/target:scale-110 transition-transform origin-right">/ {kpi.target.toLocaleString()}</div>
+                              <div className={`text-2xl font-black text-amethyst-primary transition-transform origin-right ${!isPublic ? 'group-hover/target:scale-110' : ''}`}>/ {kpi.target.toLocaleString()}</div>
                            </div>
                         </div>
 
@@ -680,101 +688,116 @@ const AruneekaKPI = ({
 
          {/* RIGHT: STRATEGY & INSIGHTS */}
          <div className="lg:col-span-4 space-y-10">
-            {/* INSIGHT CARD */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-[48px] p-10 text-slate-800 border border-slate-100 shadow-sm relative overflow-hidden group"
-            >
-               <div className="absolute top-0 right-0 w-64 h-64 bg-amethyst-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:scale-150 transition-transform duration-1000" />
-               <div className="relative space-y-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amethyst-primary/10 rounded-2xl flex items-center justify-center">
-                      <Sparkles size={20} className="text-amethyst-primary" />
-                    </div>
-                    <h4 id="tour-gap-insight" className="text-xl font-black tracking-tight text-slate-800">Gap Insight</h4>
-                  </div>
-                  <p className="text-sm font-bold leading-relaxed text-slate-500 italic quote-mark">
-                    &quot;{gapInsight}&quot;
-                  </p>
-                  <div className="pt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-300">
-                    <Zap size={12} /> Powered by Aruneeka Intelligence
-                  </div>
-               </div>
-            </motion.div>
-
-            {/* CHECKLIST CARD */}
-            <div className="bg-white rounded-[48px] border border-slate-100 p-10 space-y-10 shadow-sm">
-               <div className="flex items-center justify-between">
-                  <h4 className="text-xl font-black text-slate-800 tracking-tight">Strategy Checklist</h4>
-                  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                    <Layers size={18} />
-                  </div>
-               </div>
-               
-               <div className="space-y-4">
-                  {checklist.length > 0 ? checklist.map((task, idx) => (
-                    <motion.div 
-                      key={task.id} 
-                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                      className="group flex items-center justify-between p-6 rounded-[28px] bg-slate-50/50 border border-transparent hover:border-amethyst-primary/20 hover:bg-white transition-all"
-                    >
-                       <div className="flex items-center gap-4">
-                          <motion.button 
-                            whileTap={{ scale: 0.8 }}
-                            onClick={() => toggleTask(task.id, task.status)}
-                          >
-                             {task.status === 'completed' ? (
-                               <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                  <Check size={14} strokeWidth={4} />
-                               </div>
-                             ) : (
-                               <div className="w-8 h-8 border-2 border-slate-200 rounded-xl flex items-center justify-center bg-white group-hover:border-amethyst-primary/30 transition-all">
-                                  <Circle size={14} className="text-transparent" />
-                               </div>
-                             )}
-                          </motion.button>
-                          <span className={`text-xs font-bold tracking-tight text-slate-600 ${task.status === 'completed' ? 'line-through opacity-30' : ''}`}>
-                            {task.task}
-                          </span>
+            <div className="relative group">
+               <motion.div 
+                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                 className={`bg-white rounded-[48px] p-10 text-slate-800 border border-slate-100 shadow-sm relative overflow-hidden group ${currentTier === 'free' ? 'blur-md grayscale opacity-30 select-none' : ''}`}
+               >
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amethyst-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:scale-150 transition-transform duration-1000" />
+                  <div className="relative space-y-8">
+                     <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 bg-amethyst-primary/10 rounded-2xl flex items-center justify-center">
+                         <Sparkles size={20} className="text-amethyst-primary" />
                        </div>
-                       {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
-                          <button onClick={() => handleDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 transition-all">
-                            <Trash2 size={14}/>
-                          </button>
-                       )}
-                    </motion.div>
-                  )) : (
-                    <div className="text-center py-10 space-y-4">
-                      <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-200">
-                        <CheckCircle2 size={24} />
-                      </div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Empty Roadmap</p>
-                    </div>
-                  )}
+                       <h4 id="tour-gap-insight" className="text-xl font-black tracking-tight text-slate-800">Gap Insight</h4>
+                     </div>
+                     <p className="text-sm font-bold leading-relaxed text-slate-500 italic quote-mark">
+                       &quot;{gapInsight}&quot;
+                     </p>
+                     <div className="pt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-300">
+                       <Zap size={12} /> Powered by Aruneeka Intelligence
+                     </div>
+                  </div>
+               </motion.div>
+               {currentTier === 'free' && (
+                  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 text-center bg-white/20 backdrop-blur-[2px] rounded-[48px]">
+                     <div className="w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center text-amethyst-primary mb-3">
+                        <ShieldCheck size={20} />
+                     </div>
+                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-800">Premium Required</p>
+                     <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-relaxed">Perlu subscription untuk menampilkan konten ini</p>
+                  </div>
+               )}
+            </div>
 
-                  {isAddingTask ? (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-3">
-                      <input 
-                        autoFocus value={newTaskText} 
-                        onChange={(e) => setNewTaskText(e.target.value)} 
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()} 
-                        placeholder="Define item..."
-                        className="w-full px-6 py-4 bg-white border border-amethyst-primary/20 rounded-[24px] text-sm font-bold shadow-xl shadow-amethyst-primary/5 focus:outline-none focus:ring-2 ring-amethyst-primary/10"
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={handleAddTask} className="flex-1 py-3 bg-amethyst-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest">Confirm</button>
-                        <button onClick={() => setIsAddingTask(false)} className="px-6 py-3 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancel</button>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <button 
-                      onClick={() => setIsAddingTask(true)} 
-                      className="w-full py-5 border-2 border-dashed border-slate-100 hover:border-amethyst-primary hover:text-amethyst-primary rounded-[28px] text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Plus size={14} /> Add strategic item
-                    </button>
-                  )}
+            <div className="relative group">
+               <div className={`bg-white rounded-[48px] border border-slate-100 p-10 space-y-10 shadow-sm transition-all ${currentTier === 'free' ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
+                  <div className="flex items-center justify-between">
+                     <h4 className="text-xl font-black text-slate-800 tracking-tight">Strategy Checklist</h4>
+                     <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+                       <Layers size={18} />
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                     {checklist.length > 0 ? checklist.map((task, idx) => (
+                       <motion.div 
+                         key={task.id} 
+                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                         className="group flex items-center justify-between p-6 rounded-[28px] bg-slate-50/50 border border-transparent hover:border-amethyst-primary/20 hover:bg-white transition-all"
+                       >
+                          <div className="flex items-center gap-4">
+                             <motion.button 
+                               whileTap={{ scale: isPublic ? 1 : 0.8 }}
+                               onClick={() => !isPublic && toggleTask(task.id, task.status)} style={{ cursor: isPublic ? 'default' : 'pointer' }}
+                             >
+                                {task.status === 'completed' ? (
+                                  <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                     <Check size={14} strokeWidth={4} />
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 border-2 border-slate-200 rounded-xl flex items-center justify-center bg-white group-hover:border-amethyst-primary/30 transition-all">
+                                     <Circle size={14} className="text-transparent" />
+                                  </div>
+                                )}
+                             </motion.button>
+                             <span className={`text-xs font-bold tracking-tight text-slate-600 ${task.status === 'completed' ? 'line-through opacity-30' : ''}`}>
+                               {task.task}
+                             </span>
+                          </div>
+                          {!isPublic && (userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
+                             <button onClick={() => handleDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 transition-all">
+                               <Trash2 size={14}/>
+                             </button>
+                          )}
+                       </motion.div>
+                     )) : (
+                        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-center py-4">No strategy tasks assigned yet</p>
+                     )}
+
+                     {isAddingTask ? (
+                       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-3">
+                         <input 
+                           autoFocus value={newTaskText} 
+                           onChange={(e) => setNewTaskText(e.target.value)} 
+                           onKeyDown={(e) => e.key === 'Enter' && handleAddTask()} 
+                           placeholder="Define item..."
+                           className="w-full px-6 py-4 bg-white border border-amethyst-primary/20 rounded-[24px] text-sm font-bold shadow-xl shadow-amethyst-primary/5 focus:outline-none focus:ring-2 ring-amethyst-primary/10"
+                         />
+                         <div className="flex gap-2">
+                           <button onClick={handleAddTask} className="flex-1 py-3 bg-amethyst-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest">Confirm</button>
+                           <button onClick={() => setIsAddingTask(false)} className="px-6 py-3 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancel</button>
+                         </div>
+                       </motion.div>
+                     ) : !isPublic ? (
+                       <button 
+                         onClick={() => setIsAddingTask(true)} 
+                         className="w-full py-5 border-2 border-dashed border-slate-100 hover:border-amethyst-primary hover:text-amethyst-primary rounded-[28px] text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all flex items-center justify-center gap-2"
+                       >
+                         <Plus size={14} /> Add strategic item
+                       </button>
+                     ) : null}
+                  </div>
                </div>
+               {currentTier === 'free' && (
+                  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 text-center bg-white/20 backdrop-blur-[2px] rounded-[48px]">
+                     <div className="w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center text-amethyst-primary mb-3">
+                        <ShieldCheck size={20} />
+                     </div>
+                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-800">Premium Required</p>
+                     <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-relaxed">Perlu subscription untuk menampilkan konten ini</p>
+                  </div>
+               )}
             </div>
          </div>
       </div>

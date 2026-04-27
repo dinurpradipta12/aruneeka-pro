@@ -95,7 +95,8 @@ const AruneekaContentPlan = ({
   onRefresh,
   view = 'table',
   onViewChange,
-  subscriptionTier = 'free'
+  subscriptionTier = 'free',
+  isPublic = false
 }: { 
   plans: any[], 
   onSelectContent: (p: any) => void, 
@@ -110,7 +111,8 @@ const AruneekaContentPlan = ({
   onRefresh?: () => void,
   view?: 'table' | 'kanban' | 'calendar',
   onViewChange?: (view: any) => void,
-  subscriptionTier?: string
+  subscriptionTier?: string,
+  isPublic?: boolean
 }) => {
   const { openUpgrade, user } = useWorkspace();
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
@@ -451,127 +453,129 @@ const AruneekaContentPlan = ({
 
             <div className="w-px h-6 bg-slate-100 hidden md:block" />
 
-            <div className="flex items-center gap-2">
-               <button 
-                  onClick={onNewContent}
-                  className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
-               >
-                  <Plus size={16}/> New Content
-               </button>
-
-               <div className="relative">
-                  <button id="tour-content-actions" 
-                     onClick={() => setIsMoreOpen(!isMoreOpen)}
-                     className={`w-12 h-12 flex items-center justify-center bg-white border border-amethyst-light rounded-[16px] text-amethyst-primary hover:border-amethyst-primary transition-all shadow-sm ${isMoreOpen ? 'ring-2 ring-amethyst-light' : ''}`}
+             {!isPublic && (
+               <div className="flex items-center gap-2">
+                  <button 
+                     onClick={onNewContent}
+                     className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
                   >
-                     <MoreVertical size={20}/>
+                     <Plus size={16}/> New Content
                   </button>
 
-                  <AnimatePresence>
-                     {isMoreOpen && (
-                        <>
-                           <div className="fixed inset-0 z-[120]" onClick={() => setIsMoreOpen(false)}/>
-                           <motion.div 
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute top-full right-0 mt-3 w-64 bg-white rounded-[28px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[121] py-3"
-                           >
-                              <div className="px-5 py-2 mb-2 border-b border-slate-50">
-                                 <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Content Actions</span>
-                              </div>
-                              
-                              <button 
-                                 onClick={() => {
-                                    if (isImporting) return;
-                                    
-                                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                                    if (subscriptionTier === 'free' && !isPowerUser) {
-                                       const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
-                                       if (count >= 1) {
-                                          setLockedFeature({ 
-                                            title: 'Import Limit Reached', 
-                                            desc: 'Anda telah mencapai batas 1x import untuk paket Free. Silakan upgrade ke Pro untuk akses tanpa batas.',
-                                            icon: <Upload size={32} />
-                                          });
-                                          setIsLockModalOpen(true);
-                                          setIsMoreOpen(false);
-                                          return;
+                  <div className="relative">
+                     <button id="tour-content-actions" 
+                        onClick={() => setIsMoreOpen(!isMoreOpen)}
+                        className={`w-12 h-12 flex items-center justify-center bg-white border border-amethyst-light rounded-[16px] text-amethyst-primary hover:border-amethyst-primary transition-all shadow-sm ${isMoreOpen ? 'ring-2 ring-amethyst-light' : ''}`}
+                     >
+                        <MoreVertical size={20}/>
+                     </button>
+
+                     <AnimatePresence>
+                        {isMoreOpen && (
+                           <>
+                              <div className="fixed inset-0 z-[120]" onClick={() => setIsMoreOpen(false)}/>
+                              <motion.div 
+                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 className="absolute top-full right-0 mt-3 w-64 bg-white rounded-[28px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[121] py-3"
+                              >
+                                 <div className="px-5 py-2 mb-2 border-b border-slate-50">
+                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Content Actions</span>
+                                 </div>
+                                 
+                                 <button 
+                                    onClick={() => {
+                                       if (isImporting) return;
+                                       
+                                       const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                                       if (subscriptionTier === 'free' && !isPowerUser) {
+                                          const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
+                                          if (count >= 1) {
+                                             setLockedFeature({ 
+                                               title: 'Import Limit Reached', 
+                                               desc: 'Anda telah mencapai batas 1x import untuk paket Free. Silakan upgrade ke Pro untuk akses tanpa batas.',
+                                               icon: <Upload size={32} />
+                                             });
+                                             setIsLockModalOpen(true);
+                                             setIsMoreOpen(false);
+                                             return;
+                                          }
                                        }
-                                    }
-                                    fileInputRef.current?.click();
-                                 }}
-                                 disabled={isImporting}
-                                 className={`w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              >
-                                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    {isImporting ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <Upload size={16}/>}
-                                 </div>
-                                 <div>
-                                    <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">{isImporting ? 'Importing...' : 'Import Konten Plan'}</p>
-                                    <p className="text-[8px] text-slate-400 font-bold">Upload file CSV template</p>
-                                 </div>
-                              </button>
+                                       fileInputRef.current?.click();
+                                    }}
+                                    disabled={isImporting}
+                                    className={`w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                 >
+                                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                       {isImporting ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <Upload size={16}/>}
+                                    </div>
+                                    <div>
+                                       <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">{isImporting ? 'Importing...' : 'Import Konten Plan'}</p>
+                                       <p className="text-[8px] text-slate-400 font-bold">Upload file CSV template</p>
+                                    </div>
+                                 </button>
 
-                              <a 
-                                 href="/contoh-template-kontenplan.csv"
-                                 download
-                                 className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
-                                 onClick={() => setIsMoreOpen(false)}
-                              >
-                                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <Download size={16}/>
-                                 </div>
-                                 <div>
-                                    <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Download Template</p>
-                                    <p className="text-[8px] text-slate-400 font-bold">Contoh format import CSV</p>
-                                 </div>
-                              </a>
+                                 <a 
+                                    href="/contoh-template-kontenplan.csv"
+                                    download
+                                    className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
+                                    onClick={() => setIsMoreOpen(false)}
+                                 >
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                       <Download size={16}/>
+                                    </div>
+                                    <div>
+                                       <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Download Template</p>
+                                       <p className="text-[8px] text-slate-400 font-bold">Contoh format import CSV</p>
+                                    </div>
+                                 </a>
 
-                              <button 
-                                 onClick={() => {
-                                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                                    if (subscriptionTier === 'free' && !isPowerUser) {
-                                       const count = parseInt(localStorage.getItem(`usage_export_${user?.id}`) || '0');
-                                       if (count >= 1) {
-                                          setLockedFeature({ 
-                                            title: 'Export Limit Reached', 
-                                            desc: 'Batas export 1x untuk paket Free telah tercapai. Nikmati export sepuasnya di paket Pro!',
-                                            icon: <FileSpreadsheet size={32} />
-                                          });
-                                          setIsLockModalOpen(true);
-                                          setIsMoreOpen(false);
-                                          return;
+                                 <button 
+                                    onClick={() => {
+                                       const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+                                       if (subscriptionTier === 'free' && !isPowerUser) {
+                                          const count = parseInt(localStorage.getItem(`usage_export_${user?.id}`) || '0');
+                                          if (count >= 1) {
+                                             setLockedFeature({ 
+                                               title: 'Export Limit Reached', 
+                                               desc: 'Batas export 1x untuk paket Free telah tercapai. Nikmati export sepuasnya di paket Pro!',
+                                               icon: <FileSpreadsheet size={32} />
+                                             });
+                                             setIsLockModalOpen(true);
+                                             setIsMoreOpen(false);
+                                             return;
+                                          }
+                                          // Only increment IF we allow the export
+                                          localStorage.setItem(`usage_export_${user?.id}`, (count + 1).toString());
                                        }
-                                       // Only increment IF we allow the export
-                                       localStorage.setItem(`usage_export_${user?.id}`, (count + 1).toString());
-                                    }
-                                    handleExportCSV();
-                                 }}
-                                 className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
-                              >
-                                 <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FileSpreadsheet size={16}/>
-                                 </div>
-                                 <div>
-                                    <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Export Konten Plan</p>
-                                    <p className="text-[8px] text-slate-400 font-bold">Download data saat ini</p>
-                                 </div>
-                              </button>
+                                       handleExportCSV();
+                                    }}
+                                    className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
+                                 >
+                                    <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                       <FileSpreadsheet size={16}/>
+                                    </div>
+                                    <div>
+                                       <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Export Konten Plan</p>
+                                       <p className="text-[8px] text-slate-400 font-bold">Download data saat ini</p>
+                                    </div>
+                                 </button>
 
-                              <input 
-                                 type="file" 
-                                 ref={fileInputRef} 
-                                 className="hidden" 
-                                 accept=".csv"
-                                 onChange={handleImportCSV}
-                              />
-                           </motion.div>
-                        </>
-                     )}
-                  </AnimatePresence>
+                                 <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    className="hidden" 
+                                    accept=".csv"
+                                    onChange={handleImportCSV}
+                                 />
+                              </motion.div>
+                           </>
+                        )}
+                     </AnimatePresence>
+                  </div>
                </div>
-            </div>
+             )}
          </div>
       </div>
 
@@ -622,7 +626,7 @@ const AruneekaContentPlan = ({
                        </th>
                       <th className="text-left pb-6 px-4">Assets</th>
                       <th className="text-left pb-6 px-4">Live Link</th>
-                      <th className="text-right pb-6 px-4">Action</th>
+                      {!isPublic && <th className="text-right pb-6 px-4">Action</th>}
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -642,19 +646,19 @@ const AruneekaContentPlan = ({
                         <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
                            <div className="relative">
                               <button
-                                ref={(el) => { if (el && openStatusId === plan.id) { const r = el.getBoundingClientRect(); } }}
                                 onClick={(e) => {
+                                  if (isPublic) return;
                                   e.stopPropagation();
                                   setOpenStatusId(openStatusId === plan.id ? null : plan.id);
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                   setStatusDropPos({ top: rect.bottom + 6, left: rect.left });
                                 }}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[9px] font-bold tracking-tight uppercase transition-all hover:opacity-80 ${
+                                className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[9px] font-bold tracking-tight uppercase transition-all ${isPublic ? 'cursor-default' : 'hover:opacity-80'} ${
                                   statusStyles[plan.status?.toLowerCase()] || 'bg-slate-50 text-slate-400'
                                 }`}
                               >
                                 {plan.status || 'Draft'}
-                                <ChevronDown size={10} className={`transition-transform ${openStatusId === plan.id ? 'rotate-180' : ''}`}/>
+                                {!isPublic && <ChevronDown size={10} className={`transition-transform ${openStatusId === plan.id ? 'rotate-180' : ''}`}/>}
                               </button>
                            </div>
                         </td>
@@ -696,6 +700,8 @@ const AruneekaContentPlan = ({
                                ) : (
                                  <button 
                                    onClick={() => {
+                                      if (isPublic && !plan.script_link) return;
+                                      if (isPublic) { window.open(plan.script_link, '_blank'); return; }
                                       setEditingAsset({ id: plan.id, type: 'script' });
                                       setTempLink(plan.script_link || '');
                                    }}
@@ -736,6 +742,8 @@ const AruneekaContentPlan = ({
                                ) : (
                                  <button 
                                     onClick={() => {
+                                       if (isPublic && !plan.content_link) return;
+                                       if (isPublic) { window.open(plan.content_link, '_blank'); return; }
                                        setEditingAsset({ id: plan.id, type: 'content' });
                                        setTempLink(plan.content_link || '');
                                     }}
@@ -751,7 +759,7 @@ const AruneekaContentPlan = ({
                             </div>
                         </td>
                         <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
-                           {editingAsset?.id === plan.id && editingAsset?.type === 'post' ? (
+                           {(editingAsset?.id === plan.id && editingAsset?.type === 'post' && !isPublic) ? (
                              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
                                 <input 
                                   autoFocus
@@ -789,50 +797,52 @@ const AruneekaContentPlan = ({
                            ) : (
                              <button 
                                onClick={() => {
+                                 if (isPublic) return;
                                  setEditingAsset({ id: plan.id, type: 'post' });
                                  setTempLink('');
                                }}
-                               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase border border-transparent hover:border-amethyst-light transition-all"
+                               className={`flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase border border-transparent transition-all ${isPublic ? 'cursor-default' : 'hover:border-amethyst-light'}`}
                              >
-                                <Plus size={12}/> Input Post Link
+                                {isPublic ? 'N/A' : <><Plus size={12}/> Input Post Link</>}
                              </button>
                            )}
                         </td>
-                        <td className="py-8 px-4 text-right">
-                           <div className="flex items-center justify-end gap-1 text-slate-200">
-                               {plan.status.toLowerCase() === 'uploaded' && (
+                        {!isPublic && (
+                           <td className="py-8 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1 text-slate-200">
+                                  {plan.status.toLowerCase() === 'uploaded' && (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); onInsight(plan); }}
+                                      className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${
+                                        plan.metrics_updated 
+                                        ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' 
+                                        : 'bg-[#9333EA] text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] hover:scale-105 active:scale-95'
+                                      }`}
+                                      title={plan.metrics_updated ? 'View Insights' : 'Input Metrics Insight'}
+                                    >
+                                      <TrendingUp size={12}/> {plan.metrics_updated ? 'Insights' : 'Add Metrics'}
+                                      {!plan.metrics_updated && (
+                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-white animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"/>
+                                      )}
+                                    </button>
+                                  )}
                                  <button 
-                                   onClick={(e) => { e.stopPropagation(); onInsight(plan); }}
-                                   className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${
-                                     plan.metrics_updated 
-                                     ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' 
-                                     : 'bg-[#9333EA] text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] hover:scale-105 active:scale-95'
-                                   }`}
-                                   title={plan.metrics_updated ? 'View Insights' : 'Input Metrics Insight'}
+                                   onClick={(e) => { e.stopPropagation(); onEdit(plan); }}
+                                   className="p-2 hover:text-amethyst-dark transition-colors text-amethyst-primary/60"
+                                   title="Edit Content"
                                  >
-                                   <TrendingUp size={12}/> {plan.metrics_updated ? 'Insights' : 'Add Metrics'}
-                                   {/* Metrics Status Indicator */}
-                                   {!plan.metrics_updated && (
-                                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-white animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"/>
-                                   )}
+                                   <Pencil size={14}/>
                                  </button>
-                               )}
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); onEdit(plan); }}
-                                className="p-2 hover:text-amethyst-dark transition-colors text-amethyst-primary/60"
-                                title="Edit Content"
-                              >
-                                <Pencil size={14}/>
-                              </button>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); onDelete(plan.id); }}
-                                className="p-2 hover:text-rose-500 transition-colors text-amethyst-primary/60"
-                                title="Delete Content"
-                              >
-                                <Trash2 size={14}/>
-                              </button>
-                           </div>
-                        </td>
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); onDelete(plan.id); }}
+                                   className="p-2 hover:text-rose-500 transition-colors text-amethyst-primary/60"
+                                   title="Delete Content"
+                                 >
+                                   <Trash2 size={14}/>
+                                 </button>
+                              </div>
+                           </td>
+                        )}
                      </tr>
                    ))}
                 </tbody>

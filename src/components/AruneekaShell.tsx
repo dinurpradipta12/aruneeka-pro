@@ -29,7 +29,8 @@ import {
    ArrowLeft,
    Terminal,
    Sparkles,
-  Megaphone
+  Megaphone,
+  RefreshCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -225,8 +226,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    // Administrative Realtime States
    const [pendingUsersCount, setPendingUsersCount] = useState(0);
    const [pendingInboxCount, setPendingInboxCount] = useState(0);
-   const [lastNotification, setLastNotification] = useState<{ type: 'user' | 'inbox', message: string } | null>(null);
+   const [lastNotification, setLastNotification] = useState<{ type: 'user' | 'inbox' | 'success' | 'error', message: string } | null>(null);
    const [showDynamicIsland, setShowDynamicIsland] = useState(false);
+
+   const showToast = (message: string, type: any = 'success') => { setLastNotification({ type, message }); setShowDynamicIsland(true); setTimeout(() => setShowDynamicIsland(false), 4000); };
+   const [systemConfig, setSystemConfig] = useState<any>(null);
+   const [isDismissed, setIsDismissed] = useState(false);
 
    const avatars = Array.from({ length: 12 }, (_, i) => `/assets/avatars/avatar${i + 1}.svg`);
 
@@ -308,6 +313,26 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       };
 
       initSession();
+   }, []);
+
+   useEffect(() => {
+      const fetchGlobalSettings = async () => {
+         const { data } = await supabase
+            .from('v2_agency_settings')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+         if (data) {
+            setSystemConfig(data);
+            const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
+            if (dismissed === data.banner_message) {
+               setIsDismissed(true);
+            }
+         }
+      };
+      fetchGlobalSettings();
    }, []);
 
    useEffect(() => {
@@ -434,7 +459,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
        try {
           const userStr = localStorage.getItem('aruneeka_user');
           if (!userStr) {
-            alert("Sesi berakhir, silakan login kembali.");
+            showToast("Sesi berakhir, silakan login kembali.", 'error');
             return;
           }
           const currentUser = JSON.parse(userStr);
@@ -449,7 +474,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
           }
           
           if (!workspaceId) {
-            alert("Sistem tidak menemukan Brand yang aktif. Silakan pilih brand ulang.");
+            showToast("Sistem tidak menemukan Brand yang aktif.", 'error');
             return;
           }
 
@@ -475,7 +500,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
           
           if (error) {
             console.error("Save Error:", error);
-            alert("Gagal simpan: " + error.message);
+            showToast("Gagal simpan: " + error.message, 'error');
           } else {
             setIsWizardOpen(false);
             if (pathname === '/content') {
@@ -486,119 +511,91 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
           }
        } catch (err: any) { 
          console.error("Runtime Error:", err);
-         alert("Terjadi kesalahan sistem."); 
+         showToast("Terjadi kesalahan sistem.", 'error'); 
        }
     };
 
-   const handleSaveProfile = async () => {
-      if (!editForm.fullName || !editForm.password) return;
-      setIsSavingProfile(true);
+   // --- NEW: PUBLIC SHARING LOGIC ---
+   const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
+   const [isPublic, setIsPublic] = useState(false);
+   const [publicSlug, setPublicSlug] = useState('');
+   const [isSavingShare, setIsSavingShare] = useState(false);
+
+   useEffect(() => {
+     if (selectedWorkspace) {
+        setIsPublic(!!selectedWorkspace.is_public);
+        setPublicSlug(selectedWorkspace.public_slug || '');
+     }
+   }, [selectedWorkspace]);
+
+   const togglePublicLink = async () => {
+      if (!selectedWorkspace) return;
+      setIsSavingShare(true);
       try {
-         const originalColor = user?.theme_color?.includes('::') ? user.theme_color.split('::')[1] : (user?.theme_color || '#916DD5');
-         const packedColor = `${editForm.displayRole}::${originalColor}`;
-         const { error } = await supabase.from('v2_agency_users').update({
-            full_name: editForm.fullName, password: editForm.password, email: editForm.email,
-            avatar_url: editForm.avatar, role: editForm.systemRole, theme_color: packedColor
-         }).eq('id', user.id);
+         const newStatus = !isPublic;
+         let newSlug = publicSlug;
+         
+         if (newStatus && !newSlug) {
+            newSlug = Math.random().toString(36).substring(2, 12);
+         }
+
+         const { error } = await supabase
+            .from('v2_agency_workspaces')
+            .update({ is_public: newStatus, public_slug: newSlug })
+            .eq('id', selectedWorkspace.id);
+
          if (error) throw error;
-         const newUser = { ...user, full_name: editForm.fullName, password: editForm.password, email: editForm.email, avatar_url: editForm.avatar, role: editForm.systemRole, theme_color: packedColor };
-         setUser(newUser);
-         localStorage.setItem('aruneeka_user', JSON.stringify(newUser));
-         setIsEditorOpen(false);
-      } catch (e: any) { alert("Failed: " + e.message); } finally { setIsSavingProfile(false); }
+         
+         setIsPublic(newStatus);
+         setPublicSlug(newSlug);
+         
+         // Sync local selected workspace
+         const updatedWs = { ...selectedWorkspace, is_public: newStatus, public_slug: newSlug };
+         setSelectedWorkspace(updatedWs);
+         localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(updatedWs));
+      } catch (e: any) {
+         showToast("Gagal merubah status: " + e.message, 'error');
+      } finally {
+         setIsSavingShare(false);
+      }
    };
 
-    const handleWorkspaceSelect = (ws: any) => {
-       setSelectedWorkspace(ws);
-       const savedProfStr = localStorage.getItem(`aruneeka_selected_profile_${ws.id}`);
-       if (savedProfStr) {
-          setSelectedProfile(JSON.parse(savedProfStr));
-       } else {
-          setSelectedProfile(null);
-       }
-       localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(ws));
-       setIsWsSelectorOpen(false);
-       fetchProfiles();
-       fetchTeamCount();
-    };
+   const resetPublicLink = async () => {
+      if (!selectedWorkspace || !confirm("Generating a new link will break the old one. Continue?")) return;
+      setIsSavingShare(true);
+      try {
+         const newSlug = Math.random().toString(36).substring(2, 12);
+         const { error } = await supabase
+            .from('v2_agency_workspaces')
+            .update({ public_slug: newSlug })
+            .eq('id', selectedWorkspace.id);
 
-    const [showAnnouncement, setShowAnnouncement] = useState(false);
-    const [systemConfig, setSystemConfig] = useState<any>(null);
+         if (error) throw error;
+         
+         setPublicSlug(newSlug);
+         const updatedWs = { ...selectedWorkspace, public_slug: newSlug };
+         setSelectedWorkspace(updatedWs);
+         localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(updatedWs));
+      } catch (e: any) {
+         showToast("Gagal reset link: " + e.message, 'error');
+      } finally {
+         setIsSavingShare(false);
+      }
+   };
 
-     const [isDismissed, setIsDismissed] = useState(false);
+   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${publicSlug}` : '';
 
-     // REALTIME SYSTEM CONFIG: Fetch and listen for global announcements
-     useEffect(() => {
-       const fetchInternalConfig = async () => {
-         const { data } = await supabase
-           .from('v2_agency_settings')
-           .select('is_banner_active, banner_message')
-           .order('updated_at', { ascending: false })
-           .limit(1)
-           .maybeSingle();
+   return (
+      <WorkspaceContext.Provider value={{ 
+        selectedWorkspaceId: selectedWorkspace?.id, 
+        selectedWorkspace,
+        setSelectedWorkspace,
+        subscriptionTier,
+        openUpgrade: () => setIsUpgradeModalOpen(true),
+        user
+      }}>
 
-         if (data) {
-            // Check persistent dismissal
-            const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
-            if (dismissed === data.banner_message) {
-               setIsDismissed(true);
-            } else {
-               setIsDismissed(false);
-            }
-
-            setSystemConfig({
-               is_banner_active: !!data.is_banner_active,
-               banner_message: data.banner_message || ''
-            });
-         }
-       };
-
-       fetchInternalConfig();
-
-       const configSub = supabase
-         .channel('system-wide-config')
-         .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_settings' }, async () => {
-           const { data } = await supabase
-              .from('v2_agency_settings')
-              .select('is_banner_active, banner_message')
-              .order('updated_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-           if (data) {
-              // Update persistent dismissal on realtime change
-              const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
-              if (dismissed === data.banner_message) {
-                 setIsDismissed(true);
-              } else {
-                 setIsDismissed(false);
-              }
-
-              setSystemConfig((prev: any) => {
-                 return {
-                    is_banner_active: !!data.is_banner_active,
-                    banner_message: data.banner_message || ''
-                 };
-              });
-           }
-         })
-         .subscribe();
-
-       return () => {
-         supabase.removeChannel(configSub);
-       };
-     }, []);
-
-    return (
-       <WorkspaceContext.Provider value={{ 
-         selectedWorkspaceId: selectedWorkspace?.id, 
-         selectedWorkspace,
-         setSelectedWorkspace,
-         subscriptionTier,
-         openUpgrade: () => setIsUpgradeModalOpen(true),
-         user
-       }}>
-           <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
+          <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
              {!selectedWorkspace ? (
                <AruneekaWorkspaceSelector 
                  onSelect={(ws: any) => {
@@ -635,8 +632,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                                <div className="h-4 w-px bg-white/20 mx-1" />
                                
                                <p className="text-[11px] font-black tracking-tight drop-shadow-md">
-                                  {systemConfig.banner_message}
-                               </p>
+                                  {systemConfig?.banner_message}
+                                </p>
                             </div>
 
                             <button 
@@ -656,34 +653,44 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                 )}
              </AnimatePresence>
 
-            {/* DYNAMIC ISLAND SYSTEM NOTIFICATION */}
-            <AnimatePresence>
-               {showDynamicIsland && lastNotification && (
-                  <motion.div 
-                     initial={{ y: -100, x: '-50%', opacity: 0, scale: 0.8 }}
-                     animate={{ y: 0, x: '-50%', opacity: 1, scale: 1 }}
-                     exit={{ y: -100, x: '-50%', opacity: 0, scale: 0.8 }}
-                     className="fixed top-8 left-1/2 z-[10000] min-w-[320px]"
-                  >
-                     <Link 
-                        href={lastNotification.type === 'user' ? '/admin/users' : '/admin/inbox'}
-                        onClick={() => setShowDynamicIsland(false)}
-                        className="bg-slate-950/95 backdrop-blur-2xl border border-white/10 rounded-[40px] p-2 flex items-center gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] group hover:scale-[1.02] transition-transform"
-                     >
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg ${lastNotification.type === 'user' ? 'bg-amethyst-primary text-white' : 'bg-emerald-500 text-white'}`}>
-                           {lastNotification.type === 'user' ? <ShieldCheck size={20} /> : <Inbox size={20} />}
-                        </div>
-                        <div className="flex-1 pr-6 py-2">
-                           <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">System Alert</p>
-                           <p className="text-[11px] font-bold text-white tracking-tight">{lastNotification.message}</p>
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 mr-2 group-hover:text-white transition-colors">
-                           <ChevronRight size={16} />
-                        </div>
-                     </Link>
-                  </motion.div>
-               )}
-            </AnimatePresence>
+             {/* DYNAMIC ISLAND SYSTEM NOTIFICATION */}
+             <AnimatePresence>
+                {showDynamicIsland && lastNotification && (
+                   <motion.div 
+                      layoutId="dynamic-island"
+                      initial={{ y: -80, x: '-50%', opacity: 0 }}
+                      animate={{ y: 0, x: '-50%', opacity: 1 }}
+                      exit={{ y: -80, x: '-50%', opacity: 0 }}
+                      className="fixed top-12 left-1/2 z-[11000] flex justify-center"
+                   >
+                      {['user', 'inbox'].includes(lastNotification.type) ? (
+                         <Link 
+                            href={lastNotification.type === 'user' ? '/admin/users' : '/admin/inbox'}
+                            onClick={() => setShowDynamicIsland(false)}
+                            className="bg-white/80 backdrop-blur-2xl border border-slate-200/50 rounded-[40px] p-2 flex items-center gap-4 shadow-[0_25px_60px_rgba(0,0,0,0.1)] group hover:scale-[1.02] transition-all min-w-[320px]"
+                         >
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg ${lastNotification.type === 'user' ? 'bg-amethyst-primary text-white shadow-amethyst-primary/20' : 'bg-emerald-500 text-white shadow-emerald-500/20'}`}>
+                               {lastNotification.type === 'user' ? <ShieldCheck size={20} /> : <Inbox size={20} />}
+                            </div>
+                            <div className="flex-1 pr-6 py-2">
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Admin Update</p>
+                               <p className="text-[11px] font-bold text-slate-800 tracking-tight">{lastNotification.message}</p>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 mr-2 group-hover:bg-slate-200 group-hover:text-slate-500 transition-colors">
+                               <ChevronRight size={16} />
+                            </div>
+                         </Link>
+                      ) : (
+                         <div className="bg-white/80 backdrop-blur-2xl border border-slate-200/50 rounded-full px-8 py-4 flex items-center gap-4 shadow-[0_25px_60px_rgba(0,0,0,0.1)] min-w-[280px]">
+                            <div className={`w-3 h-3 rounded-full animate-pulse shadow-lg ${lastNotification.type === 'error' ? 'bg-rose-500 shadow-rose-500/30' : 'bg-emerald-500 shadow-emerald-500/30'}`} />
+                            <div className="flex-1 whitespace-nowrap">
+                               <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">{lastNotification.message}</p>
+                            </div>
+                         </div>
+                      )}
+                   </motion.div>
+                )}
+             </AnimatePresence>
 
             <AnimatePresence>
                {user?.status === 'Pending' && (
@@ -699,9 +706,9 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             </AnimatePresence>
 
             <header className="p-8 max-w-[1600px] mx-auto">
-               <div className="rounded-[48px] p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-hidden group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
+               <div className="rounded-[48px] p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-visible group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
                   {/* DYNAMIC BACKGROUND ELEMENTS */}
-                  <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-0 pointer-events-none rounded-[48px] overflow-hidden">
                      {/* Soft Ambient Light Glows */}
                      
                      {/* 2. Floating Glass Orbs */}
@@ -780,10 +787,95 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                         </div>
                      </div>
                   </div>
-                  <div className="relative z-10 flex flex-col items-end gap-10">
-                     <motion.button id="tour-create-content" whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => setIsWizardOpen(true)} className="bg-white text-amethyst-dark px-10 py-5 rounded-2xl flex items-center gap-3 shadow-xl font-black transition-all">
-                        <Plus size={18} /> <span className="text-[11px]">Persiapkan konten</span>
-                     </motion.button>
+                  <div className="relative z-50 flex flex-col items-end gap-10">
+                     <div className="relative">
+                        <motion.button 
+                          id="tour-share-highlights" 
+                          whileHover={{ scale: 1.02, y: -2 }} 
+                          whileTap={{ scale: 0.98 }} 
+                          onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)} 
+                          className={`px-10 py-5 rounded-2xl flex items-center gap-3 shadow-xl font-black transition-all ${isShareDropdownOpen ? 'bg-amethyst-primary text-white' : 'bg-white text-amethyst-dark'}`}
+                        >
+                           <Share2 size={18} /> <span className="text-[11px]">Share Highlights</span>
+                        </motion.button>
+
+                        {/* SHARE SETTINGS DROPDOWN */}
+                        <AnimatePresence>
+                           {isShareDropdownOpen && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 5, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                className="absolute top-full right-0 mt-2 w-[240px] bg-white rounded-[24px] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] overflow-hidden"
+                              >
+                                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amethyst-primary to-indigo-500" />
+                                 
+                                 <div className="text-left space-y-2 mb-6">
+                                    <h3 className="text-base font-black text-slate-800 tracking-tight">Public Share</h3>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                       Dashboard view-only
+                                    </p>
+                                 </div>
+
+                                 <div className="space-y-5">
+                                    <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                       <div>
+                                          <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest">Public Access</p>
+                                          <p className="text-[7px] text-slate-400 font-bold">{isPublic ? 'Aktif' : 'Nonaktif'}</p>
+                                       </div>
+                                       <button 
+                                         onClick={(e) => { e.stopPropagation(); togglePublicLink(); }}
+                                         disabled={isSavingShare}
+                                         className={`w-9 h-4.5 rounded-full relative transition-all ${isPublic ? 'bg-amethyst-primary' : 'bg-slate-300'}`}
+                                       >
+                                          <motion.div 
+                                            animate={{ x: isPublic ? 18 : 4 }}
+                                            className="absolute top-0.5 left-0 w-3.5 h-3.5 bg-white rounded-full shadow-md"
+                                          />
+                                       </button>
+                                    </div>
+
+                                    {isPublic && (
+                                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                                          <div className="space-y-2">
+                                             <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Sharing Link</label>
+                                             <div className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-xl">
+                                                <input 
+                                                  readOnly 
+                                                  value={shareUrl} 
+                                                  className="flex-1 bg-transparent border-none text-[9px] font-bold text-slate-600 outline-none px-2"
+                                                />
+                                                <button 
+                                                  onClick={(e) => {
+                                                     e.stopPropagation();
+                                                     navigator.clipboard.writeText(shareUrl);
+                                                     showToast("Link disalin!", 'success');
+                                                  }}
+                                                  className="p-1.5 bg-amethyst-primary text-white rounded-lg hover:bg-amethyst-dark transition-all"
+                                                >
+                                                   <Check size={12} />
+                                                </button>
+                                             </div>
+                                          </div>
+
+                                          <button 
+                                            onClick={(e) => { e.stopPropagation(); resetPublicLink(); }}
+                                            disabled={isSavingShare}
+                                            className="w-full py-2.5 text-[8px] font-black text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-all flex items-center justify-center gap-2 bg-slate-50 rounded-xl"
+                                          >
+                                             <RefreshCcw size={10} /> Reset Link
+                                          </button>
+                                       </motion.div>
+                                    )}
+                                 </div>
+
+                                 <button onClick={() => setIsShareDropdownOpen(false)} className="mt-6 w-full py-3.5 bg-amethyst-primary/10 text-amethyst-primary rounded-[18px] font-black text-[8px] uppercase tracking-widest hover:bg-amethyst-primary/20 transition-all">
+                                    Tutup Menu
+                                 </button>
+                              </motion.div>
+                           )}
+                        </AnimatePresence>
+                     </div>
                   </div>
                </div>
             </header>
