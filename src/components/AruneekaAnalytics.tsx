@@ -379,7 +379,7 @@ const AruneekaAnalytics = ({
               )}
             </AnimatePresence>
 
-            <div className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+            <div id="tour-date-filter" className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
                {['This Month', 'Last Month', 'Custom Range'].map((range) => (
                  <button
                    key={range}
@@ -405,6 +405,7 @@ const AruneekaAnalytics = ({
           className="space-y-10"
         >
           <div 
+            id="tour-metrics-cards"
             className="grid gap-4" 
             style={{ 
               gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` 

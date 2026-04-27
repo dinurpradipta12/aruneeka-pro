@@ -137,16 +137,22 @@ const LoginPage = () => {
   };
 
   const fetchSettings = async () => {
-    const { data } = await supabase
-      .from('v2_agency_settings')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('v2_agency_settings')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+      if (error) throw error;
       
-    if (data) {
-      setSettings(data);
-      localStorage.setItem('aruneeka_branding', JSON.stringify(data));
+      if (data) {
+        setSettings(data);
+        localStorage.setItem('aruneeka_branding', JSON.stringify(data));
+      }
+    } catch (e) {
+      console.error("Login Page Branding Fetch Error:", e);
     }
   };
 
@@ -241,11 +247,15 @@ const LoginPage = () => {
             
             <div className="space-y-6">
               <div className="flex flex-col items-center gap-6 mb-10">
-                 <img src="/assets/aruneeka.png" alt="Aruneeka Logo" className="h-16 w-auto object-contain" />
+                 <img src="/assets/aruneeka.png" alt={settings?.agency_name || "Aruneeka Logo"} className="h-16 w-auto object-contain" />
                  <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">Hallo, Welcome Back!</h2>
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">
+                       {settings?.agency_name ? `Welcome to ${settings.agency_name}` : "Hallo, Welcome Back!"}
+                    </h2>
                     <p className="text-[13px] font-medium text-slate-400 leading-relaxed">
-                       Login untuk bisa menggunakan konten plan dan buat sistem <br className="hidden md:block"/> konten yang lebih efektif
+                       {settings?.agency_name 
+                         ? `Rencanakan strategi konten terbaik untuk ${settings.agency_name} di Aruneeka Pro.` 
+                         : "Login untuk bisa menggunakan konten plan dan buat sistem konten yang lebih efektif"}
                     </p>
                  </div>
               </div>

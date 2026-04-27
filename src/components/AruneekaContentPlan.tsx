@@ -342,7 +342,7 @@ const AruneekaContentPlan = ({
 
          <div className="flex items-center gap-4">
             <div className="relative">
-               <button 
+               <button id="tour-content-period" 
                   onClick={() => setIsRangeOpen(!isRangeOpen)}
                   className="flex items-center gap-4 bg-white border border-amethyst-light rounded-2xl px-6 py-3 shadow-sm hover:border-amethyst-primary transition-all group"
                >
@@ -398,7 +398,7 @@ const AruneekaContentPlan = ({
             </div>
 
             {/* View Switcher Tabs */}
-            <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center">
+            <div id="tour-view-mode" className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center">
                <button 
                  onClick={() => onViewChange?.('table')}
                  className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${view === 'table' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
@@ -460,7 +460,7 @@ const AruneekaContentPlan = ({
                </button>
 
                <div className="relative">
-                  <button 
+                  <button id="tour-content-actions" 
                      onClick={() => setIsMoreOpen(!isMoreOpen)}
                      className={`w-12 h-12 flex items-center justify-center bg-white border border-amethyst-light rounded-[16px] text-amethyst-primary hover:border-amethyst-primary transition-all shadow-sm ${isMoreOpen ? 'ring-2 ring-amethyst-light' : ''}`}
                   >

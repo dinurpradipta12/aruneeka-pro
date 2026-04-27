@@ -411,7 +411,7 @@ export const AruneekaWorkspaceSelector = ({
 
                 {ws.owner_id === currentUser.id && (
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button id="tour-edit-workspace" 
                       onClick={(e) => handleRenameWorkspace(e, ws)}
                       className="w-10 h-10 bg-slate-50 text-slate-400 hover:bg-amethyst-light hover:text-amethyst-primary rounded-xl transition-all flex items-center justify-center"
                     >
@@ -458,13 +458,11 @@ export const AruneekaWorkspaceSelector = ({
                     </div>
                   </motion.div>
                ) : (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: workspaces.length * 0.1 }}
-                    onClick={() => setIsCreateOpen(true)}
-                    className="group relative border-2 border-dashed border-slate-200 rounded-[40px] p-10 flex flex-col items-center justify-center gap-6 hover:border-amethyst-primary hover:bg-amethyst-light/5 transition-all duration-500 cursor-pointer min-h-[340px]"
-                  >
+                  <div id="tour-add-workspace">
+                    <motion.div 
+                       onClick={() => setIsCreateOpen(true)}
+                       className="group relative border-2 border-dashed border-slate-200 rounded-[40px] p-10 flex flex-col items-center justify-center gap-6 hover:border-amethyst-primary hover:bg-amethyst-light/5 transition-all duration-500 cursor-pointer min-h-[340px]"
+                    >
                     <div className="w-20 h-20 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-amethyst-primary group-hover:text-white transition-all duration-500 shadow-inner">
                       <Plus size={40} />
                     </div>
@@ -473,6 +471,7 @@ export const AruneekaWorkspaceSelector = ({
                       <p className="text-xs text-slate-400 font-medium">Create a separate workspace</p>
                     </div>
                   </motion.div>
+                </div>
                )}
             </>
           )}
@@ -926,8 +925,8 @@ export const AruneekaWorkspaceSelector = ({
           )}
           </AnimatePresence>
 
-          <motion.button
-            initial={{ scale: 0, rotate: -45 }}
+          <motion.button id="tour-invite-user" 
+             initial={{ scale: 0, rotate: -45 }}
             animate={{ scale: 1, rotate: 0 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}

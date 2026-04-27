@@ -562,9 +562,10 @@ const AruneekaKPI = ({
                 }}
                 className="flex items-center gap-3 px-8 py-4 bg-amethyst-primary text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-primary/20"
               >
-                <Plus size={16}/> Add new goal
+                <Plus size={16}/> <span id="tour-add-goal">Add new goal</span>
               </motion.button>
               <motion.button 
+                id="tour-sync-kpi"
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={handleAutoSync} disabled={isAutoSync} 
                 className="flex items-center gap-2 px-8 py-4 bg-white text-amethyst-primary rounded-[24px] border border-amethyst-primary/20 font-black text-[10px] uppercase tracking-widest shadow-sm"
@@ -690,7 +691,7 @@ const AruneekaKPI = ({
                     <div className="w-12 h-12 bg-amethyst-primary/10 rounded-2xl flex items-center justify-center">
                       <Sparkles size={20} className="text-amethyst-primary" />
                     </div>
-                    <h4 className="text-xl font-black tracking-tight text-slate-800">Gap Insight</h4>
+                    <h4 id="tour-gap-insight" className="text-xl font-black tracking-tight text-slate-800">Gap Insight</h4>
                   </div>
                   <p className="text-sm font-bold leading-relaxed text-slate-500 italic quote-mark">
                     &quot;{gapInsight}&quot;

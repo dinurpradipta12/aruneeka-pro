@@ -28,7 +28,8 @@ import {
    EyeOff,
    ArrowLeft,
    Terminal,
-   Sparkles
+   Sparkles,
+  Megaphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -38,12 +39,15 @@ import SocialProfilesModal from './SocialProfilesModal';
 import { AruneekaWorkspaceSelector } from './AruneekaWorkspaceSelector';
 import AruneekaUpgradeModal from './AruneekaUpgradeModal';
 import { supabase } from '@/lib/supabase';
+import dynamic from 'next/dynamic';
+
+const AruneekaOnboarding = dynamic(() => import('./AruneekaOnboarding'), { ssr: false });
 
 // --- SUB-COMPONENTS (Optimized to prevent Shell re-renders) ---
 
 const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
    const [showBubble, setShowBubble] = useState(false);
-   const [bubbleType, setBubbleType] = useState<"motivation" | "subscribe">("motivation");
+   const [bubbleType, setBubbleType] = useState<"motivation" | "subscribe" | "tutorial">("motivation");
    const [currentMessage, setCurrentMessage] = useState("");
    const { subscriptionTier, openUpgrade, user } = useWorkspace();
 
@@ -66,12 +70,14 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
 
       const handleDisplay = () => {
          cycle = (cycle + 1) % 4; 
-         const isSubscribeCycle = cycle % 2 === 0;
          const isPowerUser = user?.role === 'developer' || user?.role === 'Superuser';
          
-         if (isSubscribeCycle && subscriptionTier === "free" && !isPowerUser) {
+         if (cycle === 1 && subscriptionTier === "free" && !isPowerUser) {
             setBubbleType("subscribe");
             setCurrentMessage("Mau akses penuh aplikasi ini? Segera subscribe biar hasilnya bisa maksimal");
+         } else if (cycle === 3) {
+            setBubbleType("tutorial");
+            setCurrentMessage("Bingung mulai dari mana? Klik profil kamu dan pilih 'Tutorial Singkat' untuk panduan di setiap halaman.");
          } else {
             setBubbleType("motivation");
             setCurrentMessage(messages[Math.floor(Math.random() * messages.length)]);
@@ -119,14 +125,14 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
                initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }} 
                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} 
                exit={{ opacity: 0, scale: 0.5, y: 10, x: 10 }} 
-               className={`absolute bottom-6 right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType === "subscribe" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
+               className={`absolute bottom-6 right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType !== "motivation" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
             >
-               {bubbleType === "subscribe" && (
-                  <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-400 text-white rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                     <Zap size={18} className="fill-current" />
+               {bubbleType !== "motivation" && (
+                  <div className={`absolute -top-3 -left-3 w-10 h-10 rounded-full flex items-center justify-center shadow-lg animate-bounce ${bubbleType === "subscribe" ? "bg-amber-400" : "bg-emerald-400"}`}>
+                     {bubbleType === "subscribe" ? <Zap size={18} className="fill-current text-white" /> : <Sparkles size={18} className="text-white" />}
                   </div>
                )}
-               <p className={`text-[11px] font-black leading-relaxed ${bubbleType === "subscribe" ? "text-white" : "text-slate-700"}`}>
+               <p className={`text-[11px] font-black leading-relaxed ${bubbleType !== "motivation" ? "text-white" : "text-slate-700"}`}>
                   {currentMessage}
                </p>
                {bubbleType === "subscribe" && (
@@ -137,9 +143,14 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
                      Upgrade Now
                   </button>
                )}
+               {bubbleType === "tutorial" && (
+                  <div className="mt-2 text-[8px] font-bold text-white/60 italic">
+                    Tips: Klik avatar di pojok kanan bawah
+                  </div>
+               )}
                {/* Side Tail pointing to avatar */}
                <div 
-                  className={`absolute top-[65%] -right-2.5 w-6 h-6 ${bubbleType === "subscribe" ? "bg-[#AC8BEE]" : "bg-white/90"} -z-10`}
+                  className={`absolute top-[65%] -right-2.5 w-6 h-6 ${bubbleType !== "motivation" ? "bg-[#AC8BEE]" : "bg-white/90"} -z-10`}
                   style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }}
                />
             </motion.div>
@@ -511,39 +522,130 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
        fetchTeamCount();
     };
 
-   if (initializing) {
-      return (
-        <div className="min-h-screen bg-[#FDFCFE] flex items-center justify-center">
-           <motion.div 
-             animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-             transition={{ duration: 2, repeat: Infinity }}
-             className="w-20 h-20"
-           >
-              <img src="/assets/aruneeka.png" className="w-full h-full object-contain grayscale opacity-20" />
-           </motion.div>
-        </div>
-      );
-    }
+    const [showAnnouncement, setShowAnnouncement] = useState(false);
+    const [systemConfig, setSystemConfig] = useState<any>(null);
 
-   if (!selectedWorkspace && user) {
-      return (
-         <AruneekaWorkspaceSelector 
-            currentUser={user} 
-            onSelect={handleWorkspaceSelect} 
-         />
-      );
-   }
+     const [isDismissed, setIsDismissed] = useState(false);
 
-   return (
-      <WorkspaceContext.Provider value={{ 
-        selectedWorkspaceId: selectedWorkspace?.id, 
-        selectedWorkspace,
-        setSelectedWorkspace,
-        subscriptionTier,
-        openUpgrade: () => setIsUpgradeModalOpen(true),
-        user
-      }}>
-         <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
+     // REALTIME SYSTEM CONFIG: Fetch and listen for global announcements
+     useEffect(() => {
+       const fetchInternalConfig = async () => {
+         const { data } = await supabase
+           .from('v2_agency_settings')
+           .select('is_banner_active, banner_message')
+           .order('updated_at', { ascending: false })
+           .limit(1)
+           .maybeSingle();
+
+         if (data) {
+            // Check persistent dismissal
+            const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
+            if (dismissed === data.banner_message) {
+               setIsDismissed(true);
+            } else {
+               setIsDismissed(false);
+            }
+
+            setSystemConfig({
+               is_banner_active: !!data.is_banner_active,
+               banner_message: data.banner_message || ''
+            });
+         }
+       };
+
+       fetchInternalConfig();
+
+       const configSub = supabase
+         .channel('system-wide-config')
+         .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_settings' }, async () => {
+           const { data } = await supabase
+              .from('v2_agency_settings')
+              .select('is_banner_active, banner_message')
+              .order('updated_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+           if (data) {
+              // Update persistent dismissal on realtime change
+              const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
+              if (dismissed === data.banner_message) {
+                 setIsDismissed(true);
+              } else {
+                 setIsDismissed(false);
+              }
+
+              setSystemConfig((prev: any) => {
+                 return {
+                    is_banner_active: !!data.is_banner_active,
+                    banner_message: data.banner_message || ''
+                 };
+              });
+           }
+         })
+         .subscribe();
+
+       return () => {
+         supabase.removeChannel(configSub);
+       };
+     }, []);
+
+    return (
+       <WorkspaceContext.Provider value={{ 
+         selectedWorkspaceId: selectedWorkspace?.id, 
+         selectedWorkspace,
+         setSelectedWorkspace,
+         subscriptionTier,
+         openUpgrade: () => setIsUpgradeModalOpen(true),
+         user
+       }}>
+           <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
+             {/* 0. SYSTEM ANNOUNCEMENT BANNER (BROADCAST) */}
+             <AnimatePresence>
+                {systemConfig?.is_banner_active && systemConfig?.banner_message && !isDismissed && (
+                   <motion.div 
+                     initial={{ height: 0, opacity: 0 }}
+                     animate={{ height: 'auto', opacity: 1 }}
+                     exit={{ height: 0, opacity: 0 }}
+                     className="relative z-[10001] overflow-hidden"
+                   >
+                      {/* PREMIUM VIBRANT GRADIENT BACKGROUND */}
+                      <div className="bg-gradient-to-r from-[#916DD5] via-[#AC8BEE] to-[#916DD5] animate-gradient-x text-white border-b border-white/20 shadow-xl relative overflow-hidden">
+                         {/* SUBTLE GLOW EFFECT */}
+                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.4),transparent)] pointer-events-none" />
+                         
+                         <div className="max-w-[1600px] mx-auto px-8 py-3.5 flex items-center justify-between gap-6 relative z-10">
+                            <div className="flex items-center gap-4 flex-1 justify-center">
+                               <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-lg">
+                                     <Megaphone size={14} className="text-white animate-pulse" />
+                                  </div>
+                                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/90 whitespace-nowrap">Pengumuman!</span>
+                               </div>
+                               
+                               <div className="h-4 w-px bg-white/20 mx-1" />
+                               
+                               <p className="text-[11px] font-black tracking-tight drop-shadow-md">
+                                  {systemConfig.banner_message}
+                               </p>
+                            </div>
+
+                            <button 
+                              onClick={() => {
+                                setIsDismissed(true);
+                                if (systemConfig?.banner_message) {
+                                  localStorage.setItem('aruneeka_dismissed_announcement', systemConfig.banner_message);
+                                }
+                              }}
+                              className="bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-90"
+                            >
+                               Oke, Mengerti
+                            </button>
+                         </div>
+                      </div>
+                   </motion.div>
+                )}
+             </AnimatePresence>
+
             {/* DYNAMIC ISLAND SYSTEM NOTIFICATION */}
             <AnimatePresence>
                {showDynamicIsland && lastNotification && (
@@ -628,7 +730,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                            <ArrowLeft size={18} />
                         </button>
                         
-                        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 cursor-pointer hover:bg-white/20 transition-all group" onClick={() => setIsProfilesOpen(true)}>
+                        <div id="tour-profile-selector" className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 cursor-pointer hover:bg-white/20 transition-all group" onClick={() => setIsProfilesOpen(true)}>
                            <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[10px] font-black">
                               {selectedProfile ? (
                                  selectedProfile.avatar ? (
@@ -652,7 +754,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      </div>
                      
                      <div className="space-y-1">
-                        <h1 className="text-4xl font-black tracking-tight drop-shadow-sm">
+                        <h1 id="tour-workspace-selector" className="text-4xl font-black tracking-tight drop-shadow-sm">
                            {selectedWorkspace?.name || 'Aruneeka Pro Intelligence'}
                         </h1>
                         <div className="flex items-center gap-6 text-white/80 text-[10px] font-black tracking-[0.05em]">
@@ -669,7 +771,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      </div>
                   </div>
                   <div className="relative z-10 flex flex-col items-end gap-10">
-                     <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => setIsWizardOpen(true)} className="bg-white text-amethyst-dark px-10 py-5 rounded-2xl flex items-center gap-3 shadow-xl font-black transition-all">
+                     <motion.button id="tour-create-content" whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => setIsWizardOpen(true)} className="bg-white text-amethyst-dark px-10 py-5 rounded-2xl flex items-center gap-3 shadow-xl font-black transition-all">
                         <Plus size={18} /> <span className="text-[11px]">Persiapkan konten</span>
                      </motion.button>
                   </div>
@@ -680,9 +782,14 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                 <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
                    <div className="flex items-center gap-1">
                       {navItems.map((item) => (
-                         <Link key={item.href} href={item.href} className={`px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-amethyst-dark text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-amethyst-primary hover:bg-slate-50'}`}>
-                            {item.icon} <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                         </Link>
+                         <Link 
+                           key={item.href} 
+                           href={item.href} 
+                           id={`tour-nav-${item.href.replace('/', '')}`}
+                           className={`px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-amethyst-dark text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-amethyst-primary hover:bg-slate-50'}`}
+                        >
+                           {item.icon} <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                        </Link>
                       ))}
                    </div>
                 </nav>
@@ -696,8 +803,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                             const isStyling = item.href === '/admin/appearance';
                             const count = isUserAdmin ? pendingUsersCount : (isStyling ? 0 : pendingInboxCount);
                             
-                            const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
-                            const isDeveloper = ['developer', 'Superuser'].includes(user?.role) || user?.username === 'arunika' || ['developer', 'Superuser'].includes(storedUser?.role) || storedUser?.username === 'arunika';
+                            const isDeveloper = ['developer', 'Superuser'].includes(user?.role) || user?.username === 'arunika';
                             
                             // Specific restriction: System Styling ONLY for dev/superuser
                             if (isStyling && !isDeveloper) return null;
@@ -885,6 +991,22 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center"><LogOut size={18} /></div>
                               <div className="text-left"><div className="text-sm font-black text-rose-600">Terminate account</div><div className="text-[9px] font-bold opacity-50">Logout session</div></div>
                            </button>
+
+                           <div className="h-px bg-slate-100 mx-4 my-2 opacity-50" />
+
+                           <button 
+                             onClick={() => { 
+                               setIsProfilePopupOpen(false); 
+                               if ((window as any).startAruneekaTour) (window as any).startAruneekaTour(); 
+                             }} 
+                             className="w-full flex items-center gap-4 p-4 rounded-[24px] bg-amethyst-primary/5 hover:bg-amethyst-primary/10 transition-all text-amethyst-primary group"
+                           >
+                              <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform"><Sparkles size={18} /></div>
+                              <div className="text-left">
+                                <div className="text-sm font-black">Tutorial singkat</div>
+                                <div className="text-[9px] font-bold opacity-70 italic">Pelajari fitur (Panduan menyesuaikan tiap halaman)</div>
+                              </div>
+                           </button>
                         </motion.div>
                      )}
                   </AnimatePresence>
@@ -938,6 +1060,9 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                onClose={() => setIsUpgradeModalOpen(false)} 
                user={user}
             />
+
+            {/* Interactive Onboarding Guide */}
+            <AruneekaOnboarding />
 
             {/* Global Realtime Success Celebration */}
             <AnimatePresence>

@@ -38,7 +38,9 @@ export default function AdminInboxPage() {
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
+    let channel: any;
+
+    const init = async () => {
       const userStr = localStorage.getItem('aruneeka_user');
       if (!userStr) {
         router.push('/login');
@@ -52,9 +54,10 @@ export default function AdminInboxPage() {
       setIsAuthorized(true);
       fetchData();
 
-      // Enable Realtime Listener for Inbox
-      const channel = supabase
-        .channel('admin-inbox-live')
+      // Enable Realtime Listener for Inbox with a UNIQUE name per session
+      const channelId = `admin-inbox-${Date.now()}`;
+      channel = supabase
+        .channel(channelId)
         .on(
           'postgres_changes', 
           { event: '*', schema: 'public', table: 'v2_agency_inbox' }, 
@@ -64,12 +67,13 @@ export default function AdminInboxPage() {
           }
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     };
-    checkAuth();
+
+    init();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {

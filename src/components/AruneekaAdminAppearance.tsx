@@ -10,32 +10,58 @@ import {
   Eye,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useWorkspace } from './AruneekaShell';
 
 const AruneekaAdminAppearance = () => {
+  const { user } = useWorkspace();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // SELF-SUFFICIENT USER FETCHING: Support standalone usage
+  const [localUser, setLocalUser] = useState<any>(null);
+  useEffect(() => {
+    if (!user) {
+      const stored = localStorage.getItem('aruneeka_user');
+      if (stored) setLocalUser(JSON.parse(stored));
+    }
+  }, [user]);
+
+  const activeUser = user || localUser;
+
   
-  const [config, setConfig] = useState({
+  interface AppearanceConfig {
+    login_hero_bg_color: string;
+    login_page_bg_color: string;
+    login_hero_image: string;
+    agency_name: string;
+    is_banner_active: boolean;
+    banner_message: string;
+  }
+
+  const [config, setConfig] = useState<AppearanceConfig>({
     login_hero_bg_color: '#916DD5',
     login_page_bg_color: '#f8fafc',
     login_hero_image: '',
-    agency_name: 'Aruneeka Pro'
+    agency_name: 'Aruneeka Pro',
+    is_banner_active: false,
+    banner_message: ''
   });
 
 
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      // Global Fetch: Get the latest system branding
+      // Use the reliable agency_settings table for everything
       const { data, error } = await supabase
         .from('v2_agency_settings')
         .select('*')
@@ -43,14 +69,14 @@ const AruneekaAdminAppearance = () => {
         .limit(1)
         .maybeSingle();
       
-      if (error) console.error("Fetch Settings Error:", error);
-      
       if (data) {
         setConfig({
           login_hero_bg_color: data.login_hero_bg_color || '#916DD5',
           login_page_bg_color: data.login_page_bg_color || '#f8fafc',
           login_hero_image: data.login_hero_image || '',
-          agency_name: data.agency_name || 'Aruneeka Pro'
+          agency_name: data.agency_name || 'Aruneeka Pro',
+          is_banner_active: data.is_banner_active || false,
+          banner_message: data.banner_message || ''
         });
       }
     } catch (e) {
@@ -97,7 +123,7 @@ const AruneekaAdminAppearance = () => {
         .from('agency-assets')
         .getPublicUrl(filePath);
 
-      setConfig((prev) => ({ ...prev, login_hero_image: publicUrl }));
+      setConfig((prev: AppearanceConfig) => ({ ...prev, login_hero_image: publicUrl }));
       setMessage({ text: 'Gambar berhasil diupload!', type: 'success' });
     } catch (err: any) {
       console.error("Upload Error:", err);
@@ -108,40 +134,39 @@ const AruneekaAdminAppearance = () => {
   };
 
   const handleSave = async () => {
+    // FINAL SECURITY CHECK before DB write
+    const isPowerUser = ['developer', 'Superuser'].includes(activeUser?.role || '');
+    const isMaster = activeUser?.username === 'arunika';
+
+    if (!isPowerUser && !isMaster) {
+      setMessage({ text: `Akses ditolak: Anda tidak memiliki otoritas (Role: ${activeUser?.role || 'Guest'}).`, type: 'error' });
+      return;
+    }
+
     setMessage(null);
     setIsSaving(true);
     
     try {
-      // Global Save: Target existing record or create default
-      const { data: existing } = await supabase
+      const settingsPayload = {
+         login_hero_bg_color: config.login_hero_bg_color,
+         login_page_bg_color: config.login_page_bg_color,
+         login_hero_image: config.login_hero_image,
+         agency_name: config.agency_name,
+         updated_at: new Date().toISOString()
+      };
+
+      const { data: existingBranding } = await supabase
         .from('v2_agency_settings')
         .select('id')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const targetId = existing?.id || '00000000-0000-0000-0000-000000000000';
+      const brandingId = existingBranding?.id || '00000000-0000-0000-0000-000000000000';
+      await supabase.from('v2_agency_settings').upsert({ id: brandingId, ...settingsPayload });
 
-      const { error } = await supabase
-        .from('v2_agency_settings')
-        .upsert({
-          id: targetId,
-          ...config,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error("Save Error:", error);
-        throw error;
-      }
-      
       setShowSuccess(true);
-      // Force refresh on next login for everyone by updating local cache
       localStorage.setItem('aruneeka_branding', JSON.stringify(config));
-      
-      setTimeout(() => {
-        setMessage(null);
-      }, 5000);
     } catch (e: any) {
       setMessage({ text: `Gagal menyimpan: ${e.message}`, type: 'error' });
     } finally {
@@ -149,24 +174,59 @@ const AruneekaAdminAppearance = () => {
     }
   };
 
-  const { user } = useWorkspace();
-  
-  // High-priority override for master developer account
-  const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
-  const isMasterAccount = user?.username === 'arunika' || storedUser?.username === 'arunika';
-  const isDevOrSuper = ['developer', 'Superuser'].includes(user?.role || '') || ['developer', 'Superuser'].includes(storedUser?.role || '');
+  const handleBroadcast = async () => {
+    const isPowerUser = ['developer', 'Superuser'].includes(activeUser?.role || '');
+    const isMaster = activeUser?.username === 'arunika';
 
+    if (!isPowerUser && !isMaster) {
+      setMessage({ text: "Anda tidak memiliki izin broadcast.", type: 'error' });
+      return;
+    }
+
+    setIsBroadcasting(true);
+    try {
+      const { data: existing } = await supabase
+        .from('v2_agency_settings')
+        .select('id')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+      const brandingId = existing?.id || '00000000-0000-0000-0000-000000000000';
+
+      const { error } = await supabase.from('v2_agency_settings').upsert({
+        id: brandingId,
+        is_banner_active: config.is_banner_active,
+        banner_message: config.banner_message,
+        updated_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+      setMessage({ text: "Pengumuman berhasil disiarkan!", type: 'success' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (e: any) {
+      setMessage({ text: `Gagal broadcast: ${e.message}`, type: 'error' });
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  // Logic for master developer account override
+  const isMasterAccount = activeUser?.username === 'arunika';
+  const isDevOrSuper = ['developer', 'Superuser'].includes(activeUser?.role || '');
+
+  // SECURITY CHECK: Strictly restricted to Developers / Superusers
   if (!isDevOrSuper && !isMasterAccount) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
-        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
-          <AlertCircle size={32} />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
+        <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[35px] flex items-center justify-center shadow-inner">
+           <AlertCircle size={48} />
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-black text-slate-800 tracking-tight">Access Restricted</h3>
-          <p className="text-xs text-slate-400 font-medium max-w-sm mx-auto leading-relaxed">
-            Halaman System Styling bersifat global dan sangat sensitif. Hanya akun dengan role <span className="text-amethyst-primary font-bold">developer</span> atau <span className="text-amethyst-primary font-bold">Superuser</span> yang diizinkan melakukan konfigurasi branding utama.
-          </p>
+           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Limited Access</h2>
+           <p className="text-sm text-slate-400 font-medium max-w-sm mx-auto leading-relaxed">
+             Hanya <span className="text-amethyst-primary font-bold">Aruneeka Developer</span> yang diizinkan untuk mengubah desain sistem global.
+           </p>
         </div>
       </div>
     );
@@ -300,21 +360,82 @@ const AruneekaAdminAppearance = () => {
                    )}
                  </AnimatePresence>
 
-                 <button 
-                   onClick={handleSave}
-                   disabled={isSaving}
-                   className="w-full py-5 bg-amethyst-dark text-white rounded-[24px] font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-amethyst-dark/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                 >
-                   {isSaving ? <Loader2 className="animate-spin" size={18} /> : (
-                     <>
-                       <Save size={18} />
-                       Apply Global Branding
-                     </>
-                   )}
-                 </button>
-              </div>
-           </div>
-        </div>
+                  <div className="pt-6 border-t border-slate-100 space-y-6">
+                    <div className="flex items-center justify-between">
+                       <div className="space-y-1">
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Broadcast System Announcement</h4>
+                          <p className="text-[10px] font-medium text-slate-300 italic pl-1">Informasi penting untuk seluruh user yang online.</p>
+                       </div>
+                       <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={!!config.is_banner_active} 
+                            onChange={(e) => setConfig((prev: AppearanceConfig) => ({ ...prev, is_banner_active: e.target.checked }))}
+                            className="sr-only peer" 
+                          />
+                          <div className="w-11 h-6 bg-slate-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amethyst-primary"></div>
+                       </label>
+                    </div>
+                    
+                    <div className="space-y-4">
+                       <textarea 
+                          value={config.banner_message || ''}
+                          onChange={(e) => setConfig((prev: AppearanceConfig) => ({ ...prev, banner_message: e.target.value }))}
+                          placeholder="Ketik pengumuman maintenance atau update di sini..."
+                          className="w-full bg-slate-50 border-none rounded-[24px] p-5 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/10 transition-all min-h-[100px] resize-none"
+                       />
+                       
+                       <button 
+                         onClick={handleBroadcast}
+                         disabled={isBroadcasting}
+                         className="w-full py-4 bg-amethyst-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amethyst-primary/10 hover:bg-amethyst-dark active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                       >
+                         {isBroadcasting ? (
+                           <>
+                             <Loader2 className="animate-spin" size={14} />
+                             Broadcasting...
+                           </>
+                         ) : (
+                           <>
+                             <Sparkles size={14} />
+                             Broadcast Announcement Now
+                           </>
+                         )}
+                       </button>
+
+                       {/* Explicit Broadcast Status Feedback */}
+                       <AnimatePresence>
+                          {message && message.text.includes("Pengumuman") && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0 }}
+                              className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-wider text-center ${
+                                message.type === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'
+                              }`}
+                            >
+                              {message.text}
+                            </motion.div>
+                          )}
+                       </AnimatePresence>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="w-full py-5 bg-slate-800 text-white rounded-[24px] font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-slate-800/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {isSaving ? <Loader2 className="animate-spin" size={18} /> : (
+                      <>
+                        <Save size={18} />
+                        Sync Branding Identity
+                      </>
+                    )}
+                  </button>
+               </div>
+            </div>
+         </div>
 
         {/* Right Side: Identity Preview */}
         <div className="lg:col-span-7 flex flex-col gap-6">
