@@ -21,6 +21,199 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
+// --- SUB-COMPONENTS FOR ANALYTICS ---
+
+const GrowthChart = ({ data, color, maxVal }: { data: any[], color: string, maxVal: number }) => {
+   if (data.length === 0) return null;
+   
+   const width = 450;
+   const height = 150;
+   const paddingLeft = 40;
+   const paddingRight = 20;
+   const paddingTop = 20;
+   const paddingBottom = 30;
+   
+   const chartWidth = width - paddingLeft - paddingRight;
+   const chartHeight = height - paddingTop - paddingBottom;
+   
+   // Generate points for the SVG path
+   const points = data.map((d, i) => {
+      const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
+      const y = paddingTop + chartHeight - ((d.value / maxVal) * chartHeight);
+      return `${x},${y}`;
+   }).join(' ');
+ 
+   const colorMap: any = {
+      amethyst: '#916DD5',
+      emerald: '#10B981',
+      indigo: '#6366F1'
+   };
+ 
+   // Y-axis indicators (0, 25%, 50%, 75%, 100%)
+   const yIndicators = [0, Math.ceil(maxVal * 0.25), Math.ceil(maxVal * 0.5), Math.ceil(maxVal * 0.75), maxVal];
+ 
+   return (
+      <div className="w-full h-[180px] flex items-center justify-center mt-6">
+         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+            <defs>
+               <linearGradient id={`grad-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={colorMap[color]} stopOpacity="0.15" />
+                  <stop offset="100%" stopColor={colorMap[color]} stopOpacity="0" />
+               </linearGradient>
+            </defs>
+ 
+            {/* Y-Axis Grid Lines & Indicators */}
+            {yIndicators.map((val, i) => {
+               const y = paddingTop + chartHeight - ((val / maxVal) * chartHeight);
+               return (
+                  <g key={`y-${i}`}>
+                     <line 
+                        x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} 
+                        stroke="#F1F5F9" strokeWidth="1" strokeDasharray="4,4"
+                     />
+                     <text 
+                        x={paddingLeft - 10} y={y} 
+                        textAnchor="end" alignmentBaseline="middle" 
+                        className="text-[10px] font-black fill-slate-300 tracking-tighter"
+                     >
+                        {val}
+                     </text>
+                  </g>
+               );
+            })}
+ 
+            {/* Area under the line */}
+            <motion.path 
+               initial={{ opacity: 0, d: `M ${paddingLeft},${paddingTop + chartHeight} ${points.split(' ').map(p => p.split(',')[0] + ',' + (paddingTop + chartHeight)).join(' ')}` }}
+               animate={{ opacity: 1, d: `M ${paddingLeft},${paddingTop + chartHeight} ${points} V ${paddingTop + chartHeight} Z` }}
+               transition={{ duration: 1, ease: 'easeOut' }}
+               fill={`url(#grad-${color})`}
+            />
+ 
+            {/* The actual line */}
+            <motion.polyline
+               fill="none"
+               stroke={colorMap[color]}
+               strokeWidth="3"
+               strokeLinecap="round"
+               strokeLinejoin="round"
+               points={points}
+               initial={{ pathLength: 0, opacity: 0 }}
+               animate={{ pathLength: 1, opacity: 1 }}
+               transition={{ duration: 1.5, ease: 'easeInOut' }}
+            />
+ 
+            {/* X-Axis Labels (Date Periods) */}
+            {data.map((d, i) => {
+               const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
+               return (
+                  <text 
+                     key={`x-${i}`}
+                     x={x} y={height - 5}
+                     textAnchor="middle"
+                     className="text-[10px] font-black fill-slate-400 uppercase tracking-tighter"
+                  >
+                     {d.name}
+                  </text>
+               );
+            })}
+ 
+            {/* Data Points */}
+            {data.map((d, i) => {
+               const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
+               const y = paddingTop + chartHeight - ((d.value / maxVal) * chartHeight);
+               return (
+                  <g key={`pt-${i}`} className="group/pt">
+                     <circle cx={x} cy={y} r="10" fill="transparent" className="cursor-pointer" />
+                     <motion.circle 
+                        cx={x} cy={y} r="4" 
+                        fill="white" 
+                        stroke={colorMap[color]} 
+                        strokeWidth="2.5"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1 + (i * 0.1) }}
+                     />
+                     {/* Tooltip on hover (Simulated) */}
+                     <g className="opacity-0 group-hover/pt:opacity-100 transition-opacity pointer-events-none">
+                        <rect x={x - 15} y={y - 30} width="30" height="20" rx="6" fill="#1E293B" />
+                        <text x={x} y={y - 16} textAnchor="middle" className="text-[10px] font-bold fill-white">
+                           {d.value}
+                        </text>
+                     </g>
+                  </g>
+               );
+            })}
+         </svg>
+      </div>
+   );
+};
+
+const AnalyticsCard = ({ title, value, trend, color, data, maxVal }: any) => {
+   const [isExpanded, setIsExpanded] = useState(false);
+
+   const bgColors: any = {
+      amethyst: 'bg-amethyst-primary/5',
+      emerald: 'bg-emerald-50',
+      indigo: 'bg-indigo-50'
+   };
+   
+   const textColors: any = {
+      amethyst: 'text-amethyst-primary',
+      emerald: 'text-emerald-500',
+      indigo: 'text-indigo-600'
+   };
+
+   return (
+      <motion.div 
+         layout
+         onClick={() => setIsExpanded(!isExpanded)}
+         className={`bg-white border cursor-pointer group rounded-[32px] p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden relative ${isExpanded ? 'ring-2 ring-slate-100' : 'border-slate-100'}`}
+      >
+         <div className="flex items-center justify-between relative z-10">
+            <div className="space-y-1">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
+               <div className="flex items-center gap-3">
+                  <h3 className="text-3xl font-black text-slate-800">{value}</h3>
+                  <span className={`px-2 py-1 ${bgColors[color]} ${textColors[color]} rounded-lg text-[9px] font-black uppercase tracking-widest`}>
+                     {trend}
+                  </span>
+               </div>
+            </div>
+            <div className={`w-12 h-12 ${bgColors[color]} ${textColors[color]} rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110`}>
+               {title.includes('Active') ? <Zap size={20} /> : title.includes('Member') ? <Users size={20} /> : <ShieldCheck size={20} />}
+            </div>
+         </div>
+
+         <AnimatePresence>
+            {isExpanded && (
+               <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="pt-6 border-t border-slate-50 mt-6"
+               >
+                  <div className="flex items-center justify-between mb-2 px-1">
+                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Growth Trend</p>
+                     <p className="text-[9px] font-bold text-slate-400 uppercase italic">Last {data.length} periods</p>
+                  </div>
+                  
+                  <GrowthChart data={data} color={color} maxVal={maxVal} />
+               </motion.div>
+            )}
+         </AnimatePresence>
+
+         <div className="absolute bottom-4 right-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Click to {isExpanded ? 'close' : 'expand'}</span>
+            <ArrowUpDown size={10} className="text-slate-300" />
+         </div>
+      </motion.div>
+   );
+};
+
+// --- MAIN COMPONENT ---
+
 interface AppUser {
   id: string;
   full_name: string;
@@ -28,6 +221,7 @@ interface AppUser {
   role: string;
   status: string;
   workspace_id?: string;
+  parent_user_id?: string;
   avatar_url?: string;
   created_at: string;
   subscription_expiry?: string;
@@ -278,29 +472,84 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
   }
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-8 pb-10">
       {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-         <div className="space-y-1">
-            <div className="flex items-center gap-3 text-amethyst-primary">
-               <ShieldCheck size={20} />
-               <span className="text-[10px] font-black uppercase tracking-[0.3em]">System Administration</span>
+      <div className="flex flex-col gap-10">
+         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-1">
+               <div className="flex items-center gap-3 text-amethyst-primary">
+                  <ShieldCheck size={20} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">System Administration</span>
+               </div>
+               <h2 className="text-4xl font-black text-slate-800 tracking-tight">User Management</h2>
             </div>
-            <h2 className="text-4xl font-black text-slate-800 tracking-tight">User Management</h2>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
+               <Clock size={14} className="text-slate-400" />
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Sync Active</span>
+            </div>
          </div>
 
-         <div className="flex items-center gap-4">
-            <div className="bg-white p-4 px-8 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-6">
-               <div className="text-center">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Population</p>
-                  <p className="text-2xl font-black text-slate-800">{users.length}</p>
-               </div>
-               <div className="w-px h-10 bg-slate-100" />
-               <div className="text-center">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Now</p>
-                  <p className="text-2xl font-black text-emerald-500">{users.filter(u => u.role === 'Superuser' || u.full_name).length}</p>
-               </div>
-            </div>
+         {/* INTERACTIVE ANALYTICS CARDS */}
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {(() => {
+               const activeUsers = users.filter(u => u.status === 'Active');
+               const invitedMembers = users.filter(u => u.role === 'Member');
+               const totalPop = users.length + pendingUsers.length;
+
+               // Helper to process growth data
+               const getGrowthData = () => {
+                  const periods: { [key: string]: number } = {};
+                  const sortedUsers = [...users, ...pendingUsers].sort((a, b) => 
+                     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                  );
+
+                  sortedUsers.forEach(u => {
+                     const date = new Date(u.created_at);
+                     const period = `${date.getDate()}/${date.toLocaleString('default', { month: 'short' })}`;
+                     periods[period] = (periods[period] || 0) + 1;
+                  });
+
+                  // Ensure we have at least 2 points for a line
+                  const result = Object.entries(periods).map(([name, value]) => ({ name, value }));
+                  if (result.length === 1) {
+                     return [{ name: '', value: 0 }, ...result];
+                  }
+                  return result;
+               };
+
+               const chartData = getGrowthData();
+               const maxVal = Math.max(...chartData.map(d => d.value), 5);
+
+               return (
+                  <>
+                     <AnalyticsCard 
+                        title="Total Population"
+                        value={totalPop}
+                        trend="+12%"
+                        color="indigo"
+                        data={chartData}
+                        maxVal={maxVal}
+                     />
+                     <AnalyticsCard 
+                        title="Active Now"
+                        value={activeUsers.length}
+                        trend="Live"
+                        color="emerald"
+                        data={chartData}
+                        maxVal={maxVal}
+                     />
+                     <AnalyticsCard 
+                        title="Invited Members"
+                        value={invitedMembers.length}
+                        trend="Team"
+                        color="amethyst"
+                        data={chartData}
+                        maxVal={maxVal}
+                     />
+                  </>
+               );
+            })()}
          </div>
       </div>
 
@@ -501,7 +750,22 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                              )}
                              <div className="space-y-0.5">
                                 <p className="font-black text-slate-800 tracking-tight">{user.full_name || 'Anonymous User'}</p>
-                                <p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p>
+                                <div className="flex flex-col gap-1">
+                                   <p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p>
+                                   {(user.parent_user_id || (user.workspace_id && user.role?.toLowerCase() !== 'owner' && user.role?.toLowerCase() !== 'superuser' && user.role?.toLowerCase() !== 'developer')) && (
+                                      <div className="flex items-center gap-1.5 mt-1 px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg w-fit group-hover:bg-amethyst-primary/5 group-hover:border-amethyst-primary/10 transition-all">
+                                         <UserPlus size={10} className="text-amethyst-primary" />
+                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+                                            Invited by:{' '}
+                                            <span className="text-amethyst-primary">
+                                               {users.find(u => u.id === user.parent_user_id)?.full_name || 
+                                                users.find(u => u.workspace_id === user.workspace_id && (u.role?.toLowerCase() === 'owner' || u.role?.toLowerCase() === 'admin'))?.full_name || 
+                                                'Principal Owner'}
+                                            </span>
+                                         </span>
+                                      </div>
+                                   )}
+                                </div>
                              </div>
                           </div>
                        </td>

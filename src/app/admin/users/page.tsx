@@ -28,7 +28,7 @@ export default function AdminUsersPage() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="min-h-screen bg-[#FDFCFE] pb-20">
+    <div className="bg-[#FDFCFE]">
       {/* Independent Admin Header */}
       <header className="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm shadow-slate-100/50">
         <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="px-8 max-w-[1600px] mx-auto mt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="px-8 max-w-[1600px] mx-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <AruneekaAdminUsers />
       </main>
     </div>

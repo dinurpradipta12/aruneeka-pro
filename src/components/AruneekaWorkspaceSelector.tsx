@@ -330,21 +330,22 @@ export const AruneekaWorkspaceSelector = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFE] flex flex-col items-center justify-center p-6 pb-20 relative overflow-hidden">
-      {/* Mesh Gradients Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amethyst-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amethyst-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-white/40 rounded-full blur-[80px] pointer-events-none" />
+    <div className="h-screen bg-[#FDFCFE] flex flex-col items-center justify-start pt-28 pb-12 px-6 relative overflow-hidden overscroll-none">
+      {/* Mesh Gradients Background - Fixed to viewport */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amethyst-primary/5 rounded-full blur-[130px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-amethyst-primary/8 rounded-full blur-[130px]" />
+      </div>
       
-      {/* Subtle Dot Pattern */}
-      <div className="absolute inset-0 opacity-[0.1] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#916DD5 1.5px, transparent 1.5px)', backgroundSize: '32px 32px' }} />
+      {/* Seamless Fixed Dot Pattern */}
+      <div className="fixed inset-0 opacity-[0.08] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(#916DD5 1px, transparent 0)', backgroundSize: '32px 32px' }} />
       
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-4xl w-full relative z-10"
       >
-        <div className="text-center mb-16 space-y-8">
+        <div className="text-center mb-12 space-y-8">
           <div className="flex justify-center mb-6">
              <img src="/assets/aruneeka.png" alt="Aruneeka Logo" className="h-24 object-contain" />
           </div>
@@ -403,7 +404,7 @@ export const AruneekaWorkspaceSelector = ({
                  <div className="flex items-center gap-2 text-slate-400">
                     <Users size={14} className="opacity-50" />
                     <span className="text-[11px] font-bold tracking-tight">{ws.member_count} active members</span>
-                 </div>
+                  </div>
               </div>
 
               {/* Bottom Actions & Decor */}
