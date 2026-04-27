@@ -336,13 +336,13 @@ const AruneekaContentPlan = ({
   return (
     <div className="space-y-8 pb-20">
       {/* Header Area */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
          <div className="space-y-2">
             <h2 className="text-3xl font-bold text-amethyst-dark tracking-tight">Content Production Line</h2>
             <p className="text-sm text-slate-400 font-normal italic">Manage your content lifecycle from strategy to publishing.</p>
          </div>
 
-         <div className="flex items-center gap-4">
+         <div className="flex flex-wrap items-center gap-3 md:gap-4">
             <div className="relative">
                <button id="tour-content-period" 
                   onClick={() => setIsRangeOpen(!isRangeOpen)}
@@ -451,7 +451,7 @@ const AruneekaContentPlan = ({
                </button>
             </div>
 
-            <div className="w-px h-6 bg-slate-100 hidden md:block" />
+            <div className="flex flex-wrap items-center gap-2">
 
              {!isPublic && (
                <div className="flex items-center gap-2">
@@ -576,7 +576,8 @@ const AruneekaContentPlan = ({
                   </div>
                </div>
              )}
-         </div>
+          </div>
+       </div>
       </div>
 
       {/* Platform Filter Pills */}

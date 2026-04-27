@@ -29,9 +29,11 @@ import {
    ArrowLeft,
    Terminal,
    Sparkles,
-  Megaphone,
-  RefreshCcw
-} from 'lucide-react';
+   Megaphone,
+   RefreshCcw,
+   Activity,
+   Monitor
+ } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -667,7 +669,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                          <Link 
                             href={lastNotification.type === 'user' ? '/admin/users' : '/admin/inbox'}
                             onClick={() => setShowDynamicIsland(false)}
-                            className="bg-white/80 backdrop-blur-2xl border border-slate-200/50 rounded-[40px] p-2 flex items-center gap-4 shadow-[0_25px_60px_rgba(0,0,0,0.1)] group hover:scale-[1.02] transition-all min-w-[320px]"
+                            className="bg-white/80 backdrop-blur-2xl border border-slate-200/50 rounded-[40px] p-2 flex items-center gap-4 shadow-[0_25px_60px_rgba(0,0,0,0.1)] group hover:scale-[1.02] transition-all w-[90vw] md:min-w-[320px] md:w-auto"
                          >
                             <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg ${lastNotification.type === 'user' ? 'bg-amethyst-primary text-white shadow-amethyst-primary/20' : 'bg-emerald-500 text-white shadow-emerald-500/20'}`}>
                                {lastNotification.type === 'user' ? <ShieldCheck size={20} /> : <Inbox size={20} />}
@@ -681,7 +683,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                             </div>
                          </Link>
                       ) : (
-                         <div className="bg-white/80 backdrop-blur-2xl border border-slate-200/50 rounded-full px-8 py-4 flex items-center gap-4 shadow-[0_25px_60px_rgba(0,0,0,0.1)] min-w-[280px]">
+                         <div className="bg-white/80 backdrop-blur-2xl border border-slate-200/50 rounded-full px-6 md:px-8 py-3 md:py-4 flex items-center gap-4 shadow-[0_25px_60px_rgba(0,0,0,0.1)] w-[90vw] md:min-w-[280px] md:w-auto">
                             <div className={`w-3 h-3 rounded-full animate-pulse shadow-lg ${lastNotification.type === 'error' ? 'bg-rose-500 shadow-rose-500/30' : 'bg-emerald-500 shadow-emerald-500/30'}`} />
                             <div className="flex-1 whitespace-nowrap">
                                <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">{lastNotification.message}</p>
@@ -695,7 +697,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             <AnimatePresence>
                {user?.status === 'Pending' && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xl p-4">
-                     <div className="bg-white rounded-[40px] p-10 text-center space-y-6 w-full max-w-lg shadow-2xl">
+                     <div className="bg-white rounded-[32px] md:rounded-[40px] p-6 md:p-10 text-center space-y-6 w-full max-w-[90vw] md:max-w-lg shadow-2xl">
                         <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto"><Clock size={32} className="animate-spin-slow" /></div>
                         <h3 className="text-2xl font-black text-slate-800 tracking-tight">Akun menunggu verifikasi</h3>
                         <p className="text-[13px] text-slate-400 font-medium leading-relaxed">Sabar ya, Superuser sedang memeriksa akun Anda. Anda akan segera bisa mengeksplorasi Aruneeka Pro!</p>
@@ -705,8 +707,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                )}
             </AnimatePresence>
 
-            <header className="p-8 max-w-[1600px] mx-auto">
-               <div className="rounded-[48px] p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-visible group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
+            <header className="p-4 md:p-8 max-w-[1600px] mx-auto">
+               <div className="rounded-[32px] md:rounded-[48px] p-6 md:p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-visible group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
                   {/* DYNAMIC BACKGROUND ELEMENTS */}
                   <div className="absolute inset-0 pointer-events-none rounded-[48px] overflow-hidden">
                      {/* Soft Ambient Light Glows */}
@@ -735,7 +737,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent)] pointer-events-none" />
                   </div>
 
-                  <div className="relative z-10 space-y-6">
+                  <div className="relative z-10 space-y-4 md:space-y-6">
                      <div className="flex items-center gap-3">
                         <button 
                           onClick={() => {
@@ -880,7 +882,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                </div>
             </header>
 
-             <div className="px-8 max-w-[1600px] mx-auto mt-4 relative z-20 flex flex-col md:flex-row items-center justify-center gap-6">
+             <div className="px-6 md:px-8 max-w-[1600px] mx-auto mt-4 relative z-20 hidden md:flex flex-col md:flex-row items-center justify-center gap-6">
                 <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
                    <div className="flex items-center gap-1">
                       {navItems.map((item) => (
@@ -931,7 +933,43 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                 )}
              </div>
 
-            <main className="px-8 max-w-[1600px] mx-auto mt-10">
+             {/* MOBILE BOTTOM NAVIGATION */}
+             <div className="md:hidden fixed bottom-6 left-6 right-6 z-[5000]">
+                <nav className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-3xl p-2 flex items-center justify-around shadow-2xl shadow-amethyst-primary/20 text-slate-400">
+                   <Link 
+                     href="/analytics" 
+                     className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/analytics' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
+                   >
+                      <Activity size={20} />
+                      <span className="text-[8px] font-black uppercase tracking-tighter">Performance</span>
+                   </Link>
+                   <Link 
+                     href="/content" 
+                     className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/content' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
+                   >
+                      <Calendar size={20} />
+                      <span className="text-[8px] font-black uppercase tracking-tighter">Plan</span>
+                   </Link>
+                   <Link 
+                     href="/kpi" 
+                     className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/kpi' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
+                   >
+                      <Target size={20} />
+                      <span className="text-[8px] font-black uppercase tracking-tighter">KPI</span>
+                   </Link>
+                   {['Superuser', 'developer'].includes(user?.role) && (
+                      <Link 
+                        href="/admin/users"
+                        className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname.startsWith('/admin') ? 'bg-slate-900 text-white shadow-lg' : 'hover:text-slate-600'}`}
+                      >
+                         <Monitor size={20} />
+                         <span className="text-[8px] font-black uppercase tracking-tighter">Admin</span>
+                      </Link>
+                   )}
+                </nav>
+             </div>
+
+            <main className="px-4 md:px-8 max-w-[1600px] mx-auto mt-6 md:mt-10 pb-32 md:pb-0">
                {React.Children.map(children, child => React.isValidElement(child) ? React.cloneElement(child as any, { 
                   selectedProfileId: selectedProfile?.id, 
                   selectedWorkspaceId: selectedWorkspace?.id,
@@ -1178,7 +1216,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
                        animate={{ opacity: 1, scale: 1, y: 0 }}
                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                       className="bg-white w-full max-w-sm rounded-[48px] p-10 text-center shadow-2xl relative z-10 space-y-8" 
+                       className="bg-white w-full max-w-[90vw] md:max-w-sm rounded-[32px] md:rounded-[48px] p-6 md:p-10 text-center shadow-2xl relative z-10 space-y-8" 
                      >
                         <div className="relative">
                            <div className="absolute inset-0 bg-amethyst-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />

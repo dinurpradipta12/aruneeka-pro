@@ -613,7 +613,7 @@ const AruneekaKPI = ({
                      initial={{ opacity: 0, y: 20 }}
                      animate={{ opacity: 1, y: 0 }}
                      transition={{ delay: idx * 0.1 }}
-                     className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-amethyst-primary/5 transition-all group relative overflow-hidden"
+                     className="bg-white rounded-[32px] md:rounded-[48px] p-6 md:p-10 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-amethyst-primary/5 transition-all group relative overflow-hidden"
                    >
                      <div className="absolute top-0 right-0 w-32 h-32 bg-amethyst-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
                      

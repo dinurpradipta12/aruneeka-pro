@@ -412,10 +412,7 @@ const AruneekaAnalytics = ({
         >
           <div 
             id="tour-metrics-cards"
-            className="grid gap-4" 
-            style={{ 
-              gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` 
-            }}
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4" 
           >
              {stats.map((stat, i) => {
                 const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
@@ -461,8 +458,8 @@ const AruneekaAnalytics = ({
              })}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-             <div className="lg:col-span-2 bg-white rounded-[40px] border border-slate-50 shadow-premium p-10 flex flex-col min-h-[550px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10">
+             <div className="lg:col-span-2 bg-white rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-premium p-6 md:p-10 flex flex-col min-h-[450px] md:min-h-[550px]">
                 <div className="flex items-center justify-between mb-12">
                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -697,7 +694,7 @@ const AruneekaAnalytics = ({
            initial={{ opacity: 0, y: 30 }}
            animate={{ opacity: 1, y: 0 }}
            transition={{ delay: 0.3 }}
-           className="bg-white rounded-[40px] shadow-premium p-12 border border-slate-50 relative overflow-hidden"
+           className="bg-white rounded-[32px] md:rounded-[40px] shadow-premium p-6 md:p-12 border border-slate-50 relative overflow-hidden"
         >
            {/* Logic Locking for Breakdown Table */}
            {(() => {
