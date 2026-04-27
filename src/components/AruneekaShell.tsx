@@ -235,6 +235,39 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [systemConfig, setSystemConfig] = useState<any>(null);
    const [isDismissed, setIsDismissed] = useState(false);
 
+   const handleSaveProfile = async () => {
+      if (!user?.id) return;
+      setIsSavingProfile(true);
+      try {
+         const updates: any = {
+            full_name: editForm.fullName,
+            avatar_url: editForm.avatar,
+            theme_color: `${editForm.displayRole}::${editForm.systemRole || user.role || 'Member'}`
+         };
+         if (editForm.password) {
+            updates.password = editForm.password;
+         }
+         
+         const { data, error } = await supabase
+            .from('v2_agency_users')
+            .update(updates)
+            .eq('id', user.id)
+            .select()
+            .single();
+            
+         if (error) throw error;
+         
+         setUser(data);
+         localStorage.setItem('aruneeka_user', JSON.stringify(data));
+         showToast('Persona updated successfully!', 'success');
+         setIsEditorOpen(false);
+      } catch (err: any) {
+         showToast('Failed to update persona: ' + err.message, 'error');
+      } finally {
+         setIsSavingProfile(false);
+      }
+   };
+
    const avatars = Array.from({ length: 12 }, (_, i) => `/assets/avatars/avatar${i + 1}.svg`);
 
    const parseRoles = (u: any) => {
