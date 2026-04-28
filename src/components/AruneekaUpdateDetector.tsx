@@ -51,7 +51,7 @@ const AruneekaUpdateDetector = () => {
     // 3. Performance Listeners: Check on focus + Polling
     window.addEventListener('focus', checkVersion);
 
-    const interval = setInterval(checkVersion, 15000); // 15 seconds for aggressive tracking
+    const interval = setInterval(checkVersion, 600000); // 10 minutes
     
     return () => {
       window.removeEventListener('focus', checkVersion);
