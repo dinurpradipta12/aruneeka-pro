@@ -517,8 +517,7 @@ export const AruneekaWorkspaceSelector = ({
               </Link>
 
               {(() => {
-                const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
-                const isDeveloper = ['developer', 'Superuser'].includes(currentUser?.role) || currentUser?.username === 'arunika' || ['developer', 'Superuser'].includes(storedUser?.role) || storedUser?.username === 'arunika';
+                const isDeveloper = ['developer', 'Superuser'].includes(currentUser?.role) || currentUser?.username === 'arunika';
                 
                 if (!isDeveloper) return null;
 
