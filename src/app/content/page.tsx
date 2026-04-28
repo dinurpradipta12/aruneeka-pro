@@ -1,31 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaContentPlan from '@/components/AruneekaContentPlan';
 import ContentDetailModal from '@/components/ContentDetailModal';
 import NewContentWizard from '@/components/NewContentWizard';
 import AruneekaMetricsModal from '@/components/AruneekaMetricsModal';
 import AruneekaConfirmModal from "@/components/AruneekaConfirmModal";
-import { List, Layout, Calendar, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWorkspace } from '@/components/AruneekaShell';
 
-export default function ContentPage() {
+export default function ContentPage({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ profileId?: string }>;
+}) {
+  const resolvedSearchParams = React.use(searchParams);
+  const selectedProfileId = resolvedSearchParams.profileId;
+
   return (
     <AruneekaShell>
-      <ContentManager />
+      <ContentManager selectedProfileId={selectedProfileId} />
     </AruneekaShell>
   );
 }
 
 interface ContentManagerProps {
-  selectedWorkspaceId?: string;
   selectedProfileId?: string;
-  subscriptionTier?: string;
 }
 
-const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTier = 'free' }: ContentManagerProps) => {
+const ContentManager = ({ selectedProfileId }: ContentManagerProps) => {
+  const { selectedWorkspaceId, subscriptionTier = 'free' } = useWorkspace();
   const [isWizardOpen, setIsWizardOpen] = React.useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = React.useState(false);
   const [selectedContent, setSelectedContent] = React.useState<any>(null);
@@ -58,8 +63,6 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
     };
   }, [selectedProfileId, selectedWorkspaceId]);
 
-
-
   const fetchPlans = async (isSilent = false) => {
     const workspaceId = selectedWorkspaceId;
     if (!workspaceId) return;
@@ -71,8 +74,6 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
       .eq('workspace_id', workspaceId);
     
     if (selectedProfileId) {
-      // Gunakan string filter 'or' yang valid di Supabase:
-      // Tampilkan yang target_account-nya COCOK DENGAN ID profil, atau yang masih KOSONG (null).
       query = query.or(`target_account.eq.${selectedProfileId},target_account.is.null`);
     }
 
@@ -82,7 +83,6 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
     if (!isSilent) setLoading(false);
   };
 
-  // Only include columns that exist in the v2_agency_content_plans table
   const sanitizePayload = (data: any) => {
     const userStr = localStorage.getItem('aruneeka_user');
     const user = userStr ? JSON.parse(userStr) : {};
@@ -106,7 +106,6 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
   const handleSaveContent = async (data: any) => {
     let workspaceId = selectedWorkspaceId;
     
-    // Safety fallback
     if (!workspaceId) {
       const savedWs = localStorage.getItem('aruneeka_selected_workspace');
       if (savedWs) workspaceId = JSON.parse(savedWs).id;
@@ -117,7 +116,6 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
       return;
     }
 
-    // Update payload with verified workspaceId
     const payload = { ...sanitizePayload(data), workspace_id: workspaceId };
     
     if (editingContent) {
@@ -164,8 +162,8 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
       .eq("workspace_id", workspaceId);
 
     if (!error) fetchPlans(true);
+    setDeleteModal({ isOpen: false, id: null });
   };
-
 
   const handleSaveMetrics = async (id: string, metrics: any) => {
     const workspaceId = selectedWorkspaceId;
@@ -186,40 +184,32 @@ const ContentManager = ({ selectedWorkspaceId, selectedProfileId, subscriptionTi
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    // 1. Optimistic Update: Ganti seketika di layar tanpa menunggu server!
     setPlans(prevPlans => prevPlans.map(p => p.id === id ? { ...p, status: newStatus } : p));
-
     const workspaceId = selectedWorkspaceId;
     const { error } = await supabase
       .from('v2_agency_content_plans')
       .update({ status: newStatus })
       .eq('id', id)
       .eq('workspace_id', workspaceId);
-    
     if (error) {
       alert(`Gagal update status: ${error.message}`);
-      fetchPlans(true); // Revert jika gagal
+      fetchPlans(true);
     }
   };
 
   const handleInlineUpdate = async (id: string, field: string, value: string) => {
-    // Optimistic Update: Link atau field lainnya seketika berganti
     setPlans(prevPlans => prevPlans.map(p => p.id === id ? { ...p, [field]: value } : p));
-
     const workspaceId = selectedWorkspaceId;
     const { error } = await supabase
       .from('v2_agency_content_plans')
       .update({ [field]: value })
       .eq('id', id)
       .eq('workspace_id', workspaceId);
-      
-    if (error) fetchPlans(true); // Revert jika gagal
+    if (error) fetchPlans(true);
   };
 
   return (
     <>
-
-
       <AruneekaContentPlan 
         plans={plans} 
         view={activeTab === 'list' ? 'table' : activeTab}

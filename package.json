@@ -29,6 +29,7 @@
     "eslint-config-next": "15.1.6",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "@cloudflare/next-on-pages": "^1.13.16"
+    "@cloudflare/next-on-pages": "^1.13.16",
+    "@eslint/eslintrc": "^3"
   }
 }
