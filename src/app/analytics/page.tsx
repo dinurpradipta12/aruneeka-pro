@@ -1,23 +1,20 @@
-'use client';
-
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaAnalytics from '@/components/AruneekaAnalytics';
 import React from 'react';
 
 export const runtime = 'edge';
 
-export default function AnalyticsPage({ 
+export default async function AnalyticsPage({ 
   searchParams 
 }: { 
   searchParams: Promise<{ profileId?: string }>;
 }) {
-  // Use React.use() to unwrap the promise in a client component
-  const resolvedSearchParams = React.use(searchParams);
-  const selectedProfileId = resolvedSearchParams.profileId;
+  // Await the promise in the server component
+  const { profileId } = await searchParams;
 
   return (
     <AruneekaShell>
-      <AruneekaAnalytics selectedProfileId={selectedProfileId} />
+      <AruneekaAnalytics selectedProfileId={profileId} />
     </AruneekaShell>
   );
 }
