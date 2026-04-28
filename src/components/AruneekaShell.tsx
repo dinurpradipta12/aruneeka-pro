@@ -204,10 +204,22 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const pathname = usePathname();
    const [isWizardOpen, setIsWizardOpen] = useState(false);
    const [isProfilesOpen, setIsProfilesOpen] = useState(false);
-   const [user, setUser] = useState<any>(null);
+   const [user, setUser] = useState<any>(() => {
+      if (typeof window !== 'undefined') {
+         const saved = localStorage.getItem('aruneeka_user');
+         return saved ? JSON.parse(saved) : null;
+      }
+      return null;
+   });
    const [initializing, setInitializing] = useState(true);
    const [teamCount, setTeamCount] = useState(0);
-   const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
+   const [selectedWorkspace, setSelectedWorkspace] = useState<any>(() => {
+      if (typeof window !== 'undefined') {
+         const saved = localStorage.getItem('aruneeka_selected_workspace');
+         return saved ? JSON.parse(saved) : null;
+      }
+      return null;
+   });
    const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
    const [subscriptionExpiry, setSubscriptionExpiry] = useState<string | null>(null);
    const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
@@ -598,7 +610,9 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       }}>
 
           <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark pb-20 font-inter relative antialiased">
-             {!selectedWorkspace ? (
+             {initializing && !selectedWorkspace ? (
+                null 
+             ) : !selectedWorkspace ? (
                <AruneekaWorkspaceSelector 
                  onSelect={(ws: any) => {
                    setSelectedWorkspace(ws);
