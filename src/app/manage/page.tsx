@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaTeam from '@/components/AruneekaTeam';
 

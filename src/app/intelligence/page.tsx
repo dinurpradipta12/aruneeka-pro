@@ -1,4 +1,7 @@
 'use client';
+
+export const runtime = 'edge';
+
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaIntelligence from '@/components/AruneekaIntelligence';
 import { useWorkspace } from '@/components/AruneekaShell';
