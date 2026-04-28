@@ -1,10 +1,9 @@
-export const runtime = 'edge';
-
+// Halaman statis murni (tanpa Edge runtime) untuk pengujian isolasi total
 export default function TestPage() {
   return (
-    <div className="p-20">
-      <h1 className="text-4xl font-black">Route Test Success</h1>
-      <p>If you can see this, then routing in /p/ is working fine.</p>
+    <div style={{ padding: '100px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1 style={{ fontSize: '48px', fontWeight: '900' }}>Static Test Success</h1>
+      <p>Jika Anda melihat ini, berarti sistem folder /p/ bekerja untuk halaman statis.</p>
     </div>
   );
 }

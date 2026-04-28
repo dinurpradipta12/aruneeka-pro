@@ -26,7 +26,8 @@ export const metadata: Metadata = {
   },
 };
 
-import AruneekaUpdateDetector from "@/components/AruneekaUpdateDetector";
+import dynamic from "next/dynamic";
+const AruneekaUpdateDetector = dynamic(() => import("@/components/AruneekaUpdateDetector"), { ssr: false });
 
 export default function RootLayout({
   children,
