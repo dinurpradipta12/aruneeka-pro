@@ -59,6 +59,26 @@ const AruneekaAnalytics = ({
   const openUpgrade = workspaceContext.openUpgrade;
   const workspaceId = isPublic ? selectedWorkspaceId : (selectedWorkspaceId || workspaceContext.selectedWorkspaceId);
 
+  // Helper for power user check
+  const getIsPowerUser = () => {
+    const role = (workspaceContext.user?.role || '').toLowerCase();
+    if (role === 'superuser' || role === 'developer') return true;
+    
+    // Fallback for public pages where context might be empty but user is logged in
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('aruneeka_user');
+      if (stored) {
+        try {
+          const u = JSON.parse(stored);
+          const r = (u.role || '').toLowerCase();
+          return r === 'superuser' || r === 'developer';
+        } catch(e) {}
+      }
+    }
+    return false;
+  };
+  const isPowerUserActual = getIsPowerUser();
+
   const fetchData = async () => {
     const isInitial = data.length === 0;
     if (isInitial) setIsLoading(true);
@@ -414,11 +434,8 @@ const AruneekaAnalytics = ({
             id="tour-metrics-cards"
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4" 
           >
-             {stats.map((stat: any, i: number) => {
-                const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
-                const user = userStr ? JSON.parse(userStr) : null;
-                const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                const isLocked = i >= 3 && currentTier === 'free' && !isPowerUser;
+              {stats.map((stat: any, i: number) => {
+                const isLocked = i >= 3 && currentTier === 'free' && !isPowerUserActual;
 
                 return (
                   <motion.div 
@@ -698,10 +715,7 @@ const AruneekaAnalytics = ({
         >
            {/* Logic Locking for Breakdown Table */}
            {(() => {
-              const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
-              const user = userStr ? JSON.parse(userStr) : null;
-              const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-              const isBreakdownLocked = currentTier === 'free' && !isPowerUser;
+              const isBreakdownLocked = currentTier === 'free' && !isPowerUserActual;
 
               return isBreakdownLocked && (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/5 backdrop-blur-[12px] transition-all duration-700">
@@ -729,7 +743,7 @@ const AruneekaAnalytics = ({
               );
            })()}
 
-           <div className={`transition-all duration-700 ${currentTier === 'free' && !(typeof window !== 'undefined' && (localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer'))) ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
+           <div className={`transition-all duration-700 ${currentTier === 'free' && !isPowerUserActual ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
               <div className="flex items-center justify-between mb-12">
                  <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">Detailed Asset Breakdown</h3>
                  <div className="flex items-center gap-2">

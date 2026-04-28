@@ -12,7 +12,8 @@ interface Step {
   description: string;
   icon: React.ReactNode;
   route?: string;
-  isWorkspaceSelector?: boolean; // Special flag for when we're in the brand selector
+  isWorkspaceSelector?: boolean;
+  requiredRoles?: string[];
 }
 
 const allSteps: Step[] = [
@@ -106,7 +107,8 @@ const allSteps: Step[] = [
     route: '/strategy',
     title: 'Strategic Goals',
     description: 'Tetapkan target performa bulanan Anda. Aruneeka akan membantu memantau sejauh mana tim mencapai tujuan tersebut.',
-    icon: <Target size={24} className="text-rose-600" />
+    icon: <Target size={24} className="text-rose-600" />,
+    requiredRoles: ['Owner', 'Admin', 'Superuser', 'developer']
   },
   {
     id: 'kpi-sync',
@@ -114,7 +116,8 @@ const allSteps: Step[] = [
     route: '/strategy',
     title: 'Auto-Sync Targets',
     description: 'Sinkronkan target dari bulan sebelumnya secara otomatis agar strategi Anda tetap berkelanjutan.',
-    icon: <Zap size={24} className="text-amber-500" />
+    icon: <Zap size={24} className="text-amber-500" />,
+    requiredRoles: ['Owner', 'Admin', 'Superuser', 'developer']
   },
   {
     id: 'kpi-gap',
@@ -144,9 +147,9 @@ const AruneekaOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
-  const [isNavigating, setIsNavigating] = useState(false);
   const [activeSteps, setActiveSteps] = useState<Step[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState(false);
 
   // Initial Check for Global Announcement
   useEffect(() => {
@@ -164,32 +167,58 @@ const AruneekaOnboarding = () => {
     const selectorExists = document.getElementById('tour-add-workspace');
     const normalizedPath = pathname?.replace(/\/$/, '') || '/';
     
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
+    const userRole = storedUser ? JSON.parse(storedUser).role : 'Member';
+
     let filtered;
     if (selectorExists) {
-      filtered = allSteps.filter(s => !s.route || s.route === '/');
+      filtered = allSteps.filter(s => !s.route || s.route === '/' || s.route === '');
     } else {
       filtered = allSteps.filter(s => {
-        const stepRoute = s.route?.replace(/\/$/, '');
-        return stepRoute === normalizedPath;
+        if (!s.route) return false;
+        
+        // 1. Route match
+        const stepRoute = s.route.replace(/\/$/, '') || '/';
+        const currentPath = normalizedPath || '/';
+        if (stepRoute !== currentPath) return false;
+
+        // 2. Role match
+        if (s.requiredRoles && !s.requiredRoles.includes(userRole)) return false;
+
+        return true;
       });
     }
     
+    console.log("Onboarding: Path", normalizedPath, "Active Steps:", filtered.length);
     setActiveSteps(filtered);
     // Don't reset currentStep here if we're in the middle of a tour
   }, [pathname, isVisible]); 
 
   // Check if tour should start automatically for this page
   useEffect(() => {
-    // Wait until announcement is dismissed
-    if (showAnnouncement || activeSteps.length === 0) return;
+    if (showAnnouncement || isVisible || activeSteps.length === 0) return;
 
     const isSelector = typeof document !== 'undefined' && !!document.getElementById('tour-add-workspace');
     const pageId = isSelector ? 'selector' : (pathname?.replace(/\//g, '_') || 'home');
     const hasCompletedTour = localStorage.getItem(`aruneeka_tour_completed_${pageId}`);
     
-    if (!hasCompletedTour && !isVisible) {
-      const timer = setTimeout(() => setIsVisible(true), 1500);
-      return () => clearTimeout(timer);
+    if (!hasCompletedTour) {
+      const checkAndShow = () => {
+        const step = activeSteps[0];
+        if (step && document.getElementById(step.targetId)) {
+          setIsVisible(true);
+          return true;
+        }
+        return false;
+      };
+
+      if (!checkAndShow()) {
+        const interval = setInterval(() => {
+          if (checkAndShow()) clearInterval(interval);
+        }, 100);
+        const timeout = setTimeout(() => clearInterval(interval), 5000);
+        return () => { clearInterval(interval); clearTimeout(timeout); };
+      }
     }
   }, [activeSteps, pathname, showAnnouncement, isVisible]);
 
@@ -199,12 +228,16 @@ const AruneekaOnboarding = () => {
     if (!step) return false;
 
     const target = document.getElementById(step.targetId);
+    if (!target) {
+      console.log("Onboarding: Target NOT FOUND in DOM:", step.targetId);
+    }
     if (target) {
       const rect = target.getBoundingClientRect();
-      // Relaxed check: as long as it's in DOM and has some position
-      setTargetRect(rect);
-      setIsNavigating(false);
-      return true;
+      if (rect.width > 0 && rect.height > 0) {
+        setTargetRect(rect);
+        setSearchTimeout(false);
+        return true;
+      }
     }
     return false;
   }, [currentStep, activeSteps]);
@@ -222,15 +255,24 @@ const AruneekaOnboarding = () => {
 
     updateRect();
     const interval = setInterval(updateRect, 500);
+    
+    // Auto-skip if stuck for more than 5 seconds
+    const timeout = setTimeout(() => {
+      if (isVisible && !targetRect) {
+        setSearchTimeout(true);
+      }
+    }, 5000);
+
     window.addEventListener('resize', updateRect);
     window.addEventListener('scroll', updateRect);
 
     return () => {
       clearInterval(interval);
+      clearTimeout(timeout);
       window.removeEventListener('resize', updateRect);
       window.removeEventListener('scroll', updateRect);
     };
-  }, [isVisible, currentStep, activeSteps, findTarget]);
+  }, [isVisible, activeSteps, currentStep, findTarget]);
 
   const handleNext = () => {
     if (currentStep < activeSteps.length - 1) {
@@ -258,27 +300,39 @@ const AruneekaOnboarding = () => {
     localStorage.setItem('aruneeka_guide_announced', 'true');
   };
 
-  const startManualTour = () => {
+  const startManualTour = useCallback(() => {
     const pageId = (pathname === '/' || !pathname) ? 'selector' : pathname.replace(/\//g, '_');
     localStorage.removeItem(`aruneeka_tour_completed_${pageId}`);
+    
+    console.log('Onboarding: Triggering manual tour for:', pageId);
     
     // Force reset states
     setTargetRect(null);
     setCurrentStep(0);
+    setSearchTimeout(false);
     setIsVisible(true);
-    
-    console.log('Manual tour started for:', pageId);
-  };
+  }, [pathname]);
 
   // Expose manual trigger to window for the test button
   useEffect(() => {
+    console.log("Onboarding: Updating window.startAruneekaTour");
     (window as any).startAruneekaTour = startManualTour;
-  }, [pathname, activeSteps]); // Added activeSteps to dependency
+    return () => { (window as any).startAruneekaTour = null; };
+  }, [startManualTour]);
+
+  useEffect(() => {
+    console.log("Onboarding State Change - isVisible:", isVisible);
+  }, [isVisible]);
+
+  console.log("Onboarding Render:", { isVisible, stepsCount: activeSteps.length, currentStep, hasTarget: !!targetRect });
 
   if (!isVisible) return null;
 
   const step = activeSteps[currentStep];
-  if (!step) return null;
+  if (!step) {
+    console.log("Onboarding: No step found at index", currentStep);
+    return null;
+  }
 
   // Logic for smart positioning (Side, Top, or Bottom)
   const getTooltipPosition = () => {
@@ -397,9 +451,8 @@ const AruneekaOnboarding = () => {
         )}
       </AnimatePresence>
 
-      {/* 2. BACKGROUND OVERLAY (SPOTLIGHT) */}
       <AnimatePresence>
-        {isVisible && targetRect && !isNavigating && !showAnnouncement && (
+        {isVisible && targetRect && !showAnnouncement && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -422,31 +475,43 @@ const AruneekaOnboarding = () => {
       </AnimatePresence>
 
       {/* 3. SEARCHING INDICATOR */}
-      <AnimatePresence mode="wait">
-        {isVisible && (isNavigating || !targetRect) && !showAnnouncement && (
+      {isVisible && !targetRect && !showAnnouncement && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-slate-950/20 backdrop-blur-[1px]"
+            className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-slate-950/40 backdrop-blur-md"
           >
-             <div className="flex flex-col items-center gap-6 bg-white/10 backdrop-blur-md p-10 rounded-[40px] border border-white/20 shadow-2xl">
+             <div className="flex flex-col items-center gap-8 bg-white/10 backdrop-blur-xl p-12 rounded-[50px] border border-white/20 shadow-2xl max-w-sm text-center">
                 <div className="relative">
-                   <div className="w-16 h-16 border-4 border-white/10 border-t-amethyst-primary rounded-full animate-spin" />
-                   <Sparkles className="absolute inset-0 m-auto text-amethyst-primary" size={24} />
+                   <div className="w-20 h-20 border-4 border-white/10 border-t-amethyst-primary rounded-full animate-spin" />
+                   <Sparkles className="absolute inset-0 m-auto text-amethyst-primary" size={28} />
                 </div>
-                <div className="space-y-1 text-center">
-                   <p className="text-white text-[12px] font-black uppercase tracking-[0.3em]">Aruneeka Intelligence</p>
-                   <p className="text-white/60 text-[10px] font-medium italic">Searching for target feature...</p>
+                <div className="space-y-2">
+                   <p className="text-white text-[14px] font-black uppercase tracking-[0.3em]">Aruneeka Intelligence</p>
+                   <p className="text-white/60 text-[11px] font-medium italic">Elemen belum siap, lewati panduan?</p>
+                </div>
+                <div className="flex flex-col gap-3 w-full">
+                   <button 
+                     onClick={completeTour}
+                     className="w-full py-4 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all"
+                   >
+                      Skip All Guide
+                   </button>
+                   <button 
+                     onClick={() => setIsVisible(false)}
+                     className="w-full py-4 bg-amethyst-primary text-white rounded-[20px] text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amethyst-primary/20"
+                   >
+                      Close & Continue
+                   </button>
                 </div>
              </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+      )}
 
       {/* 4. TOOLTIP CARD */}
       <AnimatePresence mode="wait">
-        {isVisible && targetRect && !isNavigating && !showAnnouncement && (
+        {isVisible && targetRect && !showAnnouncement && (
           <motion.div 
             key={`${step.id}-${currentStep}`}
             initial={{ 

@@ -94,6 +94,10 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
         ...editData,
         title: editData.title || '',
         headline: editData.headline || editData.title || '',
+        description: editData.description || '',
+        script_link: editData.script_link || '',
+        content_link: editData.content_link || '',
+        post_link: editData.post_link || '',
         due_date: editData.due_date ? new Date(editData.due_date).toISOString().split('T')[0] : defaultValues.due_date
       });
     } else if (!editData && isOpen) {
@@ -158,15 +162,13 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Content Pillar</label>
-                       <select 
-                         value={formData.content_pillar} 
-                         onChange={e => setFormData({...formData, content_pillar: e.target.value})}
-                         className="w-full h-16 bg-slate-50 rounded-2xl px-6 text-sm font-black outline-none appearance-none cursor-pointer"
-                       >
-                          {['Education', 'Entertainment', 'Sales', 'Personal Branding', 'Insight', 'Behind the scene'].map((p: string) => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                       </select>
+                        <input 
+                          type="text" 
+                          value={formData.content_pillar} 
+                          onChange={e => setFormData({...formData, content_pillar: e.target.value})} 
+                          placeholder="Strategi Konten..." 
+                          className="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" 
+                        />
                     </div>
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Status / Phase</label>

@@ -41,6 +41,9 @@ import NewContentWizard from './NewContentWizard';
 import SocialProfilesModal from './SocialProfilesModal';
 import { AruneekaWorkspaceSelector } from './AruneekaWorkspaceSelector';
 import AruneekaUpgradeModal from './AruneekaUpgradeModal';
+import ContentDetailModal from './ContentDetailModal';
+import AruneekaMetricsModal from './AruneekaMetricsModal';
+import AruneekaConfirmModal from './AruneekaConfirmModal';
 import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
 
@@ -230,6 +233,11 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [pendingInboxCount, setPendingInboxCount] = useState(0);
    const [lastNotification, setLastNotification] = useState<{ type: 'user' | 'inbox' | 'success' | 'error', message: string } | null>(null);
    const [showDynamicIsland, setShowDynamicIsland] = useState(false);
+   const [selectedContent, setSelectedContent] = useState<any>(null);
+   const [isDetailOpen, setIsDetailOpen] = useState(false);
+   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+   const [deleteId, setDeleteId] = useState<string | null>(null);
 
    const showToast = (message: string, type: any = 'success') => { setLastNotification({ type, message }); setShowDynamicIsland(true); setTimeout(() => setShowDynamicIsland(false), 4000); };
    const [systemConfig, setSystemConfig] = useState<any>(null);
@@ -473,6 +481,51 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
        } catch (e) { console.error(e); }
     };
 
+    const handleSaveProfile = async () => {
+       if (!user) return;
+       setIsSavingProfile(true);
+       try {
+          // 1. Prepare updates
+          const updates: any = {
+             full_name: editForm.fullName,
+             password: editForm.password,
+             avatar_url: editForm.avatar
+          };
+
+          // Handle displayRole via theme_color if it's a custom title
+          if (editForm.displayRole) {
+             updates.theme_color = `${editForm.displayRole}::#AC8BEE`;
+          }
+
+          const { error } = await supabase
+             .from('v2_agency_users')
+             .update(updates)
+             .eq('id', user.id);
+
+          if (error) throw error;
+
+          // 2. Sync local state
+          const updatedUser = { 
+             ...user, 
+             full_name: editForm.fullName, 
+             password: editForm.password,
+             avatar_url: editForm.avatar,
+             theme_color: updates.theme_color
+          };
+          
+          setUser(updatedUser);
+          localStorage.setItem('aruneeka_user', JSON.stringify(updatedUser));
+          
+          showToast("Persona berhasil diperbarui!", 'success');
+          setIsEditorOpen(false);
+       } catch (err: any) {
+          console.error("Save Profile Error:", err);
+          showToast("Gagal update: " + err.message, 'error');
+       } finally {
+          setIsSavingProfile(false);
+       }
+    };
+
     const handleSaveContent = async (data: any) => {
        try {
           const userStr = localStorage.getItem('aruneeka_user');
@@ -514,24 +567,63 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             metrics: {}
           };
 
-          const { error } = await supabase.from('v2_agency_content_plans').insert([payload]);
-          
-          if (error) {
-            console.error("Save Error:", error);
-            showToast("Gagal simpan: " + error.message, 'error');
+          const isUpdate = !!(data.id || selectedContent?.id);
+          const targetId = data.id || selectedContent?.id;
+
+          console.log("Saving Content:", { isUpdate, targetId, title: payload.title });
+
+          if (isUpdate && targetId) {
+            const { error, count } = await supabase
+              .from('v2_agency_content_plans')
+              .update(payload)
+              .eq('id', targetId)
+              .select();
+            
+            if (error) throw error;
+            console.log("Update Success, rows affected:", count);
           } else {
-            setIsWizardOpen(false);
-            if (pathname === '/content') {
-              window.location.reload();
-            } else {
-              window.location.href = '/content';
-            }
+            const { error } = await supabase.from('v2_agency_content_plans').insert([payload]);
+            if (error) throw error;
           }
-       } catch (err: any) { 
-         console.error("Runtime Error:", err);
-         showToast("Terjadi kesalahan sistem.", 'error'); 
-       }
+          
+          setIsWizardOpen(false);
+          setSelectedContent(null);
+          showToast(isUpdate ? "Konten diperbarui!" : "Konten berhasil dibuat!", 'success');
+          
+          // Force clear cache for this workspace to ensure fresh fetch
+          if (workspaceId) {
+            sessionStorage.removeItem(`aruneeka_plans_cache_${workspaceId}`);
+          }
+
+          // Re-fetch via local event or refresh
+          window.dispatchEvent(new CustomEvent('aruneeka_refresh_content'));
+          if (pathname !== '/content') {
+            window.location.href = '/content';
+          }
+        } catch (err: any) { 
+          console.error("Runtime Error:", err);
+          showToast(`Gagal: ${err.message || "Kesalahan sistem"}`, 'error'); 
+        }
     };
+
+    const handleDeleteContent = async (id: string) => {
+        setDeleteId(id);
+        setIsDeleteConfirmOpen(true);
+     };
+
+     const executeDelete = async () => {
+        if (!deleteId) return;
+        try {
+           const { error } = await supabase.from('v2_agency_content_plans').delete().eq('id', deleteId);
+           if (error) throw error;
+           showToast("Konten berhasil dihapus", 'success');
+           window.dispatchEvent(new CustomEvent('aruneeka_refresh_content'));
+           setIsDeleteConfirmOpen(false);
+           setDeleteId(null);
+        } catch (err: any) {
+           showToast("Gagal hapus: " + err.message, 'error');
+        }
+     };
 
    // --- NEW: PUBLIC SHARING LOGIC ---
    const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
@@ -603,12 +695,15 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${publicSlug}` : '';
 
+   const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+   const effectiveTier = isPowerUser ? 'pro' : subscriptionTier;
+
    return (
       <WorkspaceContext.Provider value={{ 
         selectedWorkspaceId: selectedWorkspace?.id, 
         selectedWorkspace,
         setSelectedWorkspace,
-        subscriptionTier,
+        subscriptionTier: effectiveTier,
         openUpgrade: () => setIsUpgradeModalOpen(true),
         user
       }}>
@@ -903,16 +998,19 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              <div className="px-6 md:px-8 max-w-[1600px] mx-auto mt-4 relative z-20 hidden md:flex flex-col md:flex-row items-center justify-center gap-6">
                 <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
                    <div className="flex items-center gap-1">
-                      {navItems.map((item) => (
-                         <Link 
-                           key={item.href} 
-                           href={item.href} 
-                           id={`tour-nav-${item.href.replace('/', '')}`}
-                           className={`px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${pathname === item.href ? 'bg-amethyst-dark text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-amethyst-primary hover:bg-slate-50'}`}
-                        >
-                           {item.icon} <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                        </Link>
-                      ))}
+                      {navItems.map((item) => {
+                         const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+                         return (
+                            <Link 
+                              key={item.href} 
+                              href={item.href} 
+                              id={`tour-nav-${item.href.replace('/', '')}`}
+                              className={`px-6 py-3.5 rounded-xl flex items-center gap-3 transition-all ${isActive ? 'bg-amethyst-dark text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-amethyst-primary hover:bg-slate-50'}`}
+                           >
+                              {item.icon} <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                           </Link>
+                         );
+                      })}
                    </div>
                 </nav>
 
@@ -969,8 +1067,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                       <span className="text-[8px] font-black uppercase tracking-tighter">Plan</span>
                    </Link>
                    <Link 
-                     href="/kpi" 
-                     className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/kpi' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
+                     href="/strategy" 
+                     className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/strategy' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
                    >
                       <Target size={20} />
                       <span className="text-[8px] font-black uppercase tracking-tighter">KPI</span>
@@ -991,7 +1089,13 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                {React.Children.map(children, child => React.isValidElement(child) ? React.cloneElement(child as any, { 
                   selectedProfileId: selectedProfile?.id, 
                   selectedWorkspaceId: selectedWorkspace?.id,
-                  subscriptionTier
+                  subscriptionTier,
+                  initialData: selectedContent,
+                  onNewContent: () => { setSelectedContent(null); setIsWizardOpen(true); },
+                  onSelectContent: (p: any) => { setSelectedContent(p); setIsDetailOpen(true); },
+                  onEditContent: (p: any) => { setSelectedContent(p); setIsWizardOpen(true); },
+                  onInsight: (p: any) => { setSelectedContent(p); setIsMetricsOpen(true); },
+                  onDelete: (id: string) => handleDeleteContent(id)
                }) : child)}
             </main>
 
@@ -1196,10 +1300,11 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
             <NewContentWizard 
               isOpen={isWizardOpen} 
-              onClose={() => setIsWizardOpen(false)} 
+              onClose={() => { setIsWizardOpen(false); setSelectedContent(null); }} 
               onSave={handleSaveContent} 
               selectedWorkspaceId={selectedWorkspace?.id}
               selectedProfileId={selectedProfile?.id}
+              editData={selectedContent}
             />
             <SocialProfilesModal 
                isOpen={isProfilesOpen} 
@@ -1217,6 +1322,29 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                isOpen={isUpgradeModalOpen} 
                onClose={() => setIsUpgradeModalOpen(false)} 
                user={user}
+            />
+
+            <ContentDetailModal 
+               isOpen={isDetailOpen}
+               onClose={() => setIsDetailOpen(false)}
+               content={selectedContent}
+               onEdit={() => { setIsDetailOpen(false); setIsWizardOpen(true); }}
+            />
+
+            <AruneekaMetricsModal 
+               isOpen={isMetricsOpen}
+               onClose={() => setIsMetricsOpen(false)}
+               content={selectedContent}
+               workspaceId={selectedWorkspace?.id}
+            />
+
+            <AruneekaConfirmModal 
+               isOpen={isDeleteConfirmOpen}
+               onClose={() => setIsDeleteConfirmOpen(false)}
+               onConfirm={executeDelete}
+               title="Hapus Konten"
+               message="Apakah Anda yakin ingin menghapus konten ini secara permanen? Tindakan ini tidak dapat dibatalkan."
+               type="danger"
             />
 
             {/* Interactive Onboarding Guide */}

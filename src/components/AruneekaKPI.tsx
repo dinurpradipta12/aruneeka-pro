@@ -96,6 +96,26 @@ const AruneekaKPI = ({
   const { selectedWorkspaceId: contextWorkspaceId } = workspaceContext;
   const currentTier = isPublic ? (subscriptionTier || 'free') : (workspaceContext as any).subscriptionTier;
   const workspaceId = propWorkspaceId || contextWorkspaceId;
+
+  // Helper for power user check
+  const getIsPowerUser = () => {
+    const role = (workspaceContext.user?.role || '').toLowerCase();
+    if (role === 'superuser' || role === 'developer') return true;
+    
+    // Fallback for public pages where context might be empty but user is logged in
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('aruneeka_user');
+      if (stored) {
+        try {
+          const u = JSON.parse(stored);
+          const r = (u.role || '').toLowerCase();
+          return r === 'superuser' || r === 'developer';
+        } catch(e) {}
+      }
+    }
+    return false;
+  };
+  const isPowerUserActual = getIsPowerUser();
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePlatform, setActivePlatform] = useState<'ALL' | 'INSTAGRAM' | 'TIKTOK' | 'THREADS'>('ALL');
@@ -246,10 +266,13 @@ const AruneekaKPI = ({
   };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('aruneeka_user');
-    if (storedUser) {
-       setUserRole(JSON.parse(storedUser).role || 'Member');
+    if (workspaceContext.user) {
+      console.log("KPI: User Role from Context:", workspaceContext.user.role);
+      setUserRole(workspaceContext.user.role || 'Member');
     }
+  }, [workspaceContext.user]);
+
+  useEffect(() => {
     if (workspaceId) {
       fetchRealData();
       fetchChecklist();
@@ -549,6 +572,8 @@ const AruneekaKPI = ({
       "Terus pantau perkembangan strategi Anda secara harian. Konsistensi dalam eksekusi dan evaluasi metrik adalah kunci utama untuk mencapai target besar yang telah Anda tetapkan.";
   }, [kpis, activePlatform]);
 
+
+
   return (
     <div className="space-y-12 pb-24">
       {/* HEADER SECTION */}
@@ -557,9 +582,10 @@ const AruneekaKPI = ({
             <h2 className="text-4xl font-black text-amethyst-primary tracking-tight leading-none">KPI & Growth</h2>
             <p className="text-[13px] text-slate-400 font-medium italic leading-relaxed">Precision intelligence and monthly performance cycle.</p>
          </div>
-         {!isPublic && (userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser') && (
+         {!isPublic && (userRole === 'Owner' || userRole === 'Admin' || userRole === 'Superuser' || userRole === 'developer') && (
             <div className="flex items-center gap-3">
               <motion.button 
+                id="tour-add-goal"
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   const firstPlat = 'INSTAGRAM';
@@ -569,7 +595,7 @@ const AruneekaKPI = ({
                 }}
                 className="flex items-center gap-3 px-8 py-4 bg-amethyst-primary text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-primary/20"
               >
-                <Plus size={16}/> <span id="tour-add-goal">Add new goal</span>
+                <Plus size={16}/> <span>Add new goal</span>
               </motion.button>
               <motion.button 
                 id="tour-sync-kpi"
@@ -691,7 +717,7 @@ const AruneekaKPI = ({
             <div className="relative group">
                <motion.div 
                  initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                 className={`bg-white rounded-[48px] p-10 text-slate-800 border border-slate-100 shadow-sm relative overflow-hidden group ${currentTier === 'free' ? 'blur-md grayscale opacity-30 select-none' : ''}`}
+                 className={`bg-white rounded-[48px] p-10 text-slate-800 border border-slate-100 shadow-sm relative overflow-hidden group ${currentTier === 'free' && !isPowerUserActual ? 'blur-md grayscale opacity-30 select-none' : ''}`}
                >
                   <div className="absolute top-0 right-0 w-64 h-64 bg-amethyst-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:scale-150 transition-transform duration-1000" />
                   <div className="relative space-y-8">
@@ -709,7 +735,7 @@ const AruneekaKPI = ({
                      </div>
                   </div>
                </motion.div>
-               {currentTier === 'free' && (
+               {currentTier === 'free' && !isPowerUserActual && (
                   <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 text-center bg-white/20 backdrop-blur-[2px] rounded-[48px]">
                      <div className="w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center text-amethyst-primary mb-3">
                         <ShieldCheck size={20} />
@@ -721,7 +747,7 @@ const AruneekaKPI = ({
             </div>
 
             <div className="relative group">
-               <div className={`bg-white rounded-[48px] border border-slate-100 p-10 space-y-10 shadow-sm transition-all ${currentTier === 'free' ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
+               <div className={`bg-white rounded-[48px] border border-slate-100 p-10 space-y-10 shadow-sm transition-all ${currentTier === 'free' && !isPowerUserActual ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
                   <div className="flex items-center justify-between">
                      <h4 className="text-xl font-black text-slate-800 tracking-tight">Strategy Checklist</h4>
                      <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
@@ -789,7 +815,7 @@ const AruneekaKPI = ({
                      ) : null}
                   </div>
                </div>
-               {currentTier === 'free' && (
+               {currentTier === 'free' && !isPowerUserActual && (
                   <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 text-center bg-white/20 backdrop-blur-[2px] rounded-[48px]">
                      <div className="w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center text-amethyst-primary mb-3">
                         <ShieldCheck size={20} />

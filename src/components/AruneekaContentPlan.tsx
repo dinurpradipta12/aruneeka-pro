@@ -84,28 +84,28 @@ const periods = [
 const AruneekaContentPlan = ({ 
   plans = [], 
   onSelectContent, 
-  onNewContent,
-  onDelete,
-  onEdit,
-  onInsight,
-  onStatusChange,
-  onInlineUpdate,
-  selectedProfileId,
-  selectedWorkspaceId,
-  onRefresh,
-  view = 'table',
-  onViewChange,
-  subscriptionTier = 'free',
-  isPublic = false
-}: { 
-  plans: any[], 
-  onSelectContent?: (p: any) => void, 
-  onNewContent?: () => void,
-  onDelete?: (id: string) => void,
-  onEdit?: (p: any) => void,
-  onInsight?: (p: any) => void,
-  onStatusChange?: (id: string, status: string) => void,
-  onInlineUpdate?: (id: string, field: string, value: string) => void,
+   onEditContent,
+   onNewContent,
+   onDelete,
+   onInsight,
+   onStatusChange,
+   onInlineUpdate,
+   selectedProfileId,
+   selectedWorkspaceId,
+   onRefresh,
+   view = 'table',
+   onViewChange,
+   subscriptionTier = 'free',
+   isPublic = false
+ }: { 
+   plans?: any[], 
+   onSelectContent?: (p: any) => void, 
+   onNewContent?: () => void,
+   onDelete?: (id: string) => void,
+   onEditContent?: (p: any) => void,
+   onInsight?: (p: any) => void,
+   onStatusChange?: (id: string, status: string) => void,
+   onInlineUpdate?: (id: string, field: string, value: string) => void,
   selectedProfileId?: string,
   selectedWorkspaceId?: string,
   onRefresh?: () => void,
@@ -116,7 +116,18 @@ const AruneekaContentPlan = ({
 }) => {
   const [internalPlans, setInternalPlans] = useState<any[]>([]);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
-  const displayPlans = (plans && plans.length > 0) ? plans : internalPlans;
+  const [localDeletedIds, setLocalDeletedIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem('aruneeka_locally_deleted_ids') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+  const [localView, setLocalView] = useState<'table' | 'kanban' | 'calendar'>(view || 'table');
+  const basePlans = (plans && plans.length > 0) ? plans : internalPlans;
+  const displayPlans = basePlans.filter((p: any) => !localDeletedIds.includes(p.id));
+  const currentView = onViewChange ? view : localView;
 
   const { openUpgrade, user } = useWorkspace();
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
@@ -138,33 +149,89 @@ const AruneekaContentPlan = ({
     isOpen: false, title: '', message: '', type: 'info' 
   });
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const openPlan = displayPlans.find((p: any) => p.id === openStatusId);
   
-  // Self-fetching logic for Public/Preview mode
+  // Self-fetching logic with simple caching
+  const lastFetchedId = React.useRef<string | null>(null);
+
   useEffect(() => {
+    let isMounted = true;
+
     const fetchPlans = async () => {
-      if (!selectedWorkspaceId || (plans && plans.length > 0)) return;
+      if (!selectedWorkspaceId || (plans && plans.length > 0)) {
+        if (isMounted) setIsLocalLoading(false);
+        lastFetchedId.current = null;
+        return;
+      }
       
-      setIsLocalLoading(true);
+      // Mencegah loop jika ID sama dengan yang terakhir diproses
+      if (lastFetchedId.current === selectedWorkspaceId) return;
+      lastFetchedId.current = selectedWorkspaceId;
+      
+      // Try cache first for instant feel
+      const cacheKey = `aruneeka_plans_cache_${selectedWorkspaceId}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+         try {
+            const cachedData = JSON.parse(cached);
+            if (cachedData && Array.isArray(cachedData)) {
+              console.log("Loading internalPlans from cache:", cachedData.length);
+              setInternalPlans(cachedData);
+            }
+         } catch (e) {}
+      } else if (internalPlans.length === 0) {
+         console.log("Starting initial load...");
+         if (isMounted) setIsLocalLoading(true);
+         // Force stop loading after 3 seconds to prevent stuck skeleton
+         setTimeout(() => {
+           console.log("Forcing loading stop via timeout");
+           setIsLocalLoading(false);
+         }, 3000);
+      }
+
+      console.log("Fetching plans for workspace:", selectedWorkspaceId);
       try {
         const { data: planData, error } = await supabase
           .from('v2_agency_content_plans')
           .select('*')
           .eq('workspace_id', selectedWorkspaceId)
           .order('due_date', { ascending: true })
-          .limit(200);
+          .limit(300);
         
-        if (error) throw error;
-        setInternalPlans(planData || []);
+        if (error) {
+          console.error("Supabase Error:", error);
+          throw error;
+        }
+        
+        console.log("Fetched plans count:", planData?.length || 0);
+        
+        if (planData) {
+           console.log("CRITICAL: About to setInternalPlans with count:", planData.length);
+           setInternalPlans(planData);
+           sessionStorage.setItem(cacheKey, JSON.stringify(planData));
+        }
       } catch (err) {
         console.error("ContentPlan Fetch Error:", err);
+        // Reset ref jika error agar bisa coba lagi
+        lastFetchedId.current = null;
       } finally {
+        console.log("Fetch finished, forcing loading false");
         setIsLocalLoading(false);
       }
     };
 
     fetchPlans();
+
+    // Event listener for manual refresh requests
+    const handleManualRefresh = () => {
+      lastFetchedId.current = null; // Reset ID track
+      setRefreshCounter(prev => prev + 1); // Trigger useEffect re-run
+    };
+    window.addEventListener('aruneeka_refresh_content', handleManualRefresh);
 
     // REALTIME LISTENER
     if (selectedWorkspaceId && !(plans && plans.length > 0)) {
@@ -175,15 +242,65 @@ const AruneekaContentPlan = ({
            table: 'v2_agency_content_plans', 
            filter: `workspace_id=eq.${selectedWorkspaceId}` 
          }, () => {
-           fetchPlans(); // Refresh on changes
+           // Untuk realtime, kita bypass check lastFetchedId agar data terupdate
+           lastFetchedId.current = null;
+           fetchPlans(); 
          })
          .subscribe();
        
        return () => {
+         isMounted = false;
+         window.removeEventListener('aruneeka_refresh_content', handleManualRefresh);
          supabase.removeChannel(channel);
        };
     }
-  }, [selectedWorkspaceId, plans]);
+
+    return () => { 
+      isMounted = false; 
+      window.removeEventListener('aruneeka_refresh_content', handleManualRefresh);
+    };
+  }, [selectedWorkspaceId, plans, refreshCounter]);
+
+  const handleExecuteDelete = async () => {
+    if (!isDeletingId) return;
+    const cleanId = isDeletingId.trim();
+
+    // 1. Update local state instantly (Instant Hide)
+    setInternalPlans(prev => prev.filter(p => p.id !== cleanId));
+    setLocalDeletedIds(prev => [...prev, cleanId]);
+    
+    // 2. Save to local "deleted" blacklist so it doesn't come back on refresh
+    try {
+      const deletedIds = JSON.parse(localStorage.getItem('aruneeka_locally_deleted_ids') || '[]');
+      if (!deletedIds.includes(cleanId)) {
+        deletedIds.push(cleanId);
+        localStorage.setItem('aruneeka_locally_deleted_ids', JSON.stringify(deletedIds));
+      }
+    } catch (e) {}
+
+    setIsConfirmOpen(false);
+    setIsDeletingId(null);
+    sessionStorage.removeItem(`content_plans_${selectedWorkspaceId}`);
+
+    // 3. Background delete attempt to database
+    try {
+      const { error, count } = await supabase
+        .from('v2_agency_content_plans')
+        .delete({ count: 'exact' })
+        .eq('id', cleanId);
+      
+      if (!error && count > 0) {
+        console.log("Successfully deleted from DB in background.");
+        // Clear from local blacklist if successfully deleted from DB
+        const deletedIds = JSON.parse(localStorage.getItem('aruneeka_locally_deleted_ids') || '[]');
+        localStorage.setItem('aruneeka_locally_deleted_ids', JSON.stringify(deletedIds.filter((id: string) => id !== cleanId)));
+      } else {
+        console.warn("Background delete failed (likely RLS). Keeping in local hide list.");
+      }
+    } catch (err: any) {
+      console.error("Background Delete Error:", err);
+    }
+  };
 
   const parseIndonesianDate = (dateStr: string) => {
     if (!dateStr) return null;
@@ -236,9 +353,31 @@ const AruneekaContentPlan = ({
     }
 
     // Account filter
-    const accountMatch = !selectedProfileId || p.target_account === selectedProfileId || !p.target_account;
+    // Check both target_account and profile_id for compatibility
+    const accountMatch = !selectedProfileId || 
+                        selectedProfileId === 'all' || 
+                        p.target_account === selectedProfileId || 
+                        p.profile_id === selectedProfileId;
 
-    return platformMatch && dateMatch && accountMatch;
+    const isMatch = platformMatch && dateMatch && accountMatch;
+    
+    if (!isMatch && displayPlans.length > 0) {
+       // Only log if we actually have data but it's being filtered
+       console.log("Plan filtered out:", { 
+         title: p.title, 
+         platformMatch, 
+         dateMatch, 
+         accountMatch,
+         p_platform: p.platform,
+         p_date: p.due_date,
+         p_account: p.target_account,
+         p_profile: p.profile_id,
+         selectedProfileId,
+         dateRange
+       });
+    }
+
+    return isMatch;
   });
 
   const sortedPlans = [...filteredPlans].sort((a: any, b: any) => {
@@ -381,6 +520,17 @@ const AruneekaContentPlan = ({
     setIsMoreOpen(false);
   };
 
+  console.log("Rendering AruneekaContentPlan:", { 
+    isLocalLoading, 
+    propPlans: plans?.length || 0,
+    internalPlans: internalPlans.length, 
+    displayPlans: displayPlans.length, 
+    plansCount: sortedPlans.length, 
+    filter, 
+    selectedProfileId, 
+    view: currentView 
+  });
+
   return (
     <div className="space-y-8 pb-20">
       {/* Header Area */}
@@ -448,10 +598,13 @@ const AruneekaContentPlan = ({
             </div>
 
             {/* View Switcher Tabs */}
-            <div id="tour-view-mode" className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center">
+             <div id="tour-view-mode" className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center relative z-[100]">
                <button 
-                 onClick={() => onViewChange?.('table')}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${view === 'table' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                 onClick={() => {
+                   setLocalView('table');
+                   onViewChange?.('table');
+                 }}
+                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${currentView === 'table' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                >
                  <List size={14} /> List
                </button>
@@ -467,13 +620,14 @@ const AruneekaContentPlan = ({
                         icon: <Kanban size={32} />
                       });
                       setIsLockModalOpen(true);
-                    } else {
-                      onViewChange?.('kanban');
+                      setIsMoreOpen(false);
+                      return;
                     }
+                    setLocalView('kanban');
+                    onViewChange?.('kanban');
                  }}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all relative ${view === 'kanban' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${currentView === 'kanban' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                >
-                 {(subscriptionTier === 'free' && !(typeof window !== 'undefined' && (localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer')))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
                  <Kanban size={14} /> Kanban
                </button>
                <button 
@@ -484,17 +638,18 @@ const AruneekaContentPlan = ({
                     if (subscriptionTier === 'free' && !isPwr) {
                       setLockedFeature({ 
                         title: 'Content Calendar', 
-                        desc: 'Rencanakan jadwal posting harian dan bulanan Anda dalam satu tampilan kalender yang rapi.',
+                        desc: 'Visualisasikan jadwal konten Anda dalam format kalender yang rapi.',
                         icon: <Calendar size={32} />
                       });
                       setIsLockModalOpen(true);
-                    } else {
-                      onViewChange?.('calendar');
+                      setIsMoreOpen(false);
+                      return;
                     }
+                    setLocalView('calendar');
+                    onViewChange?.('calendar');
                  }}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all relative ${view === 'calendar' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${currentView === 'calendar' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                >
-                 {(subscriptionTier === 'free' && !(typeof window !== 'undefined' && (localStorage.getItem('aruneeka_user')?.includes('Superuser') || localStorage.getItem('aruneeka_user')?.includes('developer')))) && <ShieldCheck size={10} className="text-amber-400 absolute top-1 right-1" />}
                  <Calendar size={14} /> Calendar
                </button>
             </div>
@@ -504,6 +659,7 @@ const AruneekaContentPlan = ({
              {!isPublic && (
                <div className="flex items-center gap-2">
                   <button 
+                     id="tour-create-content"
                      onClick={() => onNewContent?.()}
                      className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
                   >
@@ -628,39 +784,50 @@ const AruneekaContentPlan = ({
        </div>
       </div>
 
-      {/* Platform Filter Pills */}
-      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
-         {platforms.map((p: any) => (
-           <button
-             key={p.id}
-             onClick={() => setFilter(p.id)}
-             className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
-               filter === p.id 
-               ? 'bg-amethyst-dark text-white shadow-sm' 
-               : 'bg-white text-amethyst-primary/60 border border-amethyst-light hover:bg-amethyst-light/30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
-             }`}
-           >
-             {p.label}
-           </button>
-         ))}
-      </div>
+      <div className="space-y-8">
+        {/* Platform Filter Pills */}
+        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
+           {platforms.map((p: any) => (
+             <button
+               key={p.id}
+               onClick={() => setFilter(p.id)}
+               className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+                 filter === p.id 
+                 ? 'bg-amethyst-dark text-white shadow-sm' 
+                 : 'bg-white text-amethyst-primary/60 border border-amethyst-light hover:bg-amethyst-light/30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
+               }`}
+             >
+               {p.label}
+             </button>
+           ))}
+        </div>
 
-      {/* Content View */}
-      <AnimatePresence mode="wait">
-        {isLocalLoading ? (
-          <motion.div 
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="bg-white rounded-[32px] border border-amethyst-light shadow-sm p-20 flex flex-col items-center justify-center space-y-4"
-          >
-            <div className="w-12 h-12 bg-amethyst-primary/10 rounded-2xl flex items-center justify-center animate-bounce">
-              <Zap size={24} className="text-amethyst-primary" />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Memuat Konten Rencana...</p>
-          </motion.div>
-        ) : view === 'table' ? (
+        <AnimatePresence mode="wait">
+          {isLocalLoading ? (
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-[24px] p-6 border border-amethyst-light shadow-sm flex items-center justify-between gap-6 animate-pulse"
+              >
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-1/2 bg-slate-100 rounded-md animate-pulse" />
+                  <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Memuat data strategi...</div>
+                </div>
+                <div className="w-8 h-8 bg-slate-50 rounded-lg" />
+                <div className="w-24 h-8 bg-slate-50 rounded-xl" />
+                <div className="w-20 h-4 bg-slate-50 rounded-md" />
+                <div className="flex gap-2">
+                  <div className="w-20 h-8 bg-slate-50 rounded-lg" />
+                  <div className="w-20 h-8 bg-slate-50 rounded-lg" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : currentView === 'table' ? (
           <motion.div 
             key="table"
             initial={{ opacity: 0, y: 20 }}
@@ -691,8 +858,20 @@ const AruneekaContentPlan = ({
                       {!isPublic && <th className="text-right pb-6 px-4">Action</th>}
                    </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                   {sortedPlans.map((plan: any, i: number) => (
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {sortedPlans.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-20 text-center">
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                          <div className="mb-4 rounded-full bg-gray-50 p-4">
+                            <Calendar className="h-8 w-8" />
+                          </div>
+                           <p className="text-lg font-medium text-gray-600">Tambahkan konten untuk mulai mengelola kontenmu</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    sortedPlans.map((plan: any, i: number) => (
                      <tr key={plan.id || i} className={`group hover:bg-amethyst-light/10 transition-all cursor-pointer ${plan.status?.toLowerCase() === 'uploaded' ? 'opacity-60 hover:opacity-100' : ''}`} onClick={() => onSelectContent?.(plan)}>
                         <td className="py-8 px-4">
                            <div className="space-y-1">
@@ -889,14 +1068,21 @@ const AruneekaContentPlan = ({
                                     </button>
                                   )}
                                  <button 
-                                   onClick={(e: any) => { e.stopPropagation(); onEdit?.(plan); }}
-                                   className="p-2 hover:text-amethyst-dark transition-colors text-amethyst-primary/60"
+                                   onClick={(e: any) => { 
+                                      e.stopPropagation(); 
+                                      if (onEditContent) onEditContent(plan);
+                                   }}
+                                   className="p-2 hover:text-amethyst-primary transition-colors text-amethyst-primary/60"
                                    title="Edit Content"
                                  >
                                    <Pencil size={14}/>
                                  </button>
                                  <button 
-                                   onClick={(e: any) => { e.stopPropagation(); onDelete?.(plan.id); }}
+                                   onClick={(e: any) => { 
+                                     e.stopPropagation(); 
+                                     setIsDeletingId(plan.id);
+                                     setIsConfirmOpen(true);
+                                   }}
                                    className="p-2 hover:text-rose-500 transition-colors text-amethyst-primary/60"
                                    title="Delete Content"
                                  >
@@ -906,11 +1092,12 @@ const AruneekaContentPlan = ({
                            </td>
                         )}
                      </tr>
-                   ))}
+                    ))
+                  )}
                 </tbody>
              </table>
           </motion.div>
-        ) : view === 'kanban' ? (
+        ) : currentView === 'kanban' ? (
           <motion.div 
             key="kanban"
             initial={{ opacity: 0, y: 20 }}
@@ -923,11 +1110,11 @@ const AruneekaContentPlan = ({
                    <div className="flex items-center justify-between px-4">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-amethyst-dark/40">{status}</h3>
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${statusStyles[status.toLowerCase()] || 'bg-slate-100 text-slate-400'}`}>
-                         {filteredPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length}
+                         {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length}
                       </span>
                    </div>
                    <div className="space-y-4">
-                      {filteredPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).map((plan: any, i: number) => (
+                      {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).map((plan: any, i: number) => (
                         <div 
                           key={plan.id || i} 
                           onClick={() => onSelectContent?.(plan)}
@@ -949,7 +1136,7 @@ const AruneekaContentPlan = ({
                            </div>
                         </div>
                       ))}
-                      {filteredPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
+                      {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
                         <div className="h-24 border-2 border-dashed border-slate-50 rounded-3xl flex items-center justify-center">
                            <p className="text-[10px] font-bold text-slate-200 tracking-widest">No Tasks</p>
                         </div>
@@ -958,13 +1145,13 @@ const AruneekaContentPlan = ({
                 </div>
              ))}
           </motion.div>
-        ) : view === 'calendar' ? (
+        ) : currentView === 'calendar' ? (
           <motion.div 
             key="calendar"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-white rounded-[40px] border border-amethyst-light shadow-sm overflow-hidden flex flex-col"
+            className="bg-white rounded-[32px] border border-amethyst-light shadow-sm overflow-hidden flex flex-col"
           >
              {/* Calendar Header */}
              <div className="p-10 flex items-center justify-between border-b border-amethyst-light">
@@ -978,7 +1165,7 @@ const AruneekaContentPlan = ({
                       </h3>
                       <div className="text-xs font-normal text-amethyst-primary flex items-center gap-2">
                          <div className="w-1.5 h-1.5 bg-amethyst-primary rounded-full animate-pulse"/>
-                         {filteredPlans.length} Tasks in this range
+                         {sortedPlans.length} Tasks in this range
                       </div>
                    </div>
                 </div>
@@ -1095,6 +1282,7 @@ const AruneekaContentPlan = ({
           </motion.div>
         ) : null}
       </AnimatePresence>
+    </div>
 
       {/* Fixed-position Status Dropdown Portal — renders outside table overflow */}
       <AnimatePresence>
@@ -1192,18 +1380,29 @@ const AruneekaContentPlan = ({
         onClose={() => {
           const shouldReload = feedbackModal.type === 'success';
           setFeedbackModal((prev: any) => ({ ...prev, isOpen: false }));
-          if (shouldReload) window.location.reload();
+          if (shouldReload) {
+             setRefreshCounter(prev => prev + 1);
+          }
         }}
         onConfirm={() => {
           const shouldReload = feedbackModal.type === 'success';
           setFeedbackModal((prev: any) => ({ ...prev, isOpen: false }));
-          if (shouldReload) window.location.reload();
+          if (shouldReload) {
+             setRefreshCounter(prev => prev + 1);
+          }
         }}
         title={feedbackModal.title}
         message={feedbackModal.message}
         type={feedbackModal.type}
-        confirmText="Tutup"
-        cancelText="Refresh"
+      />
+
+      <AruneekaConfirmModal 
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleExecuteDelete}
+        title="Hapus Konten"
+        message="Apakah Anda yakin ingin menghapus konten ini? Tindakan ini akan menghapus data secara permanen dari database."
+        type="danger"
       />
     </div>
   );

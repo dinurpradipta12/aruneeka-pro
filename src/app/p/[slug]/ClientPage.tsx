@@ -27,6 +27,20 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('performance');
+  const [loggedInUser, setLoggedInUser] = useState<any>(null);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const usrStr = localStorage.getItem('aruneeka_user');
+      if (usrStr) {
+        try {
+          setLoggedInUser(JSON.parse(usrStr));
+        } catch (e) {
+          console.error("Error parsing logged-in user:", e);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchPublicWorkspace = async () => {
@@ -86,8 +100,11 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
     );
   }
 
+
   const ownerTier = (workspace?.owner as any)?.subscription_tier || 'free';
-  
+  const userRole = (loggedInUser?.role || '').toLowerCase();
+  const isPowerUser = userRole === 'superuser' || userRole === 'developer';
+  const effectiveTier = isPowerUser ? 'pro' : ownerTier;
 
   return (
     <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark font-inter antialiased pb-20">
@@ -96,11 +113,12 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
         <div className="absolute inset-0 bg-gradient-to-r from-amethyst-primary/20 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-lg bg-amethyst-primary flex items-center justify-center">
+            <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isPowerUser ? 'bg-amber-400' : 'bg-amethyst-primary'}`}>
               <ShieldCheck size={12} className="text-white" />
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">
-              Viewing as Guest • <span className="text-amethyst-primary">{workspace.name}</span>
+              {isPowerUser ? `Viewing as ${loggedInUser.role} • ` : 'Viewing as Guest • '}
+              <span className="text-amethyst-primary">{workspace.name}</span>
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -168,7 +186,7 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
               <AruneekaAnalytics 
                 selectedWorkspaceId={workspace.id}
                 isPublic={true}
-                subscriptionTier={ownerTier}
+                subscriptionTier={effectiveTier}
               />
             )}
             {activeTab === 'content' && (
@@ -176,14 +194,14 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
                 selectedWorkspaceId={workspace.id}
                 plans={[]} // Let it fetch its own
                 isPublic={true}
-                subscriptionTier={ownerTier}
+                subscriptionTier={effectiveTier}
               />
             )}
             {activeTab === 'kpi' && (
               <AruneekaKPI 
                 selectedWorkspaceId={workspace.id}
                 isPublic={true}
-                subscriptionTier={ownerTier}
+                subscriptionTier={effectiveTier}
               />
             )}
           </motion.div>
