@@ -10,6 +10,8 @@ import AruneekaConfirmModal from "@/components/AruneekaConfirmModal";
 import { supabase } from '@/lib/supabase';
 import { useWorkspace } from '@/components/AruneekaShell';
 
+export const runtime = 'edge';
+
 export default function ContentPage({ 
   searchParams 
 }: { 

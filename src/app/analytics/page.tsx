@@ -4,6 +4,8 @@ import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaAnalytics from '@/components/AruneekaAnalytics';
 import React from 'react';
 
+export const runtime = 'edge';
+
 export default function AnalyticsPage({ 
   searchParams 
 }: { 

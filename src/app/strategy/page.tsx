@@ -5,6 +5,8 @@ import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaKPI from '@/components/AruneekaKPI';
 import { useWorkspace } from '@/components/AruneekaShell';
 
+export const runtime = 'edge';
+
 export default function StrategyPage({ 
   searchParams 
 }: { 
