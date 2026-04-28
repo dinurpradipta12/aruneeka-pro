@@ -1,10 +1,9 @@
-import dynamic from 'next/dynamic';
-
-const ClientPage = dynamic(() => import('./ClientPage'), { ssr: false });
+import ClientPageWrapper from './ClientPageWrapper';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default function Page() {
-  return <ClientPage />;
+  return <ClientPageWrapper />;
 }
+
