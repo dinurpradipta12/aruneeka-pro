@@ -53,7 +53,7 @@ const AdminInbox = () => {
         .eq('id', userId);
 
       if (error) throw error;
-      setPendingUsers(prev => prev.filter(u => u.id !== userId));
+      setPendingUsers((prev: any[]) => prev.filter((u: any) => u.id !== userId));
     } catch (e) {
       console.error("Approval error:", e);
     } finally {
@@ -96,7 +96,7 @@ const AdminInbox = () => {
                </motion.div>
              ) : (
                <div className="space-y-4">
-                 {pendingUsers.map((user, idx) => (
+                 {pendingUsers.map((user: any, idx: number) => (
                    <motion.div key={user.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-premium flex flex-col md:flex-row items-center justify-between gap-8 group hover:border-amethyst-light/30 transition-all">
                      <div className="flex items-center gap-6">
                         <div className="w-16 h-16 bg-slate-50 text-amethyst-primary rounded-2xl flex items-center justify-center font-black text-xl border border-slate-100 group-hover:bg-amethyst-primary group-hover:text-white transition-all">

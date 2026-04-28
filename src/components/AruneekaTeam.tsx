@@ -25,16 +25,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useWorkspace } from './AruneekaShell';
 
-interface TeamMember {
-  id: string;
-  full_name: string;
-  email: string;
-  role: 'Admin' | 'Sub Admin' | 'Member';
-  status: 'Active' | 'Invited' | 'Inactive';
-  avatar_url?: string;
-  created_at: string;
-}
-
 const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string }) => {
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +85,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     let title = '';
     if (u.theme_color && u.theme_color.includes('::')) {
       title = u.theme_color.split('::')[0];
-    } else if (!['Superuser', 'Owner', 'Admin', 'Member'].includes(dbRole)) {
+    } else if (!(['Superuser', 'Owner', 'Admin', 'Member'].includes(dbRole))) {
       title = dbRole;
     }
     return { systemRole: dbRole, displayRole: title || dbRole };
@@ -150,7 +140,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     showPopup('Hapus Personel', `Apakah Anda yakin ingin menghapus ${name}?`, async () => {
       try {
         setMembers((prev: any[]) => prev.filter((m: any) => m.id !== id));
-        setPopup(p => ({ ...p, isOpen: false }));
+        setPopup((p: any) => ({ ...p, isOpen: false }));
         await supabase.from('v2_agency_users').delete().eq('id', id);
       } catch (e) { console.error(e); }
     }, 'danger');
@@ -160,8 +150,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     setEditingMember(member);
     setIsLoading(true);
     try {
-      // Get current admin username from context or localStorage fallback
-      let adminUsername = user?.username;
+      let adminUsername = workspaceUser?.username;
 
       if (!adminUsername) {
         const storedUser = localStorage.getItem('aruneeka_user');
@@ -170,32 +159,29 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
         }
       }
 
-      // 1. Find all workspaces where the ADMIN (me) has access
       const { data: adminRecords } = await supabase
         .from('v2_agency_users')
         .select('workspace_id')
         .eq('username', adminUsername);
 
-      const adminWsIds = (adminRecords?.map((r: any) => r.workspace_id) || []).filter((id: any) => id);
+      const adminWsIds = (adminRecords?.map((r: any) => r.workspace_id) || []).filter((idVal: any) => idVal);
 
-      // 2. Fetch those workspaces
-      let wsData: any[] = [];
+      let wsDataList: any[] = [];
       if (adminWsIds.length > 0) {
         const { data } = await supabase
           .from('v2_agency_workspaces')
           .select('*')
           .in('id', adminWsIds)
           .order('name');
-        if (data) wsData = data;
+        if (data) wsDataList = data;
       }
 
-      // 3. Find all workspaces where THIS MEMBER is already registered
       const { data: accessData } = await supabase
         .from('v2_agency_users')
         .select('workspace_id')
         .eq('username', member.username);
 
-      if (wsData) setAllWorkspaces(wsData);
+      if (wsDataList) setAllWorkspaces(wsDataList);
       if (accessData) setMemberAccess(accessData.map((a: any) => a.workspace_id));
 
       setIsAccessModalOpen(true);
@@ -212,13 +198,12 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
 
     try {
       if (isAdding) {
-        // 1. Create user record in that workspace
         const { data: newUser, error: userError } = await supabase
           .from('v2_agency_users')
           .insert([{
             full_name: editingMember.full_name,
             username: editingMember.username,
-            password: editingMember.password, // Sync password
+            password: editingMember.password, 
             role: editingMember.role,
             status: 'Active',
             workspace_id: workspaceId,
@@ -230,7 +215,6 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
 
         if (userError) throw userError;
 
-        // 2. Add to membership table
         await supabase.from('v2_agency_workspace_members').insert([{
           user_id: newUser.id,
           workspace_id: workspaceId,
@@ -239,21 +223,18 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
 
         setMemberAccess(prev => [...prev, workspaceId]);
       } else {
-        // Prevent removing access from current workspace if desired, 
-        // but here we just follow the command. 
         if (workspaceId === selectedWorkspaceId) {
           alert("Tidak bisa menghapus akses dari brand yang sedang aktif.");
           return;
         }
 
-        // Remove from that workspace
         await supabase
           .from('v2_agency_users')
           .delete()
           .eq('username', editingMember.username)
           .eq('workspace_id', workspaceId);
 
-        setMemberAccess((prev: any[]) => prev.filter((id: string) => id !== workspaceId));
+        setMemberAccess((prev: string[]) => prev.filter((idStr: string) => idStr !== workspaceId));
       }
     } catch (e: any) {
       alert("Gagal update akses: " + e.message);
@@ -271,7 +252,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     }
   };
 
-  const { subscriptionTier, openUpgrade, user } = useWorkspace();
+  const { subscriptionTier, openUpgrade, user: workspaceUser } = useWorkspace();
 
   return (
     <div className="space-y-10 pb-20">
@@ -290,7 +271,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
       </div>
 
       <div id="tour-squad-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
-        {filteredMembers.map((member, i) => (
+        {filteredMembers.map((member: any, i: number) => (
           <motion.div 
             layout 
             initial={{ opacity: 0, y: 20 }}
@@ -346,7 +327,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
       <AnimatePresence>
         {isEditModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl">
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 space-y-8 border border-white/20">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-m-md rounded-[40px] shadow-2xl p-10 space-y-8 border border-white/20">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-amethyst-light/20 rounded-[20px] flex items-center justify-center text-amethyst-dark">
                   <Settings size={32} />
@@ -371,7 +352,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">System Authority</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['Admin', 'Sub Admin', 'Member'].map(r => (
+                    {['Admin', 'Sub Admin', 'Member'].map((r: string) => (
                       <button key={r} onClick={() => setEditForm({ ...editForm, systemRole: r })} className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${editForm.systemRole === r ? 'bg-amethyst-dark text-white border-amethyst-dark shadow-lg shadow-amethyst-dark/20' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'}`}>{r}</button>
                     ))}
                   </div>
@@ -397,7 +378,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${popup.type === 'danger' ? 'bg-rose-50 text-rose-500' : 'bg-amethyst-primary/10 text-amethyst-primary'}`}>{popup.type === 'danger' ? <Trash2 size={28} /> : <AlertCircle size={28} />}</div>
                 <div className="space-y-2"><h3 className="text-xl font-black text-amethyst-dark tracking-tight">{popup.title}</h3><p className="text-sm text-slate-400 font-medium leading-relaxed">{popup.message}</p></div>
                 <div className="flex gap-3 pt-2">
-                  <button onClick={() => setPopup(p => ({ ...p, isOpen: false }))} className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button>
+                  <button onClick={() => setPopup((p: any) => ({ ...p, isOpen: false }))} className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button>
                   <button onClick={popup.onConfirm} className={`flex-1 py-4 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all ${popup.type === 'danger' ? 'bg-rose-500 shadow-rose-500/20 hover:bg-rose-600' : 'bg-amethyst-dark shadow-amethyst-dark/20 hover:bg-black'}`}>
                     {popup.confirmLabel || 'Konfirmasi'}
                   </button>
@@ -431,7 +412,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                {allWorkspaces.map(ws => {
+                {allWorkspaces.map((ws: any) => {
                   const hasAccess = memberAccess.includes(ws.id);
                   return (
                     <div key={ws.id} className={`flex items-center justify-between p-5 rounded-2xl border transition-all ${hasAccess ? 'bg-amethyst-light/5 border-amethyst-primary/20' : 'bg-slate-50/50 border-slate-100'}`}>

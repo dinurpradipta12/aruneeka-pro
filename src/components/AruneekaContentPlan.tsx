@@ -139,7 +139,7 @@ const AruneekaContentPlan = ({
   });
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const openPlan = displayPlans.find(p => p.id === openStatusId);
+  const openPlan = displayPlans.find((p: any) => p.id === openStatusId);
   
   // Self-fetching logic for Public/Preview mode
   useEffect(() => {
@@ -199,7 +199,7 @@ const AruneekaContentPlan = ({
     return 'Draft';
   };
 
-  const filteredPlans = displayPlans.filter(p => {
+  const filteredPlans = displayPlans.filter((p: any) => {
     // Platform filter
     const platformMatch = filter === 'all' || p.platform?.toLowerCase() === filter.toLowerCase();
     
@@ -222,7 +222,7 @@ const AruneekaContentPlan = ({
     return platformMatch && dateMatch && accountMatch;
   });
 
-  const sortedPlans = [...filteredPlans].sort((a, b) => {
+  const sortedPlans = [...filteredPlans].sort((a: any, b: any) => {
     if (!a.due_date && !b.due_date) return 0;
     if (!a.due_date) return 1;
     if (!b.due_date) return -1;
@@ -240,9 +240,9 @@ const AruneekaContentPlan = ({
     setIsImporting(true);
     Papa.parse(file, {
       complete: async (results) => {
-        const data = results.data as any[];
+        const resultData = results.data as any[];
         // Data starts from Row 3 (index 2) according to user mention "A3 and B3"
-        const rowsToImport = data.slice(2).filter(row => {
+        const rowsToImport = resultData.slice(2).filter((row: any) => {
           if (!row[0] || !row[0].trim()) return false;
           // Skip header placeholders
           const title = row[0].toLowerCase();
@@ -262,7 +262,7 @@ const AruneekaContentPlan = ({
         }
 
         const userStr = localStorage.getItem('aruneeka_user');
-        const user = userStr ? JSON.parse(userStr) : null;
+        const userObj = userStr ? JSON.parse(userStr) : null;
         
         const workspaceId = selectedWorkspaceId;
 
@@ -277,11 +277,11 @@ const AruneekaContentPlan = ({
           return;
         }
 
-        const payloads = rowsToImport.map(row => ({
+        const payloads = rowsToImport.map((row: any) => ({
           workspace_id: workspaceId,
-          user_id: user?.id,
+          user_id: userObj?.id,
           target_account: selectedProfileId || null, 
-          author_name: row[4] || user?.full_name || 'Owner', // Col E (PIC)
+          author_name: row[4] || userObj?.full_name || 'Owner', // Col E (PIC)
           title: row[0], // Col A (Headline)
           content_pillar: row[1], // Col B (Pillar)
           platform: row[2] || 'Instagram', // Col C (Platform)
@@ -306,10 +306,10 @@ const AruneekaContentPlan = ({
           if (onRefresh) onRefresh();
 
           // Increment usage for free users
-          const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
+          const isPowerUser = userObj?.role === 'Superuser' || userObj?.role === 'developer';
           if (subscriptionTier === 'free' && !isPowerUser) {
-             const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
-             localStorage.setItem(`usage_import_${user?.id}`, (count + 1).toString());
+             const count = parseInt(localStorage.getItem(`usage_import_${userObj?.id}`) || '0');
+             localStorage.setItem(`usage_import_${userObj?.id}`, (count + 1).toString());
           }
         } catch (err: any) {
           console.error(err);
@@ -324,7 +324,7 @@ const AruneekaContentPlan = ({
           setIsMoreOpen(false);
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error(err);
         setFeedbackModal({
           isOpen: true,
@@ -438,10 +438,10 @@ const AruneekaContentPlan = ({
                </button>
                <button 
                  onClick={() => {
-                    const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
-                    const user = userStr ? JSON.parse(userStr) : null;
-                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                    if (subscriptionTier === 'free' && !isPowerUser) {
+                    const usrStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
+                    const usr = usrStr ? JSON.parse(usrStr) : null;
+                    const isPwr = usr?.role === 'Superuser' || usr?.role === 'developer';
+                    if (subscriptionTier === 'free' && !isPwr) {
                       setLockedFeature({ 
                         title: 'Kanban Visualizer', 
                         desc: 'Kelola alur kerja konten Anda dengan drag-and-drop Kanban board yang intuitif.',
@@ -459,10 +459,10 @@ const AruneekaContentPlan = ({
                </button>
                <button 
                  onClick={() => {
-                    const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
-                    const user = userStr ? JSON.parse(userStr) : null;
-                    const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                    if (subscriptionTier === 'free' && !isPowerUser) {
+                    const usrStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
+                    const usr = usrStr ? JSON.parse(usrStr) : null;
+                    const isPwr = usr?.role === 'Superuser' || usr?.role === 'developer';
+                    if (subscriptionTier === 'free' && !isPwr) {
                       setLockedFeature({ 
                         title: 'Content Calendar', 
                         desc: 'Rencanakan jadwal posting harian dan bulanan Anda dalam satu tampilan kalender yang rapi.',
@@ -517,8 +517,8 @@ const AruneekaContentPlan = ({
                                     onClick={() => {
                                        if (isImporting) return;
                                        
-                                       const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                                       if (subscriptionTier === 'free' && !isPowerUser) {
+                                       const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
+                                       if (subscriptionTier === 'free' && !isPwr) {
                                           const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
                                           if (count >= 1) {
                                              setLockedFeature({ 
@@ -562,8 +562,8 @@ const AruneekaContentPlan = ({
 
                                  <button 
                                     onClick={() => {
-                                       const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
-                                       if (subscriptionTier === 'free' && !isPowerUser) {
+                                       const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
+                                       if (subscriptionTier === 'free' && !isPwr) {
                                           const count = parseInt(localStorage.getItem(`usage_export_${user?.id}`) || '0');
                                           if (count >= 1) {
                                              setLockedFeature({ 
@@ -673,7 +673,7 @@ const AruneekaContentPlan = ({
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                   {sortedPlans.map((plan, i) => (
+                   {sortedPlans.map((plan: any, i: number) => (
                      <tr key={plan.id || i} className={`group hover:bg-amethyst-light/10 transition-all cursor-pointer ${plan.status?.toLowerCase() === 'uploaded' ? 'opacity-60 hover:opacity-100' : ''}`} onClick={() => onSelectContent?.(plan)}>
                         <td className="py-8 px-4">
                            <div className="space-y-1">
@@ -686,15 +686,15 @@ const AruneekaContentPlan = ({
                               {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : '-'}
                            </div>
                         </td>
-                        <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
                            <div className="relative">
                               <button
-                                onClick={(e) => {
+                                onClick={(e: any) => {
                                   if (isPublic) return;
                                   e.stopPropagation();
-                                  setOpenStatusId?.(openStatusId === plan.id ? null : plan.id);
+                                  setOpenStatusId(openStatusId === plan.id ? null : plan.id);
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  setStatusDropPos?.({ top: rect.bottom + 6, left: rect.left });
+                                  setStatusDropPos({ top: rect.bottom + 6, left: rect.left });
                                 }}
                                 className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[9px] font-bold tracking-tight uppercase transition-all ${isPublic ? 'cursor-default' : 'hover:opacity-80'} ${
                                   statusStyles[plan.status?.toLowerCase()] || 'bg-slate-50 text-slate-400'
@@ -714,7 +714,7 @@ const AruneekaContentPlan = ({
                              }
                            </div>
                         </td>
-                        <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
                             <div className="flex items-center gap-3">
                                {/* Script Asset */}
                                {editingAsset?.id === plan.id && editingAsset?.type === 'script' ? (
@@ -722,7 +722,7 @@ const AruneekaContentPlan = ({
                                     <input 
                                        autoFocus
                                        value={tempLink}
-                                       onChange={(e) => setTempLink(e.target.value)}
+                                       onChange={(e: any) => setTempLink(e.target.value)}
                                        placeholder="Script URL..."
                                        className="w-32 h-9 bg-white border border-amethyst-primary/30 rounded-xl px-3 text-[9px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300 shadow-sm"
                                     />
@@ -730,13 +730,13 @@ const AruneekaContentPlan = ({
                                        onClick={() => {
                                           plan.script_link = tempLink;
                                           if (onInlineUpdate) onInlineUpdate(plan.id, 'script_link', tempLink);
-                                          setEditingAsset?.(null);
+                                          setEditingAsset(null);
                                        }}
                                        className="px-3 py-2 bg-amethyst-dark text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all"
                                     >
                                        Save
                                     </button>
-                                    <button onClick={() => setEditingAsset?.(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
+                                    <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
                                        <X size={12}/>
                                     </button>
                                  </div>
@@ -745,7 +745,7 @@ const AruneekaContentPlan = ({
                                    onClick={() => {
                                       if (isPublic && !plan.script_link) return;
                                       if (isPublic) { window.open(plan.script_link, '_blank'); return; }
-                                      setEditingAsset?.({ id: plan.id, type: 'script' });
+                                      setEditingAsset({ id: plan.id, type: 'script' });
                                       setTempLink(plan.script_link || '');
                                    }}
                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all shadow-sm ${
@@ -764,7 +764,7 @@ const AruneekaContentPlan = ({
                                     <input 
                                        autoFocus
                                        value={tempLink}
-                                       onChange={(e) => setTempLink(e.target.value)}
+                                       onChange={(e: any) => setTempLink(e.target.value)}
                                        placeholder="Content URL..."
                                        className="w-32 h-8 bg-white border border-amethyst-primary/30 rounded-xl px-3 text-[8px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300 shadow-sm"
                                     />
@@ -772,13 +772,13 @@ const AruneekaContentPlan = ({
                                        onClick={() => {
                                           plan.content_link = tempLink;
                                           if (onInlineUpdate) onInlineUpdate(plan.id, 'content_link', tempLink);
-                                          setEditingAsset?.(null);
+                                          setEditingAsset(null);
                                        }}
                                        className="px-3 py-1.5 bg-amethyst-primary text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all"
                                     >
                                        Save
                                     </button>
-                                    <button onClick={() => setEditingAsset?.(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
+                                    <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
                                        <X size={10}/>
                                     </button>
                                  </div>
@@ -787,7 +787,7 @@ const AruneekaContentPlan = ({
                                     onClick={() => {
                                        if (isPublic && !plan.content_link) return;
                                        if (isPublic) { window.open(plan.content_link, '_blank'); return; }
-                                       setEditingAsset?.({ id: plan.id, type: 'content' });
+                                       setEditingAsset({ id: plan.id, type: 'content' });
                                        setTempLink(plan.content_link || '');
                                     }}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all shadow-sm ${
@@ -801,13 +801,13 @@ const AruneekaContentPlan = ({
                                )}
                             </div>
                         </td>
-                        <td className="py-8 px-4" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
                            {(editingAsset?.id === plan.id && editingAsset?.type === 'post' && !isPublic) ? (
                              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
                                 <input 
                                   autoFocus
                                   value={tempLink}
-                                  onChange={(e) => setTempLink(e.target.value)}
+                                  onChange={(e: any) => setTempLink(e.target.value)}
                                   placeholder="Paste link..."
                                   className="w-40 h-8 bg-slate-50 border border-amethyst-primary/30 rounded-xl px-3 text-[8px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300"
                                 />
@@ -815,14 +815,14 @@ const AruneekaContentPlan = ({
                                   onClick={() => {
                                     plan.post_link = tempLink;
                                     if (onInlineUpdate) onInlineUpdate(plan.id, 'post_link', tempLink);
-                                    setEditingAsset?.(null);
+                                    setEditingAsset(null);
                                   }}
                                   className="px-3 py-1.5 bg-amethyst-dark text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
                                 >
                                   Save
                                 </button>
                                 <button 
-                                  onClick={() => setEditingAsset?.(null)}
+                                  onClick={() => setEditingAsset(null)}
                                   className="p-1 text-slate-300 hover:text-rose-500 transition-colors"
                                 >
                                   <X size={12}/>
@@ -841,7 +841,7 @@ const AruneekaContentPlan = ({
                              <button 
                                onClick={() => {
                                  if (isPublic) return;
-                                 setEditingAsset?.({ id: plan.id, type: 'post' });
+                                 setEditingAsset({ id: plan.id, type: 'post' });
                                  setTempLink('');
                                }}
                                className={`flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase border border-transparent transition-all ${isPublic ? 'cursor-default' : 'hover:border-amethyst-light'}`}
@@ -855,7 +855,7 @@ const AruneekaContentPlan = ({
                               <div className="flex items-center justify-end gap-1 text-slate-200">
                                   {plan.status.toLowerCase() === 'uploaded' && (
                                     <button 
-                                      onClick={(e) => { e.stopPropagation(); onInsight?.(plan); }}
+                                      onClick={(e: any) => { e.stopPropagation(); onInsight?.(plan); }}
                                       className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${
                                         plan.metrics_updated 
                                         ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' 
@@ -870,14 +870,14 @@ const AruneekaContentPlan = ({
                                     </button>
                                   )}
                                  <button 
-                                   onClick={(e) => { e.stopPropagation(); onEdit?.(plan); }}
+                                   onClick={(e: any) => { e.stopPropagation(); onEdit?.(plan); }}
                                    className="p-2 hover:text-amethyst-dark transition-colors text-amethyst-primary/60"
                                    title="Edit Content"
                                  >
                                    <Pencil size={14}/>
                                  </button>
                                  <button 
-                                   onClick={(e) => { e.stopPropagation(); onDelete?.(plan.id); }}
+                                   onClick={(e: any) => { e.stopPropagation(); onDelete?.(plan.id); }}
                                    className="p-2 hover:text-rose-500 transition-colors text-amethyst-primary/60"
                                    title="Delete Content"
                                  >
@@ -899,16 +899,16 @@ const AruneekaContentPlan = ({
             exit={{ opacity: 0, y: -20 }}
             className="flex gap-6 overflow-x-auto pb-8 no-scrollbar"
           >
-             {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map(status => (
+             {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map((status: string) => (
                 <div key={status} className="flex-shrink-0 w-80 space-y-6">
                    <div className="flex items-center justify-between px-4">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-amethyst-dark/40">{status}</h3>
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${statusStyles[status.toLowerCase()] || 'bg-slate-100 text-slate-400'}`}>
-                         {filteredPlans.filter(p => p.status?.toLowerCase() === status.toLowerCase()).length}
+                         {filteredPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length}
                       </span>
                    </div>
                    <div className="space-y-4">
-                      {filteredPlans.filter(p => p.status?.toLowerCase() === status.toLowerCase()).map((plan, i) => (
+                      {filteredPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).map((plan: any, i: number) => (
                         <div 
                           key={plan.id || i} 
                           onClick={() => onSelectContent?.(plan)}
@@ -930,7 +930,7 @@ const AruneekaContentPlan = ({
                            </div>
                         </div>
                       ))}
-                      {filteredPlans.filter(p => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
+                      {filteredPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
                         <div className="h-24 border-2 border-dashed border-slate-50 rounded-3xl flex items-center justify-center">
                            <p className="text-[10px] font-bold text-slate-200 tracking-widest">No Tasks</p>
                         </div>
@@ -1005,7 +1005,7 @@ const AruneekaContentPlan = ({
 
              {/* Weekday Labels */}
              <div className="grid grid-cols-7 border-b border-amethyst-light bg-slate-50/50">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day: string) => (
                   <div key={day} className="py-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-amethyst-primary/40">
                      {day}
                   </div>
@@ -1015,18 +1015,18 @@ const AruneekaContentPlan = ({
              {/* Calendar Grid */}
              <div className="grid grid-cols-7 grid-rows-5 h-[auto] min-h-[700px]">
                 {(() => {
-                  const startDate = new Date(dateRange.start);
-                  const monthIndex = startDate.getMonth();
-                  const year = startDate.getFullYear();
+                  const startDateObj = new Date(dateRange.start);
+                  const monthIndex = startDateObj.getMonth();
+                  const yearVal = startDateObj.getFullYear();
 
-                  const firstDay = new Date(year, monthIndex, 1).getDay();
-                  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+                  const firstDay = new Date(yearVal, monthIndex, 1).getDay();
+                  const daysInMonth = new Date(yearVal, monthIndex + 1, 0).getDate();
                   
                   // Generate total cells (35 or 42 depending on how it stretches)
                   const totalCells = firstDay + daysInMonth > 35 ? 42 : 35;
-                  const cells = Array.from({ length: totalCells }, (_, i) => i);
+                  const cellIndices = Array.from({ length: totalCells }, ((_: any, i: number) => i));
                   
-                  return cells.map(cellIdx => {
+                  return cellIndices.map((cellIdx: number) => {
                     const dayNum = cellIdx - firstDay + 1;
                     const isValidDay = dayNum > 0 && dayNum <= daysInMonth;
                     
@@ -1034,13 +1034,13 @@ const AruneekaContentPlan = ({
                     const isToday = isValidDay && 
                                     dayNum === now.getDate() && 
                                     monthIndex === now.getMonth() && 
-                                    year === now.getFullYear();
+                                    yearVal === now.getFullYear();
                     
-                    const dayContent = filteredPlans.filter(p => {
+                    const dayContent = filteredPlans.filter((p: any) => {
                       const d = new Date(p.due_date);
                       return d.getDate() === dayNum && 
                              d.getMonth() === monthIndex && 
-                             d.getFullYear() === year;
+                             d.getFullYear() === yearVal;
                     });
 
                     return (
@@ -1054,12 +1054,12 @@ const AruneekaContentPlan = ({
                              </div>
                              
                              <div className="flex flex-col gap-1.5 overflow-hidden">
-                                {dayContent.map((plan, idx) => (
+                                {dayContent.map((plan: any, idx: number) => (
                                     <motion.div 
                                       initial={{ opacity: 0, x: -5 }}
                                       animate={{ opacity: 1, x: 0 }}
                                       key={plan.id || idx}
-                                      onClick={(e) => { e.stopPropagation(); onSelectContent?.(plan); }}
+                                      onClick={(e: any) => { e.stopPropagation(); onSelectContent?.(plan); }}
                                     className="px-3 py-2 bg-white border border-amethyst-light rounded-xl shadow-sm cursor-pointer hover:border-amethyst-dark transition-all"
                                   >
                                      <p className="text-[9px] font-bold text-amethyst-dark truncate leading-tight">{plan.title}</p>
@@ -1089,7 +1089,7 @@ const AruneekaContentPlan = ({
               style={{ position: 'fixed', top: statusDropPos.top, left: statusDropPos.left, zIndex: 201 }}
               className="w-44 bg-white rounded-2xl shadow-2xl border border-amethyst-light/20 overflow-hidden py-1.5"
             >
-              {(['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded']).map((s: any) => (
+              {(['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded']).map((s: string) => (
                 <button
                   key={s}
                   onClick={() => {
@@ -1172,12 +1172,12 @@ const AruneekaContentPlan = ({
         isOpen={feedbackModal.isOpen}
         onClose={() => {
           const shouldReload = feedbackModal.type === 'success';
-          setFeedbackModal(prev => ({ ...prev, isOpen: false }));
+          setFeedbackModal((prev: any) => ({ ...prev, isOpen: false }));
           if (shouldReload) window.location.reload();
         }}
         onConfirm={() => {
           const shouldReload = feedbackModal.type === 'success';
-          setFeedbackModal(prev => ({ ...prev, isOpen: false }));
+          setFeedbackModal((prev: any) => ({ ...prev, isOpen: false }));
           if (shouldReload) window.location.reload();
         }}
         title={feedbackModal.title}

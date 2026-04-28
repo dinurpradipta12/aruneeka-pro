@@ -67,7 +67,7 @@ export const AruneekaWorkspaceSelector = ({
         .eq('username', currentUser.username);
         
       if (!userRecords) return;
-      const userIds = userRecords.map(u => u.id);
+      const userIds = userRecords.map((u: any) => u.id);
 
       // 2. Fetch workspaces where any of these IDs is a member
       const { data: membershipData, error: memError } = await supabase
@@ -141,11 +141,11 @@ export const AruneekaWorkspaceSelector = ({
      if (!isDeveloper) return;
 
      const channel = supabase.channel('admin-selector-realtime-' + Math.random().toString(36).substr(2, 9))
-       .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, () => {
+       .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload: any) => {
           supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
             .then(({ count }) => setPendingUsersCount(count || 0));
        })
-       .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, () => {
+       .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload: any) => {
           supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
             .then(({ count }) => setPendingInboxCount(count || 0));
        })
@@ -276,7 +276,7 @@ export const AruneekaWorkspaceSelector = ({
 
       // 2. Add to ALL existing workspaces
       if (workspaces.length > 0) {
-        const memberships = workspaces.map(ws => ({
+        const memberships = workspaces.map((ws: any) => ({
           workspace_id: ws.id,
           user_id: newUser.id,
           role: 'Member'
@@ -358,7 +358,7 @@ export const AruneekaWorkspaceSelector = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {workspaces.map((ws, idx) => (
+          {workspaces.map((ws: any, idx: number) => (
             <motion.div
               key={ws.id}
               initial={{ opacity: 0, y: 20 }}
@@ -604,7 +604,7 @@ export const AruneekaWorkspaceSelector = ({
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-1 italic">Business Category</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {categories.map(cat => (
+                      {categories.map((cat: string) => (
                         <button 
                           key={cat}
                           onClick={() => {
@@ -696,7 +696,7 @@ export const AruneekaWorkspaceSelector = ({
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-1 italic">Business Category</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {categories.map(cat => (
+                      {categories.map((cat: string) => (
                         <button 
                           key={cat}
                           onClick={() => {
@@ -805,7 +805,7 @@ export const AruneekaWorkspaceSelector = ({
                       <div className="flex-1">
                         {!isAddingNew ? (
                           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
-                            {teamMembers.length > 0 ? teamMembers.map((member, i) => (
+                            {teamMembers.length > 0 ? teamMembers.map((member: any, i: number) => (
                               <motion.div 
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -1054,3 +1054,5 @@ export const AruneekaWorkspaceSelector = ({
     </div>
   );
 };
+
+export default AruneekaWorkspaceSelector;

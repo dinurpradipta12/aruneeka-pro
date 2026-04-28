@@ -206,7 +206,7 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
                    {view === 'list' ? (
                       <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                          <div className="grid grid-cols-1 gap-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-                            {profiles.map(p => (
+                            {profiles.map((p: SocialProfile) => (
                                <div 
                                  key={p.id} 
                                  onClick={() => { if (onSelect) onSelect(p); onClose(); }}
@@ -267,7 +267,7 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
                             <div className="space-y-3 pl-1">
                                <label className="text-[10px] font-black text-slate-400">Target platform</label>
                                <select value={formData.platform} onChange={e => setFormData({...formData, platform: e.target.value})} className="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none cursor-pointer">
-                                  {platforms.map(p => (<option key={p.id} value={p.id}>{p.label}</option>))}
+                                  {platforms.map((p: any) => (<option key={p.id} value={p.id}>{p.label}</option>))}
                                </select>
                             </div>
                          </div>

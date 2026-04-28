@@ -37,7 +37,7 @@ const GrowthChart = ({ data, color, maxVal }: { data: any[], color: string, maxV
    const chartHeight = height - paddingTop - paddingBottom;
    
    // Generate points for the SVG path
-   const points = data.map((d, i) => {
+   const points = data.map((d: any, i: number) => {
       const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
       const y = paddingTop + chartHeight - ((d.value / maxVal) * chartHeight);
       return `${x},${y}`;
@@ -63,7 +63,7 @@ const GrowthChart = ({ data, color, maxVal }: { data: any[], color: string, maxV
             </defs>
  
             {/* Y-Axis Grid Lines & Indicators */}
-            {yIndicators.map((val, i) => {
+            {yIndicators.map((val: number, i: number) => {
                const y = paddingTop + chartHeight - ((val / maxVal) * chartHeight);
                return (
                   <g key={`y-${i}`}>
@@ -84,7 +84,7 @@ const GrowthChart = ({ data, color, maxVal }: { data: any[], color: string, maxV
  
             {/* Area under the line */}
             <motion.path 
-               initial={{ opacity: 0, d: `M ${paddingLeft},${paddingTop + chartHeight} ${points.split(' ').map(p => p.split(',')[0] + ',' + (paddingTop + chartHeight)).join(' ')}` }}
+               initial={{ opacity: 0, d: `M ${paddingLeft},${paddingTop + chartHeight} ${points.split(' ').map((p: any) => p.split(',')[0] + ',' + (paddingTop + chartHeight)).join(' ')}` }}
                animate={{ opacity: 1, d: `M ${paddingLeft},${paddingTop + chartHeight} ${points} V ${paddingTop + chartHeight} Z` }}
                transition={{ duration: 1, ease: 'easeOut' }}
                fill={`url(#grad-${color})`}
@@ -104,7 +104,7 @@ const GrowthChart = ({ data, color, maxVal }: { data: any[], color: string, maxV
             />
  
             {/* X-Axis Labels (Date Periods) */}
-            {data.map((d, i) => {
+            {data.map((d: any, i: number) => {
                const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
                return (
                   <text 
@@ -119,7 +119,7 @@ const GrowthChart = ({ data, color, maxVal }: { data: any[], color: string, maxV
             })}
  
             {/* Data Points */}
-            {data.map((d, i) => {
+            {data.map((d: any, i: number) => {
                const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
                const y = paddingTop + chartHeight - ((d.value / maxVal) * chartHeight);
                return (
@@ -331,7 +331,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
         .eq('id', userId);
 
       if (error) throw error;
-      setPendingUsers(prev => prev.filter(u => u.id !== userId));
+      setPendingUsers((prev: any[]) => prev.filter((u: any) => u.id !== userId));
     } catch (e: any) {
       alert("Gagal menyetujui user: " + e.message);
     } finally {
@@ -413,7 +413,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
            await supabase.from('v2_agency_users').delete().eq('id', targetUserId);
         }
         
-        setUsers(prev => prev.filter(u => (u as any).workspace_id !== workspaceId));
+        setUsers((prev: any[]) => prev.filter((u: any) => (u as any).workspace_id !== workspaceId));
       } else {
         // Just delete the target user
         const { error: finalUserError } = await supabase
@@ -422,7 +422,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
           .eq('id', targetUserId);
 
         if (finalUserError) throw finalUserError;
-        setUsers(prev => prev.filter(u => u.id !== targetUserId));
+        setUsers((prev: any[]) => prev.filter((u: any) => u.id !== targetUserId));
       }
 
       setShowDeleteConfirm(false);
@@ -437,7 +437,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     }
   };
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = users.filter((u: any) => 
     u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -493,18 +493,18 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
          {/* INTERACTIVE ANALYTICS CARDS */}
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {(() => {
-               const activeUsers = users.filter(u => u.status === 'Active');
-               const invitedMembers = users.filter(u => u.role === 'Member');
+               const activeUsers = users.filter((u: any) => u.status === 'Active');
+               const invitedMembers = users.filter((u: any) => u.role === 'Member');
                const totalPop = users.length + pendingUsers.length;
 
                // Helper to process growth data
                const getGrowthData = () => {
                   const periods: { [key: string]: number } = {};
-                  const sortedUsers = [...users, ...pendingUsers].sort((a, b) => 
+                  const sortedUsers = [...users, ...pendingUsers].sort((a: any, b: any) => 
                      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                   );
 
-                  sortedUsers.forEach(u => {
+                  sortedUsers.forEach((u: any) => {
                      const date = new Date(u.created_at);
                      const period = `${date.getDate()}/${date.toLocaleString('default', { month: 'short' })}`;
                      periods[period] = (periods[period] || 0) + 1;
@@ -519,7 +519,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                };
 
                const chartData = getGrowthData();
-               const maxVal = Math.max(...chartData.map(d => d.value), 5);
+               const maxVal = Math.max(...chartData.map((d: any) => d.value), 5);
 
                return (
                   <>
@@ -571,7 +571,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pendingUsers.map((pUser) => (
+                {pendingUsers.map((pUser: any) => (
                    <motion.div 
                      layout
                      key={pUser.id}
@@ -598,17 +598,17 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                            className="flex-1 py-3 bg-white text-emerald-500 border border-emerald-100 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                          >
                             {approvingId === pUser.id ? (
-                              <>
-                                <motion.div 
-                                  animate={{ rotate: 360 }}
-                                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                                >
-                                  <Clock size={12} />
-                                </motion.div>
-                                Processing...
-                              </>
+                               <>
+                                 <motion.div 
+                                   animate={{ rotate: 360 }}
+                                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                                 >
+                                   <Clock size={12} />
+                                 </motion.div>
+                                 Processing...
+                               </>
                             ) : (
-                              'Approve'
+                               'Approve'
                             )}
                          </button>
                          <button className="px-4 py-3 bg-white text-slate-400 border border-slate-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">
@@ -718,7 +718,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-               {filteredUsers.map((user) => {
+               {filteredUsers.map((user: any) => {
                   // Calculate Days Left
                   const expiryDate = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
                   const startDate = user.created_at ? new Date(user.created_at) : null;
@@ -758,8 +758,8 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">
                                             Invited by:{' '}
                                             <span className="text-amethyst-primary">
-                                               {users.find(u => u.id === user.parent_user_id)?.full_name || 
-                                                users.find(u => u.workspace_id === user.workspace_id && (u.role?.toLowerCase() === 'owner' || u.role?.toLowerCase() === 'admin'))?.full_name || 
+                                               {users.find((u: any) => u.id === user.parent_user_id)?.full_name || 
+                                                users.find((u: any) => u.workspace_id === user.workspace_id && (u.role?.toLowerCase() === 'owner' || u.role?.toLowerCase() === 'admin'))?.full_name || 
                                                 'Principal Owner'}
                                             </span>
                                          </span>
@@ -774,113 +774,113 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                        </td>
                        <td className="px-8 py-6">
                            {isUnlimited ? (
-                              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border bg-black text-white border-black transition-all">
-                                 <ShieldCheck size={12} className="animate-pulse" />
-                                 <span className="text-[10px] font-black uppercase tracking-widest">Developer Pro</span>
-                              </div>
+                               <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border bg-black text-white border-black transition-all">
+                                  <ShieldCheck size={12} className="animate-pulse" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Developer Pro</span>
+                               </div>
                            ) : (
-                              <select 
-                                value={user.subscription_tier || 'free'}
-                                onChange={(e) => handleUpdateTier(user.id, e.target.value)}
-                                disabled={isUpdating}
-                                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md active:scale-95 disabled:opacity-50 appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${
-                                   user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : 
-                                   user.subscription_tier === 'pro' || user.subscription_tier === 'single_creator' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'
-                                }`}
-                                style={{
-                                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-                                   backgroundSize: '12px'
-                                }}
-                              >
-                                 <option value="free">Free Starter</option>
-                                 <option value="pro">Single Creator</option>
-                                 <option value="agency">Agency Pro</option>
-                              </select>
+                               <select 
+                                 value={user.subscription_tier || 'free'}
+                                 onChange={(e) => handleUpdateTier(user.id, e.target.value)}
+                                 disabled={isUpdating}
+                                 className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md active:scale-95 disabled:opacity-50 appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${
+                                    user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : 
+                                    user.subscription_tier === 'pro' || user.subscription_tier === 'single_creator' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'
+                                 }`}
+                                 style={{
+                                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                                    backgroundSize: '12px'
+                                 }}
+                               >
+                                  <option value="free">Free Starter</option>
+                                  <option value="pro">Single Creator</option>
+                                  <option value="agency">Agency Pro</option>
+                                </select>
                            )}
                         </td>
-                       <td className="px-8 py-6">
-                           <div className="flex items-center gap-3">
-                               <div className="space-y-0.5 min-w-[80px]">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Started</p>
-                                  <p className="text-[10px] font-black text-slate-700">
-                                     {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                                  </p>
-                               </div>
-                               <div className="w-4 h-px bg-slate-200" />
-                               <div className="space-y-0.5 min-w-[80px]">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expires</p>
-                                  <button 
-                                    onClick={() => {
-                                       setEditingUser(user);
-                                       setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
-                                    }}
-                                    className={`text-[10px] font-black text-left hover:text-amethyst-primary transition-all flex items-center gap-1 group ${isExpired ? 'text-rose-500' : 'text-slate-700'}`}
-                                  >
-                                     {expiryStr}
-                                     <Calendar size={10} className="opacity-0 group-hover:opacity-100 transition-all text-amethyst-primary" />
-                                  </button>
-                               </div>
+                        <td className="px-8 py-6">
+                            <div className="flex items-center gap-3">
+                                <div className="space-y-0.5 min-w-[80px]">
+                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Started</p>
+                                   <p className="text-[10px] font-black text-slate-700">
+                                      {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                   </p>
+                                </div>
+                                <div className="w-4 h-px bg-slate-200" />
+                                <div className="space-y-0.5 min-w-[80px]">
+                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expires</p>
+                                   <button 
+                                     onClick={() => {
+                                        setEditingUser(user);
+                                        setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
+                                     }}
+                                     className={`text-[10px] font-black text-left hover:text-amethyst-primary transition-all flex items-center gap-1 group ${isExpired ? 'text-rose-500' : 'text-slate-700'}`}
+                                   >
+                                      {expiryStr}
+                                      <Calendar size={10} className="opacity-0 group-hover:opacity-100 transition-all text-amethyst-primary" />
+                                   </button>
+                                </div>
+                            </div>
+                        </td>
+                        <td className="px-8 py-6">
+                           {isUnlimited ? (
+                             <div className="flex items-center gap-2 text-amethyst-primary">
+                                <ShieldCheck size={14} className="opacity-60" />
+                                <div className="space-y-0.5">
+                                   <p className="text-[10px] font-black uppercase tracking-widest leading-none">Internal Account</p>
+                                   <p className="text-[8px] font-bold text-slate-300 italic">No constraints</p>
+                                </div>
+                             </div>
+                           ) : expiryDate ? (
+                             <div className="space-y-2 min-w-[140px]">
+                                <div className="flex items-center justify-between">
+                                   <span className={`text-[9px] font-black uppercase tracking-widest ${
+                                     isExpired ? 'text-rose-500' : isNearExpiry ? 'text-amber-500' : 'text-emerald-500'
+                                   }`}>
+                                      {isExpired ? 'Expired' : isNearExpiry ? `${diffDays} days critical` : `${diffDays} days active`}
+                                   </span>
+                                   <span className="text-[9px] font-black text-slate-300">
+                                      {isExpired ? '0%' : `${Math.min(100, Math.ceil((diffDays / 30) * 100))}%`}
+                                   </span>
+                                </div>
+                                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                                   <motion.div 
+                                     initial={{ width: 0 }}
+                                     animate={{ width: isExpired ? '100%' : `${Math.min(100, (diffDays / 30) * 100)}%` }}
+                                     className={`h-full ${isExpired ? 'bg-rose-500' : isNearExpiry ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                   />
+                                </div>
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-2 text-slate-300 italic opacity-50">
+                                <AlertCircle size={12} />
+                                <span className="text-[10px] font-bold">Pending Setup</span>
+                             </div>
+                           )}
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                           <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => {
+                                   setEditingUser(user);
+                                   setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
+                                }}
+                                className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100"
+                              >
+                                 <Edit3 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => {
+                                   setUserToDelete(user);
+                                   setShowDeleteConfirm(true);
+                                }}
+                                className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent"
+                              >
+                                 <Trash2 size={14} />
+                              </button>
                            </div>
-                       </td>
-                       <td className="px-8 py-6">
-                          {isUnlimited ? (
-                            <div className="flex items-center gap-2 text-amethyst-primary">
-                               <ShieldCheck size={14} className="opacity-60" />
-                               <div className="space-y-0.5">
-                                  <p className="text-[10px] font-black uppercase tracking-widest leading-none">Internal Account</p>
-                                  <p className="text-[8px] font-bold text-slate-300 italic">No constraints</p>
-                               </div>
-                            </div>
-                          ) : expiryDate ? (
-                            <div className="space-y-2 min-w-[140px]">
-                               <div className="flex items-center justify-between">
-                                  <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                    isExpired ? 'text-rose-500' : isNearExpiry ? 'text-amber-500' : 'text-emerald-500'
-                                  }`}>
-                                     {isExpired ? 'Expired' : isNearExpiry ? `${diffDays} days critical` : `${diffDays} days active`}
-                                  </span>
-                                  <span className="text-[9px] font-black text-slate-300">
-                                     {isExpired ? '0%' : `${Math.min(100, Math.ceil((diffDays / 30) * 100))}%`}
-                                  </span>
-                               </div>
-                               <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                                  <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: isExpired ? '100%' : `${Math.min(100, (diffDays / 30) * 100)}%` }}
-                                    className={`h-full ${isExpired ? 'bg-rose-500' : isNearExpiry ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                  />
-                               </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-slate-300 italic opacity-50">
-                               <AlertCircle size={12} />
-                               <span className="text-[10px] font-bold">Pending Setup</span>
-                            </div>
-                          )}
-                       </td>
-                       <td className="px-8 py-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                             <button 
-                               onClick={() => {
-                                  setEditingUser(user);
-                                  setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
-                               }}
-                               className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100"
-                             >
-                                <Edit3 size={14} />
-                             </button>
-                             <button 
-                               onClick={() => {
-                                  setUserToDelete(user);
-                                  setShowDeleteConfirm(true);
-                               }}
-                               className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent"
-                             >
-                                <Trash2 size={14} />
-                             </button>
-                          </div>
-                       </td>
-                    </motion.tr>
+                        </td>
+                     </motion.tr>
                   );
                })}
             </tbody>

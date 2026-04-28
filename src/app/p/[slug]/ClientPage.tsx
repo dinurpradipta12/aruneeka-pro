@@ -15,9 +15,9 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-// import AruneekaKPI from '@/components/AruneekaKPI';
-// import AruneekaContentPlan from '@/components/AruneekaContentPlan';
-// import AruneekaAnalytics from '@/components/AruneekaAnalytics';
+import AruneekaKPI from '@/components/AruneekaKPI';
+import AruneekaContentPlan from '@/components/AruneekaContentPlan';
+import AruneekaAnalytics from '@/components/AruneekaAnalytics';
 
 export default function PublicPreviewPage() {
   const params = useParams();
@@ -91,7 +91,7 @@ export default function PublicPreviewPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFCFE] text-amethyst-dark font-inter antialiased pb-20">
-      {/* 1. PUBLIC GUEST BANNER ... (no changes needed) */}
+      {/* 1. PUBLIC GUEST BANNER */}
       <div className="bg-slate-950 text-white py-2.5 px-6 border-b border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-amethyst-primary/20 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4 relative z-10">
@@ -165,20 +165,26 @@ export default function PublicPreviewPage() {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'performance' && (
-              <div className="p-20 text-center bg-white rounded-3xl border border-slate-100">
-                <p className="text-slate-400 font-bold">Analytics Component (Temporarily Disabled for Debugging)</p>
-                <p className="text-[10px] uppercase tracking-widest mt-2">{workspace.name} ID: {workspace.id}</p>
-              </div>
+              <AruneekaAnalytics 
+                selectedWorkspaceId={workspace.id}
+                isPublic={true}
+                subscriptionTier={ownerTier}
+              />
             )}
             {activeTab === 'content' && (
-              <div className="p-20 text-center bg-white rounded-3xl border border-slate-100">
-                <p className="text-slate-400 font-bold">Content Plan Component (Temporarily Disabled for Debugging)</p>
-              </div>
+              <AruneekaContentPlan 
+                selectedWorkspaceId={workspace.id}
+                plans={[]} // Let it fetch its own
+                isPublic={true}
+                subscriptionTier={ownerTier}
+              />
             )}
             {activeTab === 'kpi' && (
-              <div className="p-20 text-center bg-white rounded-3xl border border-slate-100">
-                <p className="text-slate-400 font-bold">KPI Component (Temporarily Disabled for Debugging)</p>
-              </div>
+              <AruneekaKPI 
+                selectedWorkspaceId={workspace.id}
+                isPublic={true}
+                subscriptionTier={ownerTier}
+              />
             )}
           </motion.div>
         </AnimatePresence>

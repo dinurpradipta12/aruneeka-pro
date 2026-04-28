@@ -150,7 +150,7 @@ const AruneekaAnalytics = ({
       grouped[dayStr] = { views: 0, interactions: 0, followers: 0 };
     }
 
-    data.forEach(p => {
+    data.forEach((p: any) => {
       if (!p.due_date) return;
       try {
         const dayStr = new Date(p.due_date).toISOString().split('T')[0];
@@ -176,12 +176,12 @@ const AruneekaAnalytics = ({
       day: new Date(date).getDate(),
       month: new Date(date).toLocaleDateString('id-ID', { month: 'short' }),
       ...vals
-    })).sort((a, b) => a.date.localeCompare(b.date));
+    })).sort((a: any, b: any) => a.date.localeCompare(b.date));
   }, [data, activeRange, customStart, customEnd]);
 
   const activePlatform = useMemo(() => {
     if (!selectedProfileId) return 'all';
-    const profile = profiles.find(p => p.id === selectedProfileId);
+    const profile = profiles.find((p: any) => p.id === selectedProfileId);
     return profile?.platform?.toLowerCase() || 'all';
   }, [selectedProfileId, profiles]);
 
@@ -192,7 +192,7 @@ const AruneekaAnalytics = ({
       retentionSum: 0, uploadedCount: 0, followers: 0
     };
 
-    data.forEach(curr => {
+    data.forEach((curr: any) => {
       const platform = curr.platform?.toLowerCase() || '';
       
       // Safety: If a profile is selected, only count contents matching that platform
@@ -228,9 +228,9 @@ const AruneekaAnalytics = ({
 
     const avgRetention = totals.uploadedCount > 0 ? totals.retentionSum / totals.uploadedCount : 0;
     
-    const targetProfiles = selectedProfileId ? profiles.filter(p => p.id === selectedProfileId) : profiles;
+    const targetProfiles = selectedProfileId ? profiles.filter((p: any) => p.id === selectedProfileId) : profiles;
 
-    const initialFollowers = targetProfiles.reduce((acc, curr) => {
+    const initialFollowers = targetProfiles.reduce((acc: number, curr: any) => {
       const val = curr.followers ? String(curr.followers) : '0';
       const multiplier = val.toLowerCase().includes('k') ? 1000 : val.toLowerCase().includes('m') ? 1000000 : 1;
       const cleanVal = val.replace(/[^0-9.]/g, '');
@@ -355,38 +355,38 @@ const AruneekaAnalytics = ({
 
          <div className="flex items-center gap-4">
             <AnimatePresence>
-              {activeRange === 'Custom Range' && (
-                <motion.div 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="flex items-center gap-3 bg-white border border-slate-100 p-1.5 rounded-2xl shadow-sm"
-                >
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
-                    <CalendarIcon size={12} className="text-amethyst-primary"/>
-                    <input 
-                      type="date" 
-                      value={customStart}
-                      onChange={(e) => setCustomStart(e.target.value)}
-                      className="bg-transparent text-[10px] font-bold text-amethyst-dark outline-none cursor-pointer"
-                    />
-                  </div>
-                  <span className="text-slate-300 text-[10px] font-black">to</span>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
-                    <CalendarIcon size={12} className="text-amethyst-primary"/>
-                    <input 
-                      type="date" 
-                      value={customEnd}
-                      onChange={(e) => setCustomEnd(e.target.value)}
-                      className="bg-transparent text-[10px] font-bold text-amethyst-dark outline-none cursor-pointer"
-                    />
-                  </div>
-                </motion.div>
-              )}
+               {activeRange === 'Custom Range' && (
+                 <motion.div 
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, x: 20 }}
+                   className="flex items-center gap-3 bg-white border border-slate-100 p-1.5 rounded-2xl shadow-sm"
+                 >
+                   <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
+                     <CalendarIcon size={12} className="text-amethyst-primary"/>
+                     <input 
+                       type="date" 
+                       value={customStart}
+                       onChange={(e) => setCustomStart(e.target.value)}
+                       className="bg-transparent text-[10px] font-bold text-amethyst-dark outline-none cursor-pointer"
+                     />
+                   </div>
+                   <span className="text-slate-300 text-[10px] font-black">to</span>
+                   <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
+                     <CalendarIcon size={12} className="text-amethyst-primary"/>
+                     <input 
+                       type="date" 
+                       value={customEnd}
+                       onChange={(e) => setCustomEnd(e.target.value)}
+                       className="bg-transparent text-[10px] font-bold text-amethyst-dark outline-none cursor-pointer"
+                     />
+                   </div>
+                 </motion.div>
+               )}
             </AnimatePresence>
 
             <div id="tour-date-filter" className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-               {['This Month', 'Last Month', 'Custom Range'].map((range) => (
+               {['This Month', 'Last Month', 'Custom Range'].map((range: string) => (
                  <button
                    key={range}
                    onClick={() => setActiveRange(range)}
@@ -414,7 +414,7 @@ const AruneekaAnalytics = ({
             id="tour-metrics-cards"
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4" 
           >
-             {stats.map((stat, i) => {
+             {stats.map((stat: any, i: number) => {
                 const userStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
                 const user = userStr ? JSON.parse(userStr) : null;
                 const isPowerUser = user?.role === 'Superuser' || user?.role === 'developer';
@@ -470,7 +470,7 @@ const AruneekaAnalytics = ({
                    </div>
 
                    <div className="flex items-center bg-slate-50 p-1 rounded-xl">
-                      {['Views', 'Interactions', 'Followers'].map((type) => (
+                      {['Views', 'Interactions', 'Followers'].map((type: string) => (
                         <button 
                           key={type}
                           onClick={() => setActiveMetric(type)}
@@ -512,7 +512,7 @@ const AruneekaAnalytics = ({
                          </defs>
 
                          {/* Horizontal Grid Lines */}
-                         {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
+                         {[0, 0.25, 0.5, 0.75, 1].map((p: number, i: number) => (
                            <line 
                              key={i} 
                              x1="0" 
@@ -525,7 +525,7 @@ const AruneekaAnalytics = ({
                          ))}
 
                          {/* Vertical Grid Lines (matching X labels) */}
-                         {dailyMetrics.filter((_, i) => i % Math.ceil(dailyMetrics.length / 4) === 0).map((_, i, arr) => (
+                         {dailyMetrics.filter((_: any, i: number) => i % Math.ceil(dailyMetrics.length / 4) === 0).map((_: any, i: number, arr: any[]) => (
                            <line 
                              key={i} 
                              x1={(i * (dailyMetrics.length / (arr.length - 1)) * (800 / (dailyMetrics.length - 1)))} 
@@ -538,7 +538,7 @@ const AruneekaAnalytics = ({
                          ))}
                          
                          {/* Fix vertical grid calc - simpler approach */}
-                         {[0, 200, 400, 600, 800].map((x) => (
+                         {[0, 200, 400, 600, 800].map((x: number) => (
                            <line 
                              key={'v'+x}
                              x1={x}
@@ -624,7 +624,7 @@ const AruneekaAnalytics = ({
                    </div>
 
                    <div className="ml-12 flex justify-between pt-6 text-[9px] font-bold text-slate-300">
-                      {dailyMetrics.filter((_, i) => i % Math.ceil(dailyMetrics.length / 4) === 0).map((d, i) => (
+                      {dailyMetrics.filter((_: any, i: number) => i % Math.ceil(dailyMetrics.length / 4) === 0).map((d: any, i: number) => (
                         <span key={i}>{d.day} {d.month}</span>
                       ))}
                    </div>
@@ -634,13 +634,13 @@ const AruneekaAnalytics = ({
              <div className="space-y-12">
                 <div className="space-y-5">
                    <div className="flex items-center justify-between px-2">
-                      <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 italic">
-                         <Sparkles size={12} className="text-amethyst-primary"/> Top 3 Performers
-                      </h4>
-                      <span className="text-[8px] font-bold text-amethyst-primary uppercase tracking-widest bg-amethyst-light/20 px-2 py-0.5 rounded-full">{activeMetric}</span>
+                       <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 italic">
+                          <Sparkles size={12} className="text-amethyst-primary"/> Top 3 Performers
+                       </h4>
+                       <span className="text-[8px] font-bold text-amethyst-primary uppercase tracking-widest bg-amethyst-light/20 px-2 py-0.5 rounded-full">{activeMetric}</span>
                    </div>
                    <div className="space-y-4">
-                      {data.filter(p => p.metrics && p.metrics[activeMetric.toLowerCase()] !== undefined).sort((a, b) => (Number(b.metrics[activeMetric.toLowerCase()]) || 0) - (Number(a.metrics[activeMetric.toLowerCase()]) || 0)).slice(0, 3).map((item, i) => (
+                      {data.filter((p: any) => p.metrics && p.metrics[activeMetric.toLowerCase()] !== undefined).sort((a: any, b: any) => (Number(b.metrics[activeMetric.toLowerCase()]) || 0) - (Number(a.metrics[activeMetric.toLowerCase()]) || 0)).slice(0, 3).map((item: any, i: number) => (
                         <div 
                           key={i} 
                           onClick={() => setSelectedContent(item)}
@@ -661,13 +661,13 @@ const AruneekaAnalytics = ({
 
                 <div className="space-y-5">
                    <div className="flex items-center justify-between px-2">
-                      <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 italic">
-                         <TrendingDown size={12} className="text-slate-400"/> Needs Attention
-                      </h4>
-                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-full">Bottom 3</span>
+                       <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 italic">
+                          <TrendingDown size={12} className="text-slate-400"/> Needs Attention
+                       </h4>
+                       <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-full">Bottom 3</span>
                    </div>
                    <div className="space-y-4">
-                      {data.filter(p => p.status?.toLowerCase() === 'uploaded').sort((a, b) => (Number(a.metrics?.[activeMetric.toLowerCase()] || 0)) - (Number(b.metrics?.[activeMetric.toLowerCase()] || 0))).slice(0, 3).map((item, i) => (
+                      {data.filter((p: any) => p.status?.toLowerCase() === 'uploaded').sort((a: any, b: any) => (Number(a.metrics?.[activeMetric.toLowerCase()] || 0)) - (Number(b.metrics?.[activeMetric.toLowerCase()] || 0))).slice(0, 3).map((item: any, i: number) => (
                         <div 
                           key={i} 
                           onClick={() => setSelectedContent(item)}
@@ -751,17 +751,17 @@ const AruneekaAnalytics = ({
                     </tr>
                  </thead>
                  <tbody>
-                    {data.filter(p => p.status?.toLowerCase() === 'uploaded').sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((item, i) => {
+                    {data.filter((p: any) => p.status?.toLowerCase() === 'uploaded').sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((item: any, i: number) => {
                        const m = item.metrics || {};
                        const getV = (searchKeys: string[]) => {
-                         const normalizedSearches = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
-                         for (const dbKey in m) {
-                           const normalizedDbKey = dbKey.replace(/[\s_.]/g, '').toLowerCase();
-                           if (normalizedSearches.includes(normalizedDbKey)) {
-                             return Number(m[dbKey]) || 0;
-                           }
-                         }
-                         return 0;
+                          const normalizedSearches = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
+                          for (const dbKey in m) {
+                            const normalizedDbKey = dbKey.replace(/[\s_.]/g, '').toLowerCase();
+                            if (normalizedSearches.includes(normalizedDbKey)) {
+                              return Number(m[dbKey]) || 0;
+                            }
+                          }
+                          return 0;
                        };
 
                        const views = getV(['views', 'impressions']);
@@ -773,11 +773,11 @@ const AruneekaAnalytics = ({
                        const er = views > 0 ? ((interactions / views) * 100).toFixed(2) : '0.00';
 
                        const PlatformIcon = () => {
-                          const p = item.platform?.toLowerCase() || '';
-                          if (p.includes('instagram')) return <img src="https://cdn.simpleicons.org/instagram/E4405F" className="w-5 h-5" alt="IG" />;
-                          if (p.includes('tiktok')) return <img src="https://cdn.simpleicons.org/tiktok/000000" className="w-5 h-5" alt="TT" />;
-                          if (p.includes('threads')) return <img src="https://cdn.simpleicons.org/threads/000000" className="w-5 h-5" alt="TH" />;
-                          return <Layout size={18} className="text-amethyst-primary"/>;
+                           const p = item.platform?.toLowerCase() || '';
+                           if (p.includes('instagram')) return <img src="https://cdn.simpleicons.org/instagram/E4405F" className="w-5 h-5" alt="IG" />;
+                           if (p.includes('tiktok')) return <img src="https://cdn.simpleicons.org/tiktok/000000" className="w-5 h-5" alt="TT" />;
+                           if (p.includes('threads')) return <img src="https://cdn.simpleicons.org/threads/000000" className="w-5 h-5" alt="TH" />;
+                           return <Layout size={18} className="text-amethyst-primary"/>;
                        };
 
                        return (
@@ -881,9 +881,9 @@ const AruneekaAnalytics = ({
                     {(() => {
                        const m = selectedContent.metrics || {};
                        const get = (searchKeys: string[]) => {
-                         const ns = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
-                         for (const k in m) if (ns.includes(k.replace(/[\s_.]/g, '').toLowerCase())) return Number(m[k]) || 0;
-                         return 0;
+                          const ns = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
+                          for (const k in m) if (ns.includes(k.replace(/[\s_.]/g, '').toLowerCase())) return Number(m[k]) || 0;
+                          return 0;
                        };
                        
                        const views = get(['views', 'impressions']);
@@ -896,23 +896,23 @@ const AruneekaAnalytics = ({
                        return (
                          <>
                            <div className="flex-1 space-y-1.5 overflow-hidden">
-                               {[
-                                 { label: 'Reach', value: reach, icon: <Activity size={12}/> },
-                                 { label: 'Views', value: views, icon: <Eye size={12}/> },
-                                 { label: 'Interacts', value: interactions, icon: <Sparkles size={12}/> },
-                                 { label: 'Reposts', value: get(['shares', 'reposts']), icon: <Share2 size={12}/> },
-                                 { label: 'Visits', value: profile_visits, icon: <Users size={12}/> },
-                                 { label: 'Follows', value: `+${followers}`, icon: <Users size={12}/> },
-                                 { label: 'E. Rate', value: `${er}%`, icon: <TrendingUp size={12}/> },
-                               ].map((item, i) => (
-                                 <div key={i} className="bg-white/10 p-2 rounded-lg flex items-center justify-between border border-white/5 hover:bg-white/20 transition-all">
-                                    <div className="flex items-center gap-2">
-                                       <div className="w-6 h-6 bg-white/10 rounded-md flex items-center justify-center text-white/80">{item.icon}</div>
-                                       <span className="text-[8px] font-bold uppercase tracking-widest text-white/60">{item.label}</span>
-                                    </div>
-                                    <span className="text-xs font-black">{Number(item.value.toString().replace('+', '')) >= 1000 ? `${(Number(item.value.toString().replace('+', '')) / 1000).toFixed(1)}K` : item.value}</span>
-                                 </div>
-                               ))}
+                                {[
+                                  { label: 'Reach', value: reach, icon: <Activity size={12}/> },
+                                  { label: 'Views', value: views, icon: <Eye size={12}/> },
+                                  { label: 'Interacts', value: interactions, icon: <Sparkles size={12}/> },
+                                  { label: 'Reposts', value: get(['shares', 'reposts']), icon: <Share2 size={12}/> },
+                                  { label: 'Visits', value: profile_visits, icon: <Users size={12}/> },
+                                  { label: 'Follows', value: `+${followers}`, icon: <Users size={12}/> },
+                                  { label: 'E. Rate', value: `${er}%`, icon: <TrendingUp size={12}/> },
+                                ].map((item: any, i: number) => (
+                                  <div key={i} className="bg-white/10 p-2 rounded-lg flex items-center justify-between border border-white/5 hover:bg-white/20 transition-all">
+                                     <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 bg-white/10 rounded-md flex items-center justify-center text-white/80">{item.icon}</div>
+                                        <span className="text-[8px] font-bold uppercase tracking-widest text-white/60">{item.label}</span>
+                                     </div>
+                                     <span className="text-xs font-black">{Number(item.value.toString().replace('+', '')) >= 1000 ? `${(Number(item.value.toString().replace('+', '')) / 1000).toFixed(1)}K` : item.value}</span>
+                                  </div>
+                                ))}
                            </div>
 
                            <div className="mt-auto pt-3 border-t border-white/10 space-y-3">
@@ -983,7 +983,7 @@ const AruneekaAnalytics = ({
                            <div className="absolute left-2 right-2 h-0.5 bg-slate-200 top-1/2 -translate-y-1/2 rounded-full">
                               <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-amethyst-primary shadow-[0_0_8px_rgba(172,139,238,0.5)]" />
                            </div>
-                           {['Draft', 'Production', 'Review', 'Approved', 'Ready'].map((step, idx) => (
+                           {['Draft', 'Production', 'Review', 'Approved', 'Ready'].map((step: string, idx: number) => (
                              <div key={idx} className="relative z-10 flex flex-col items-center">
                                 <div className={`w-4 h-4 rounded-full border-2 border-white flex items-center justify-center shadow-md transition-all ${idx < 5 ? 'bg-amethyst-primary text-white' : 'bg-slate-200 text-white'}`}>
                                    <Check size={8} strokeWidth={5}/>
@@ -1003,7 +1003,7 @@ const AruneekaAnalytics = ({
                               {[
                                 { label: 'Link Script', url: selectedContent.script_link, icon: <FileText size={16}/> },
                                 { label: 'Konten Folder', url: selectedContent.content_link, icon: <Video size={16}/> },
-                              ].map((link, i) => (
+                              ].map((link: any, i: number) => (
                                 <a 
                                   key={i}
                                   href={link.url || '#'} 

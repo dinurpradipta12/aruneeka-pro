@@ -475,7 +475,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       if (profiles.length > 0) {
          const cachedProfileId = localStorage.getItem("aruneeka_selected_profile_id");
          if (cachedProfileId) {
-            const found = profiles.find(p => p.id === cachedProfileId);
+            const found = profiles.find((p: any) => p.id === cachedProfileId);
             if (found) setSelectedProfile(found);
          }
       }
@@ -935,7 +935,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                 {['Superuser', 'developer'].includes(user?.role) && (
                    <nav className="bg-slate-900/5 backdrop-blur-lg border border-slate-200/50 rounded-2xl p-1.5 inline-flex items-center">
                       <div className="flex items-center gap-1">
-                         {adminItems.map((item) => {
+                         {adminItems.map((item: any) => {
                             const isUserAdmin = item.href === '/admin/users';
                             const isStyling = item.href === '/admin/appearance';
                             const count = isUserAdmin ? pendingUsersCount : (isStyling ? 0 : pendingInboxCount);
@@ -1003,7 +1003,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              </div>
 
             <main className="px-4 md:px-8 max-w-[1600px] mx-auto mt-6 md:mt-10 pb-32 md:pb-0">
-               {React.Children.map(children, child => React.isValidElement(child) ? React.cloneElement(child as any, { 
+               {React.Children.map(children, (child: any) => React.isValidElement(child) ? React.cloneElement(child as any, { 
                   selectedProfileId: selectedProfile?.id, 
                   selectedWorkspaceId: selectedWorkspace?.id,
                   subscriptionTier
@@ -1016,7 +1016,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white w-full max-w-4xl rounded-[50px] shadow-2xl overflow-hidden flex flex-col md:flex-row shadow-black/20">
                         <div className="md:w-1/3 p-10 bg-slate-50 border-r border-slate-100 flex flex-col gap-10">
                            <div className="space-y-4"><h3 className="text-2xl font-black tracking-tight">Identity studio</h3><p className="text-[10px] text-slate-400 font-bold">Select persona</p></div>
-                           <div className="grid grid-cols-3 gap-3">{avatars.map(url => (<button key={url} onClick={() => setEditForm(prev => ({ ...prev, avatar: url }))} className={`aspect-square rounded-2xl p-2 transition-all ${editForm.avatar === url ? 'bg-amethyst-primary ring-4 ring-amethyst-light/30' : 'bg-white hover:bg-slate-100'}`}><img src={url} alt="Avatar" className="w-full h-full object-contain" /></button>))}</div>
+                           <div className="grid grid-cols-3 gap-3">{avatars.map((url: string) => (<button key={url} onClick={() => setEditForm(prev => ({ ...prev, avatar: url }))} className={`aspect-square rounded-2xl p-2 transition-all ${editForm.avatar === url ? 'bg-amethyst-primary ring-4 ring-amethyst-light/30' : 'bg-white hover:bg-slate-100'}`}><img src={url} alt="Avatar" className="w-full h-full object-contain" /></button>))}</div>
                         </div>
                         <div className="flex-1 p-12 space-y-8 overflow-y-auto max-h-[85vh]">
                            <div className="grid grid-cols-2 gap-6">

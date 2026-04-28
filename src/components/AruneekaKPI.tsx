@@ -106,7 +106,7 @@ const AruneekaKPI = ({
   const [userRole, setUserRole] = useState<string>('Member');
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newGoal, setNewGoal] = useState({ platform: 'INSTAGRAM', metric: 'Reach', target: 0, category: 'growth', profile_id: '' });
+  const [newGoal, setNewGoal] = useState<any>({ platform: 'INSTAGRAM', metric: 'Reach', target: 0, category: 'growth', profile_id: '' });
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   
   const [isEditingTarget, setIsEditingTarget] = useState(false);
@@ -137,23 +137,23 @@ const AruneekaKPI = ({
 
   const calculateKPIs = (plans: any[], targets: any[]) => {
     const getActualForMetric = (platform: string, metric: string) => {
-      const filtered = plans.filter(p => p.platform?.toLowerCase() === platform.toLowerCase());
+      const filtered = plans.filter((p: any) => p.platform?.toLowerCase() === platform.toLowerCase());
       
       if (metric === 'Views' || metric === 'Video Views') {
-        return filtered.reduce((acc, curr) => acc + (Number(curr.metrics?.views) || Number(curr.metrics?.Views) || 0), 0);
+        return filtered.reduce((acc: number, curr: any) => acc + (Number(curr.metrics?.views) || Number(curr.metrics?.Views) || 0), 0);
       }
       if (metric === 'Reach' || metric === 'Account Reach') {
-        return filtered.reduce((acc, curr) => acc + (Number(curr.metrics?.reach) || Number(curr.metrics?.Reach) || Number(curr.metrics?.views) || 0), 0);
+        return filtered.reduce((acc: number, curr: any) => acc + (Number(curr.metrics?.reach) || Number(curr.metrics?.Reach) || Number(curr.metrics?.views) || 0), 0);
       }
       if (metric === 'New Followers' || metric === 'Followers Growth') {
-        return filtered.reduce((acc, curr) => acc + (Number(curr.metrics?.new_followers) || Number(curr.metrics?.follows) || 0), 0);
+        return filtered.reduce((acc: number, curr: any) => acc + (Number(curr.metrics?.new_followers) || Number(curr.metrics?.follows) || 0), 0);
       }
       if (metric === 'Content Uploaded') {
         return filtered.length;
       }
       
-      const totalViews = filtered.reduce((acc, curr) => acc + (Number(curr.metrics?.views) || 0), 0);
-      const totalInteractions = filtered.reduce((acc, curr) => {
+      const totalViews = filtered.reduce((acc: number, curr: any) => acc + (Number(curr.metrics?.views) || 0), 0);
+      const totalInteractions = filtered.reduce((acc: number, curr: any) => {
         const m = curr.metrics || {};
         return acc + (Number(m.likes) || 0) + (Number(m.comments) || Number(m.replies) || 0) + (Number(m.shares) || Number(m.reposts) || 0);
       }, 0);
@@ -168,7 +168,7 @@ const AruneekaKPI = ({
       return 0;
     };
 
-    const mergedKpis: KPIItem[] = targets.map(t => ({
+    const mergedKpis: KPIItem[] = targets.map((t: any) => ({
       id: t.id,
       platform: t.platform,
       metric: t.metric,
@@ -293,7 +293,7 @@ const AruneekaKPI = ({
       setIsAddModalOpen(false);
       fetchRealData();
     } catch (e: any) {
-      showPopup("Gagal menyimpan", e.message, () => setPopup(p => ({ ...p, isOpen: false })), 'danger', 'Tutup');
+      showPopup("Gagal menyimpan", e.message, () => setPopup((p: any) => ({ ...p, isOpen: false })), 'danger', 'Tutup');
     } finally {
       setIsSavingGoal(false);
     }
@@ -358,7 +358,7 @@ const AruneekaKPI = ({
         if (insError) throw insError;
         fetchRealData();
       } else {
-        showPopup("Info", "Tidak ditemukan data target dari bulan sebelumnya untuk disinkronkan.", () => setPopup(p => ({...p, isOpen: false})));
+        showPopup("Info", "Tidak ditemukan data target dari bulan sebelumnya untuk disinkronkan.", () => setPopup((p: any) => ({...p, isOpen: false})));
       }
     } catch (e: any) {
       console.error(e);
@@ -370,15 +370,15 @@ const AruneekaKPI = ({
 
   const handleUpdateTask = async (id: string) => {
     if (!editingText.trim() || !id) return;
-    setChecklist(prev => prev.map(t => t.id === id ? { ...t, task: editingText } : t));
+    setChecklist((prev: any[]) => prev.map((t: any) => t.id === id ? { ...t, task: editingText } : t));
     setEditingId(null);
     await supabase.from('v2_agency_strategy_checklist').update({ task: editingText }).eq('id', id);
   };
 
   const handleDeleteTask = async (id: string) => {
     showPopup('Hapus Strategi', 'Apakah Anda yakin?', async () => {
-      setChecklist(prev => prev.filter(t => t.id !== id));
-      setPopup(p => ({ ...p, isOpen: false }));
+      setChecklist((prev: any[]) => prev.filter((t: any) => t.id !== id));
+      setPopup((p: any) => ({ ...p, isOpen: false }));
       if (id) await supabase.from('v2_agency_strategy_checklist').delete().eq('id', id);
     }, 'danger', 'Hapus Item');
   };
@@ -390,10 +390,10 @@ const AruneekaKPI = ({
       const user = userStr ? JSON.parse(userStr) : { id: null };
       const userId = user.id;
       if (!userId) return;
-      const { data } = await supabase.from('v2_agency_strategy_checklist').insert([{ 
+      const { data: insData } = await supabase.from('v2_agency_strategy_checklist').insert([{ 
         task: newTaskText, status: 'pending', workspace_id: workspaceId, user_id: userId
       }]).select();
-      if (data) {
+      if (insData) {
         setNewTaskText('');
         setIsAddingTask(false);
         fetchChecklist();
@@ -403,14 +403,14 @@ const AruneekaKPI = ({
 
   const toggleTask = async (id: string, currentStatus: string) => {
     const newState = currentStatus === 'completed' ? 'pending' : 'completed';
-    setChecklist(prev => prev.map(t => t.id === id ? { ...t, status: newState } : t));
+    setChecklist((prev: any[]) => prev.map((t: any) => t.id === id ? { ...t, status: newState } : t));
     await supabase.from('v2_agency_strategy_checklist').update({ status: newState }).eq('id', id);
   };
 
   // --- MEMOS ---
 
   const filteredKpis = useMemo(() => {
-    return kpis.filter(k => activePlatform === 'ALL' || k.platform === activePlatform);
+    return kpis.filter((k: KPIItem) => activePlatform === 'ALL' || k.platform === activePlatform);
   }, [kpis, activePlatform]);
 
   const platformMetrics: any = {
@@ -422,16 +422,16 @@ const AruneekaKPI = ({
   const gapInsight = useMemo(() => {
     if (kpis.length === 0) return "Belum ada data target. Silakan tetapkan KPI bulanan Anda agar Aruneeka dapat memberikan analisis mendalam.";
     
-    const relevantKpis = kpis.filter(k => activePlatform === 'ALL' || k.platform === activePlatform);
+    const relevantKpis = kpis.filter((k: KPIItem) => activePlatform === 'ALL' || k.platform === activePlatform);
     if (relevantKpis.length === 0) return `Belum ada data KPI untuk platform ${activePlatform} yang dapat dianalisis saat ini.`;
 
-    const reached = relevantKpis.filter(k => k.actual >= k.target && k.target > 0);
-    const below = relevantKpis.filter(k => k.actual < k.target);
-    const critical = relevantKpis.filter(k => k.actual < (k.target * 0.3) && k.target > 0);
-    const nearly = relevantKpis.filter(k => k.actual >= (k.target * 0.9) && k.actual < k.target);
-    const midRange = relevantKpis.filter(k => k.actual >= (k.target * 0.5) && k.actual < (k.target * 0.9));
+    const reached = relevantKpis.filter((k: KPIItem) => k.actual >= k.target && k.target > 0);
+    const below = relevantKpis.filter((k: KPIItem) => k.actual < k.target);
+    const critical = relevantKpis.filter((k: KPIItem) => k.actual < (k.target * 0.3) && k.target > 0);
+    const nearly = relevantKpis.filter((k: KPIItem) => k.actual >= (k.target * 0.9) && k.actual < k.target);
+    const midRange = relevantKpis.filter((k: KPIItem) => k.actual >= (k.target * 0.5) && k.actual < (k.target * 0.9));
     
-    const avgCompletion = relevantKpis.reduce((acc, k) => acc + (Math.min(k.actual / (k.target || 1), 1.5)), 0) / relevantKpis.length;
+    const avgCompletion = relevantKpis.reduce((acc: number, k: KPIItem) => acc + (Math.min(k.actual / (k.target || 1), 1.5)), 0) / relevantKpis.length;
 
     // 1. ALL TARGETS REACHED
     if (below.length === 0) {
@@ -444,27 +444,27 @@ const AruneekaKPI = ({
     }
 
     // 3. IMBALANCE: REACH VS CONVERSION
-    const reachKpi = relevantKpis.find(k => k.metric.includes('Reach') || k.metric.includes('Views'));
-    const followKpi = relevantKpis.find(k => k.metric.includes('Followers'));
+    const reachKpi = relevantKpis.find((k: KPIItem) => k.metric.includes('Reach') || k.metric.includes('Views'));
+    const followKpi = relevantKpis.find((k: KPIItem) => k.metric.includes('Followers'));
     if (reachKpi && followKpi && reachKpi.actual >= reachKpi.target && followKpi.actual < followKpi.target) {
         return "Insight Konversi: Jangkauan (Reach) Anda sudah luar biasa, namun konversi Followers tertahan. Ini menandakan profil Anda mungkin belum cukup 'inviting' atau landing page Instagram/TikTok Anda kurang meyakinkan. Optimasi Bio dan CTA sekarang.";
     }
 
     // 4. IMBALANCE: PRODUCTION VS RESULTS
-    const prodKpi = relevantKpis.find(k => k.metric === 'Content Uploaded');
-    const resultKpi = relevantKpis.find(k => k.metric === 'Views' || k.metric === 'Reach' || k.metric === 'Total Interaction');
+    const prodKpi = relevantKpis.find((k: KPIItem) => k.metric === 'Content Uploaded');
+    const resultKpi = relevantKpis.find((k: KPIItem) => k.metric === 'Views' || k.metric === 'Reach' || k.metric === 'Total Interaction');
     if (prodKpi && resultKpi && prodKpi.actual >= prodKpi.target && resultKpi.actual < (resultKpi.target * 0.6)) {
         return "Insight Efisiensi: Anda sangat produktif mengunggah konten, namun hasilnya belum sebanding. Kualitas 'hook' 3 detik pertama Anda mungkin lemah. Kurangi kuantitas, fokuslah pada riset 'opening' yang lebih memicu rasa penasaran.";
     }
 
     // 5. IMBALANCE: ENGAGEMENT VS REACH
-    const engKpi = relevantKpis.find(k => k.metric.includes('Engagement') || k.metric.includes('Interaction'));
+    const engKpi = relevantKpis.find((k: KPIItem) => k.metric.includes('Engagement') || k.metric.includes('Interaction'));
     if (engKpi && reachKpi && engKpi.actual >= engKpi.target && reachKpi.actual < (reachKpi.target * 0.7)) {
         return "Insight Audiens: Audiens lama Anda sangat loyal (Engagement tinggi), namun algoritma belum mendorong konten Anda ke luar lingkaran pengikut. Tambahkan strategi penggunaan Keyword (SEO) dan Audio Trending untuk menembus pasar baru.";
     }
 
     // 6. TIKTOK SPECIFIC: RETENTION BOOTSTRAP
-    if (activePlatform === 'TIKTOK' && relevantKpis.some(k => k.metric.includes('Retention') && k.actual < (k.target * 0.8))) {
+    if (activePlatform === 'TIKTOK' && relevantKpis.some((k: KPIItem) => k.metric.includes('Retention') && k.actual < (k.target * 0.8))) {
         return "Evaluasi TikTok: Angka Retention Rate Anda rendah. Penonton pergi sebelum video selesai. Pastikan tidak ada 'dead air' atau bagian yang membosankan di tengah video. Gunakan fast-cut editing untuk menjaga atensi.";
     }
 
@@ -481,8 +481,8 @@ const AruneekaKPI = ({
     // 9. CROSS-PLATFORM COMPARISON
     if (activePlatform === 'ALL') {
         const platformPerformance = {
-            INSTAGRAM: relevantKpis.filter(k => k.platform === 'INSTAGRAM' && (k.actual / k.target) >= 0.8).length,
-            TIKTOK: relevantKpis.filter(k => k.platform === 'TIKTOK' && (k.actual / k.target) >= 0.8).length,
+            INSTAGRAM: relevantKpis.filter((k: KPIItem) => k.platform === 'INSTAGRAM' && (k.actual / k.target) >= 0.8).length,
+            TIKTOK: relevantKpis.filter((k: KPIItem) => k.platform === 'TIKTOK' && (k.actual / k.target) >= 0.8).length,
         };
         if (platformPerformance.INSTAGRAM > platformPerformance.TIKTOK && platformPerformance.TIKTOK < 2) 
             return "Cross-Platform: Instagram Anda jauh lebih kuat. Coba 'repackage' video Reels terbaik Anda ke TikTok dengan mengganti audionya menggunakan suara yang sedang trending di TikTok untuk mengejar ketertinggalan.";
@@ -521,15 +521,15 @@ const AruneekaKPI = ({
     }
 
     // 16. ENGAGEMENT RATE CRITICAL
-    const erKpi = relevantKpis.find(k => k.metric === 'Engagement Rate');
+    const erKpi = relevantKpis.find((k: KPIItem) => k.metric === 'Engagement Rate');
     if (erKpi && erKpi.actual < (erKpi.target * 0.4)) {
         return "ER Critical: Tingkat keterlibatan sangat rendah. Mungkin konten Anda terlalu 'jualan' atau kaku. Coba buat konten yang lebih humanis, tunjukkan sisi di balik layar (BTS) untuk membangun kedekatan.";
     }
 
     // 17. CATEGORY SYNERGY (GROWTH VS PRODUCTION)
-    const growthKpis = relevantKpis.filter(k => k.category === 'growth');
-    const prodKpis = relevantKpis.filter(k => k.category === 'production');
-    if (growthKpis.every(k => k.actual < k.target) && prodKpis.every(k => k.actual >= k.target)) {
+    const growthKpis = relevantKpis.filter((k: KPIItem) => k.category === 'growth');
+    const prodKpis = relevantKpis.filter((k: KPIItem) => k.category === 'production');
+    if (growthKpis.every((k: KPIItem) => k.actual < k.target) && prodKpis.every((k: KPIItem) => k.actual >= k.target)) {
         return "Mismatch Kategori: Produksi konten sudah maksimal tapi pertumbuhan (Growth) nol. Strategi distribusi Anda bermasalah. Coba evaluasi Hashtag, SEO keyword, dan lokasi tag yang digunakan.";
     }
 
@@ -563,7 +563,7 @@ const AruneekaKPI = ({
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   const firstPlat = 'INSTAGRAM';
-                  const firstProfile = profiles.find(p => p.platform?.toUpperCase() === firstPlat)?.id || '';
+                  const firstProfile = profiles.find((p: any) => p.platform?.toUpperCase() === firstPlat)?.id || '';
                   setNewGoal({ platform: firstPlat, metric: platformMetrics[firstPlat][0], target: 0, category: 'growth', profile_id: firstProfile || (selectedProfileId || '') });
                   setIsAddModalOpen(true);
                 }}
@@ -585,7 +585,7 @@ const AruneekaKPI = ({
 
       {/* PLATFORM FILTER */}
       <div className="flex items-center gap-2 bg-white border border-slate-100 p-2 rounded-[28px] w-fit shadow-sm">
-        {['ALL', 'INSTAGRAM', 'TIKTOK', 'THREADS'].map((p) => (
+        {['ALL', 'INSTAGRAM', 'TIKTOK', 'THREADS'].map((p: string) => (
           <button 
             key={p} 
             onClick={() => setActivePlatform(p as any)} 
@@ -603,7 +603,7 @@ const AruneekaKPI = ({
          <div className="lg:col-span-8 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <AnimatePresence mode="popLayout">
-               {filteredKpis.length > 0 ? filteredKpis.map((kpi, idx) => {
+               {filteredKpis.length > 0 ? filteredKpis.map((kpi: KPIItem, idx: number) => {
                  const progress = Math.min((kpi.actual / (kpi.target || 1)) * 100, 100);
                  const isDone = kpi.actual >= kpi.target && kpi.target > 0;
                  
@@ -730,7 +730,7 @@ const AruneekaKPI = ({
                   </div>
                   
                   <div className="space-y-4">
-                     {checklist.length > 0 ? checklist.map((task, idx) => (
+                     {checklist.length > 0 ? checklist.map((task: any, idx: number) => (
                        <motion.div 
                          key={task.id} 
                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
@@ -847,9 +847,9 @@ const AruneekaKPI = ({
                     <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Target Account</label>
                     <select 
                       value={newGoal.profile_id} 
-                      onChange={(e) => {
+                      onChange={(e: any) => {
                         const profId = e.target.value;
-                        const prof = profiles.find(p => p.id === profId);
+                        const prof = profiles.find((p: any) => p.id === profId);
                         if (prof) {
                           const plat = (prof.platform?.toUpperCase() || 'INSTAGRAM') as any;
                           setNewGoal({
@@ -865,7 +865,7 @@ const AruneekaKPI = ({
                       className="w-full p-5 bg-slate-50 rounded-[28px] border border-slate-100 font-bold text-sm focus:outline-none focus:ring-2 ring-amethyst-primary/10"
                     >
                       <option value="">— Select Account —</option>
-                      {profiles.map(profile => (
+                      {profiles.map((profile: any) => (
                         <option key={profile.id} value={profile.id}>
                           {profile.name} ({profile.platform?.toUpperCase() || 'General'})
                         </option>
@@ -929,7 +929,7 @@ const AruneekaKPI = ({
                   <button onClick={popup.onConfirm} className={`w-full py-5 rounded-[24px] text-white font-black text-[10px] uppercase tracking-widest shadow-lg ${popup.type === 'danger' ? 'bg-rose-500 shadow-rose-500/20' : 'bg-amethyst-primary shadow-amethyst-primary/20'}`}>
                     {popup.confirmLabel || 'OK'}
                   </button>
-                  <button onClick={() => setPopup(p => ({ ...p, isOpen: false }))} className="w-full py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button>
+                  <button onClick={() => setPopup((p: any) => ({ ...p, isOpen: false }))} className="w-full py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button>
                </div>
             </motion.div>
           </div>
