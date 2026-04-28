@@ -3,8 +3,11 @@ import ClientPageWrapper from './ClientPageWrapper';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export default function Page(props: any) {
-  // Lintas versi: params mungkin objek atau butuh di-unwrap, 
-  // tapi untuk render awal kita teruskan saja apa adanya.
-  return <ClientPageWrapper slug={props.params?.slug} />;
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function Page({ params }: PageProps) {
+  const resolvedParams = await params;
+  return <ClientPageWrapper slug={resolvedParams.slug} />;
 }

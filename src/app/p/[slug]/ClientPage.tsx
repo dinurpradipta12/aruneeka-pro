@@ -19,9 +19,9 @@ import AruneekaKPI from '@/components/AruneekaKPI';
 import AruneekaContentPlan from '@/components/AruneekaContentPlan';
 import AruneekaAnalytics from '@/components/AruneekaAnalytics';
 
-export default function PublicPreviewPage() {
+export default function PublicPreviewPage({ slug: propSlug }: { slug?: string }) {
   const params = useParams();
-  const slug = params?.slug as string;
+  const slug = propSlug || (params?.slug as string);
   
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);

@@ -20,7 +20,5 @@ const ClientPage = dynamic(() => import('./ClientPage'), {
 });
 
 export default function ClientPageWrapper({ slug }: { slug: string }) {
-  // Kita pastikan slug diteruskan jika nanti ClientPage membutuhkannya via props
-  // Tapi saat ini ClientPage masih menggunakan useParams()
-  return <ClientPage />;
+  return <ClientPage slug={slug} />;
 }
