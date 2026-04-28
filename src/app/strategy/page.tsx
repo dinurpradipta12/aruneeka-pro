@@ -1,16 +1,19 @@
 'use client';
+
 import React from 'react';
 import AruneekaShell from '@/components/AruneekaShell';
 import AruneekaKPI from '@/components/AruneekaKPI';
-
 import { useWorkspace } from '@/components/AruneekaShell';
 
 export default function StrategyPage({ 
-  selectedProfileId
+  searchParams 
 }: { 
-  selectedProfileId?: string
+  searchParams: Promise<{ profileId?: string }>;
 }) {
+  const resolvedSearchParams = React.use(searchParams);
+  const selectedProfileId = resolvedSearchParams.profileId;
   const { selectedWorkspaceId } = useWorkspace();
+  
   return (
     <AruneekaShell>
       <AruneekaKPI 
