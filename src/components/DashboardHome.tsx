@@ -113,6 +113,24 @@ const DashboardHome = ({
 
   useEffect(() => {
     fetchDashboardIntelligence();
+
+    if (selectedWorkspaceId) {
+       const channel = supabase.channel(`dashboard-realtime-${selectedWorkspaceId}`)
+         .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_content_plans', filter: `workspace_id=eq.${selectedWorkspaceId}` }, () => {
+            fetchDashboardIntelligence();
+         })
+         .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_kpi_targets', filter: `workspace_id=eq.${selectedWorkspaceId}` }, () => {
+            fetchDashboardIntelligence();
+         })
+         .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_strategy_checklist', filter: `workspace_id=eq.${selectedWorkspaceId}` }, () => {
+            fetchDashboardIntelligence();
+         })
+         .subscribe();
+       
+       return () => {
+          supabase.removeChannel(channel);
+       };
+    }
   }, [selectedProfileId, selectedWorkspaceId]);
 
   const platformIcons: any = {

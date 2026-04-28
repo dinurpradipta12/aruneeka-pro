@@ -331,10 +331,26 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
             if (dismissed === data.banner_message) {
                setIsDismissed(true);
+            } else {
+               setIsDismissed(false);
             }
          }
       };
       fetchGlobalSettings();
+
+      const channel = supabase.channel('global-settings-realtime')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'v2_agency_settings' }, (payload) => {
+           setSystemConfig(payload.new);
+           const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
+           if (dismissed !== payload.new.banner_message) {
+              setIsDismissed(false);
+           }
+        })
+        .subscribe();
+      
+      return () => {
+         supabase.removeChannel(channel);
+      };
    }, []);
 
    useEffect(() => {

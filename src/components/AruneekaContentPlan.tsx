@@ -152,7 +152,8 @@ const AruneekaContentPlan = ({
           .from('v2_agency_content_plans')
           .select('*')
           .eq('workspace_id', selectedWorkspaceId)
-          .order('due_date', { ascending: true });
+          .order('due_date', { ascending: true })
+          .limit(200);
         
         if (error) throw error;
         setInternalPlans(planData || []);
@@ -164,6 +165,24 @@ const AruneekaContentPlan = ({
     };
 
     fetchPlans();
+
+    // REALTIME LISTENER
+    if (selectedWorkspaceId && !(plans && plans.length > 0)) {
+       const channel = supabase.channel(`content-plan-realtime-${selectedWorkspaceId}`)
+         .on('postgres_changes', { 
+           event: '*', 
+           schema: 'public', 
+           table: 'v2_agency_content_plans', 
+           filter: `workspace_id=eq.${selectedWorkspaceId}` 
+         }, () => {
+           fetchPlans(); // Refresh on changes
+         })
+         .subscribe();
+       
+       return () => {
+         supabase.removeChannel(channel);
+       };
+    }
   }, [selectedWorkspaceId, plans]);
 
   const parseIndonesianDate = (dateStr: string) => {
