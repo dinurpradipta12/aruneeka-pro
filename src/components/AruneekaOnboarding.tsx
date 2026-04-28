@@ -419,7 +419,7 @@ const AruneekaOnboarding = () => {
                 </div>
 
                 <div className="bg-slate-50/50 rounded-[30px] p-8 border border-slate-100/50">
-                  <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-4">What's New?</p>
+                  <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-4">What&apos;s New?</p>
                   <div className="grid grid-cols-2 gap-6 text-left">
                     <div className="flex gap-3">
                       <div className="w-10 h-10 shrink-0 bg-white rounded-2xl flex items-center justify-center shadow-sm text-amethyst-primary"><Zap size={20} /></div>

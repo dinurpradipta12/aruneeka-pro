@@ -5,17 +5,12 @@ import {
   Lock, 
   User, 
   ChevronRight, 
-  Zap,
-  Layout,
   AlertCircle,
   Loader2,
-  Users,
-  TrendingUp,
   ChevronLeft,
   CheckCircle2,
   Check,
   ShieldCheck,
-  Plus,
   Palette
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

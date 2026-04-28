@@ -721,7 +721,7 @@ export default function AdminInboxPage() {
                   <div className="space-y-3">
                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">{confirmAction.title}</h3>
                      <p className="text-xs font-bold text-slate-400 leading-relaxed px-4 italic">
-                        "{confirmAction.description}"
+                        &quot;{confirmAction.description}&quot;
                      </p>
                   </div>
 

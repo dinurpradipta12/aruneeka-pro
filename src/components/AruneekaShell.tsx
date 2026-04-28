@@ -623,7 +623,32 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
         } catch (err: any) {
            showToast("Gagal hapus: " + err.message, 'error');
         }
-     };
+    };
+
+    const handleSaveMetrics = async (id: string, metrics: any) => {
+        try {
+          const { error } = await supabase
+            .from('v2_agency_content_plans')
+            .update({ 
+                metrics,
+                metrics_updated: true 
+            })
+            .eq('id', id);
+          
+          if (error) throw error;
+          
+          showToast("Statistik performa berhasil diperbarui!", 'success');
+          
+          if (selectedWorkspace?.id) {
+            sessionStorage.removeItem(`aruneeka_plans_cache_${selectedWorkspace.id}`);
+          }
+          window.dispatchEvent(new CustomEvent('aruneeka_refresh_content'));
+          return null;
+        } catch (error: any) {
+          showToast("Gagal simpan statistik: " + error.message, 'error');
+          return error;
+        }
+    };
 
    // --- NEW: PUBLIC SHARING LOGIC ---
    const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
@@ -1335,7 +1360,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                isOpen={isMetricsOpen}
                onClose={() => setIsMetricsOpen(false)}
                content={selectedContent}
-               workspaceId={selectedWorkspace?.id}
+               onSave={handleSaveMetrics}
             />
 
             <AruneekaConfirmModal 

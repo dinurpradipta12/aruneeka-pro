@@ -35,6 +35,7 @@ interface ContentDetailModalProps {
   onClose: () => void;
   content: any;
   onStatusChange?: (id: string, newStatus: string) => void;
+  onEdit?: () => void;
 }
 
 const statusConfig: any = {
@@ -53,7 +54,7 @@ const platformIcons: any = {
   facebook:  <img src="https://cdn.simpleicons.org/facebook/9d6fe8" className="w-4 h-4" alt="Facebook" />,
 };
 
-const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose, content, onStatusChange }) => {
+const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose, content, onStatusChange, onEdit }) => {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const metrics = content?.metrics || {};
@@ -260,9 +261,20 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
                       {content.due_date ? new Date(content.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : 'No date'}
                     </span>
                   </div>
-                  <button onClick={onClose} className="w-9 h-9 bg-slate-50 hover:bg-amethyst-light/30 rounded-xl flex items-center justify-center text-amethyst-primary transition-all">
-                    <X size={18}/>
-                  </button>
+                   <div className="flex items-center gap-2">
+                     {onEdit && (
+                       <button 
+                         onClick={onEdit}
+                         className="w-9 h-9 bg-slate-50 hover:bg-amethyst-light/30 rounded-xl flex items-center justify-center text-amethyst-primary transition-all"
+                         title="Edit Content"
+                       >
+                         <Sparkles size={16}/>
+                       </button>
+                     )}
+                     <button onClick={onClose} className="w-9 h-9 bg-slate-50 hover:bg-amethyst-light/30 rounded-xl flex items-center justify-center text-amethyst-primary transition-all">
+                       <X size={18}/>
+                     </button>
+                   </div>
                 </div>
 
                 {/* Scrollable Body */}

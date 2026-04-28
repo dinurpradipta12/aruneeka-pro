@@ -330,7 +330,7 @@ export const AruneekaWorkspaceSelector = ({
   };
 
   return (
-    <div className="h-screen bg-[#FDFCFE] flex flex-col items-center justify-start pt-28 pb-12 px-6 relative overflow-hidden overscroll-none">
+    <div className="min-h-screen bg-[#FDFCFE] flex flex-col items-center justify-start pt-28 pb-32 px-6 relative overflow-y-auto overflow-x-hidden">
       {/* Mesh Gradients Background - Fixed to viewport */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amethyst-primary/5 rounded-full blur-[130px]" />

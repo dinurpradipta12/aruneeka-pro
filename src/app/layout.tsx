@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
 };
 
-import ClientOnlyUpdateDetector from "@/components/ClientOnlyUpdateDetector";
+// import ClientOnlyUpdateDetector from "@/components/ClientOnlyUpdateDetector";
 
 export default function RootLayout({
   children,
