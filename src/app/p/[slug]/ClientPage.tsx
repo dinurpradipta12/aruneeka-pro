@@ -15,9 +15,9 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AruneekaKPI from '@/components/AruneekaKPI';
-import AruneekaContentPlan from '@/components/AruneekaContentPlan';
-import AruneekaAnalytics from '@/components/AruneekaAnalytics';
+// import AruneekaKPI from '@/components/AruneekaKPI';
+// import AruneekaContentPlan from '@/components/AruneekaContentPlan';
+// import AruneekaAnalytics from '@/components/AruneekaAnalytics';
 
 export default function PublicPreviewPage() {
   const params = useParams();
@@ -165,26 +165,20 @@ export default function PublicPreviewPage() {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'performance' && (
-              <AruneekaAnalytics 
-                isPublic={true} 
-                selectedWorkspaceId={workspace.id} 
-                subscriptionTier={ownerTier} 
-              />
+              <div className="p-20 text-center bg-white rounded-3xl border border-slate-100">
+                <p className="text-slate-400 font-bold">Analytics Component (Temporarily Disabled for Debugging)</p>
+                <p className="text-[10px] uppercase tracking-widest mt-2">{workspace.name} ID: {workspace.id}</p>
+              </div>
             )}
             {activeTab === 'content' && (
-              <AruneekaContentPlan 
-                isPublic={true} 
-                selectedWorkspaceId={workspace.id} 
-                subscriptionTier={ownerTier}
-                plans={[]} // Need to handle plans fetch if needed, but ContentPlan usually fetches itself if workspaceId is provided
-              />
+              <div className="p-20 text-center bg-white rounded-3xl border border-slate-100">
+                <p className="text-slate-400 font-bold">Content Plan Component (Temporarily Disabled for Debugging)</p>
+              </div>
             )}
             {activeTab === 'kpi' && (
-              <AruneekaKPI 
-                isPublic={true} 
-                selectedWorkspaceId={workspace.id} 
-                subscriptionTier={ownerTier}
-              />
+              <div className="p-20 text-center bg-white rounded-3xl border border-slate-100">
+                <p className="text-slate-400 font-bold">KPI Component (Temporarily Disabled for Debugging)</p>
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
