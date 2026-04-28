@@ -1,9 +1,12 @@
 import ClientPageWrapper from './ClientPageWrapper';
 
-export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
+// Mengelabui Cloudflare agar tidak memaksa Edge shim yang crash (bug next-on-pages)
+export function generateStaticParams() {
+  return [];
+}
 
 export default function Page() {
   return <ClientPageWrapper />;
 }
+
 
