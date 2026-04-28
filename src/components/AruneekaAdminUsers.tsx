@@ -293,8 +293,8 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
         .order('created_at', { ascending: false });
       
       if (data) {
-        setUsers(data.filter(u => u.status !== 'Pending'));
-        setPendingUsers(data.filter(u => u.status === 'Pending'));
+        setUsers(data.filter((u: any) => u.status !== 'Pending'));
+        setPendingUsers(data.filter((u: any) => u.status === 'Pending'));
       }
     } catch (e) {
       console.error("Fetch users error:", e);
@@ -381,7 +381,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
             .eq('workspace_id', wsId);
 
           if (squadMembers && squadMembers.length > 0) {
-            const memberIds = squadMembers.map(m => m.id);
+            const memberIds = squadMembers.map((m: any) => m.id);
             await supabase.from('v2_agency_inbox').delete().in('user_id', memberIds);
             await supabase.from('v2_agency_workspace_members').delete().in('user_id', memberIds);
           }
