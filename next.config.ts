@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  trailingSlash: false,
+  trailingSlash: true,
+  async rewrites() {
+    return [
+      {
+        source: '/version.json',
+        destination: '/api/version',
+      },
+    ];
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
