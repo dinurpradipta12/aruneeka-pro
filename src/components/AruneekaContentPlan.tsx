@@ -338,7 +338,7 @@ const AruneekaContentPlan = ({
   };
 
   const handleExportCSV = () => {
-    const exportData = filteredPlans.map(p => ({
+    const exportData = filteredPlans.map((p: any) => ({
       'Headline': p.title,
       'Pillar': p.content_pillar,
       'Platform': p.platform,
@@ -611,7 +611,7 @@ const AruneekaContentPlan = ({
 
       {/* Platform Filter Pills */}
       <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
-         {platforms.map(p => (
+         {platforms.map((p: any) => (
            <button
              key={p.id}
              onClick={() => setFilter(p.id)}
@@ -1089,7 +1089,7 @@ const AruneekaContentPlan = ({
               style={{ position: 'fixed', top: statusDropPos.top, left: statusDropPos.left, zIndex: 201 }}
               className="w-44 bg-white rounded-2xl shadow-2xl border border-amethyst-light/20 overflow-hidden py-1.5"
             >
-              {(['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded']).map(s => (
+              {(['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded']).map((s: any) => (
                 <button
                   key={s}
                   onClick={() => {

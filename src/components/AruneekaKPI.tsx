@@ -340,7 +340,7 @@ const AruneekaKPI = ({
         const user = userStr ? JSON.parse(userStr) : { id: null };
         const userId = user.id;
 
-        const newTargetRows = prevTargets.map(t => ({
+        const newTargetRows = prevTargets.map((t: any) => ({
           workspace_id: workspaceId,
           profile_id: t.profile_id,
           platform: t.platform,

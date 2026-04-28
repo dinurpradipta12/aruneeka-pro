@@ -293,7 +293,7 @@ const AruneekaAnalytics = ({
 
   const chartMax = useMemo(() => {
     const key = activeMetric.toLowerCase();
-    const vals = dailyMetrics.map(d => Number(d[key]));
+    const vals = dailyMetrics.map((d: any) => Number(d[key]));
     return Math.max(...vals, 10);
   }, [dailyMetrics, activeMetric]);
 
@@ -754,7 +754,7 @@ const AruneekaAnalytics = ({
                     {data.filter(p => p.status?.toLowerCase() === 'uploaded').sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((item, i) => {
                        const m = item.metrics || {};
                        const getV = (searchKeys: string[]) => {
-                         const normalizedSearches = searchKeys.map(k => k.replace(/[\s_.]/g, '').toLowerCase());
+                         const normalizedSearches = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
                          for (const dbKey in m) {
                            const normalizedDbKey = dbKey.replace(/[\s_.]/g, '').toLowerCase();
                            if (normalizedSearches.includes(normalizedDbKey)) {
@@ -881,7 +881,7 @@ const AruneekaAnalytics = ({
                     {(() => {
                        const m = selectedContent.metrics || {};
                        const get = (searchKeys: string[]) => {
-                         const ns = searchKeys.map(k => k.replace(/[\s_.]/g, '').toLowerCase());
+                         const ns = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
                          for (const k in m) if (ns.includes(k.replace(/[\s_.]/g, '').toLowerCase())) return Number(m[k]) || 0;
                          return 0;
                        };
@@ -1043,7 +1043,7 @@ const AruneekaAnalytics = ({
                                       if (!hasMetrics) return "Lengkapi data metrics untuk mendapatkan insight strategis.";
                                       
                                       const getV = (keys: string[]) => {
-                                        const ns = keys.map(k => k.replace(/[\s_.]/g, '').toLowerCase());
+                                        const ns = keys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
                                         for (const k in m) if (ns.includes(k.replace(/[\s_.]/g, '').toLowerCase())) return Number(m[k]) || 0;
                                         return 0;
                                       };
