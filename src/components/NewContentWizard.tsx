@@ -163,7 +163,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                          onChange={e => setFormData({...formData, content_pillar: e.target.value})}
                          className="w-full h-16 bg-slate-50 rounded-2xl px-6 text-sm font-black outline-none appearance-none cursor-pointer"
                        >
-                          {['Education', 'Entertainment', 'Sales', 'Personal Branding', 'Insight', 'Behind the scene'].map(p => (
+                          {['Education', 'Entertainment', 'Sales', 'Personal Branding', 'Insight', 'Behind the scene'].map((p: string) => (
                             <option key={p} value={p}>{p}</option>
                           ))}
                        </select>
@@ -175,7 +175,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                          onChange={e => setFormData({...formData, status: e.target.value})}
                          className="w-full h-16 bg-slate-50 rounded-2xl px-6 text-sm font-black outline-none appearance-none cursor-pointer"
                        >
-                          {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map(s => (
+                          {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map((s: string) => (
                             <option key={s} value={s}>{s}</option>
                           ))}
                        </select>
@@ -203,7 +203,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                           <AnimatePresence>
                              {isAccountOpen && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute z-50 top-20 left-0 w-full bg-white rounded-3xl shadow-2xl border border-slate-50 p-3 max-h-60 overflow-y-auto">
-                                   {profiles.map(p => (
+                                   {profiles.map((p: any) => (
                                       <button key={p.id} onClick={() => handleAccountChange(p.id)} className="w-full p-4 rounded-xl flex items-center gap-3 hover:bg-slate-50 transition-all text-left">
                                          <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">{platformIcons[p.platform?.toLowerCase()]}</div>
                                          <div className="flex flex-col">
@@ -231,7 +231,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                     {[{ id: 'script_link', label: 'Script Link', icon: <FileText size={14}/>, color: 'text-amber-500' },
                       { id: 'content_link', label: 'Production Link (RAW)', icon: <Video size={14}/>, color: 'text-blue-500' },
                       { id: 'post_link', label: 'Final URL (IG/TT)', icon: <LinkIcon size={14}/>, color: 'text-rose-500' }
-                    ].map(field => (
+                    ].map((field: any) => (
                        <div key={field.id} className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{field.label}</label>
                           <div className="relative group">
