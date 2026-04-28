@@ -598,30 +598,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       }
    };
 
-   const resetPublicLink = async () => {
-      if (!selectedWorkspace || !confirm("Generating a new link will break the old one. Continue?")) return;
-      setIsSavingShare(true);
-      try {
-         const newSlug = Math.random().toString(36).substring(2, 12);
-         const { error } = await supabase
-            .from('v2_agency_workspaces')
-            .update({ public_slug: newSlug })
-            .eq('id', selectedWorkspace.id);
 
-         if (error) throw error;
-         
-         setPublicSlug(newSlug);
-         const updatedWs = { ...selectedWorkspace, public_slug: newSlug };
-         setSelectedWorkspace(updatedWs);
-         localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(updatedWs));
-      } catch (e: any) {
-         showToast("Gagal reset link: " + e.message, 'error');
-      } finally {
-         setIsSavingShare(false);
-      }
-   };
-
-   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${publicSlug}` : '';
 
    return (
       <WorkspaceContext.Provider value={{ 
@@ -827,8 +804,6 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                   </div>
                   <div className="relative z-50 flex flex-col items-end gap-10">
                      <div className="relative">
-                        <motion.button 
-                          id="tour-share-highlights" 
                           whileHover={{ scale: 1.02, y: -2 }} 
                           whileTap={{ scale: 0.98 }} 
                           onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)} 
