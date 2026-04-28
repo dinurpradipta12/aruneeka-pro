@@ -99,8 +99,8 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'v2_agency_users', filter: `id=eq.${user?.id}` },
-          (payload) => {
-             const updatedUser = payload.new as any;
+          (payload: any) => {
+            const updatedUser = payload.new as any;
              console.log("Realtime Profile Update:", updatedUser);
 
              // If tier changed to something higher than free, show celebration!
@@ -385,7 +385,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                table: "v2_agency_users",
                filter: `id=eq.${trackingUserId}`
              },
-             (payload) => {
+             (payload: any) => {
                const oldTier = subscriptionTier;
                const newTier = payload.new.subscription_tier;
                
@@ -424,7 +424,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
             // 2. Setup Realtime
             adminChannel = supabase.channel('system-admin-alerts')
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload) => {
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload: any) => {
                  if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
                     setPendingUsersCount(prev => prev + 1);
                     setLastNotification({ type: 'user', message: 'Ada User baru butuh verifikasi!' });
@@ -433,7 +433,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                     fetchAdminCounts(); // Refresh on updates to be sure
                  }
               })
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload) => {
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload: any) => {
                  if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
                     setPendingInboxCount(prev => prev + 1);
                     setLastNotification({ type: 'inbox', message: 'Permintaan perpanjangan / upgrade baru!' });
