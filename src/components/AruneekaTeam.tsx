@@ -80,7 +80,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
         .eq('workspace_id', selectedWorkspaceId);
 
       if (data) {
-        const processed = data.map(m => ({
+        const processed = data.map((m: any) => ({
           ...m.v2_agency_users,
           role: m.role,
           ...parsePackedRole(m.v2_agency_users)
@@ -149,7 +149,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
     if (id === currentUser?.id) { showPopup("Aksi Ditolak", "Anda tidak bisa menghapus diri sendiri!", () => { }, "danger", "Oke"); return; }
     showPopup('Hapus Personel', `Apakah Anda yakin ingin menghapus ${name}?`, async () => {
       try {
-        setMembers(prev => prev.filter(m => m.id !== id));
+        setMembers((prev: any[]) => prev.filter((m: any) => m.id !== id));
         setPopup(p => ({ ...p, isOpen: false }));
         await supabase.from('v2_agency_users').delete().eq('id', id);
       } catch (e) { console.error(e); }
@@ -176,7 +176,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
         .select('workspace_id')
         .eq('username', adminUsername);
 
-      const adminWsIds = (adminRecords?.map(r => r.workspace_id) || []).filter(id => id);
+      const adminWsIds = (adminRecords?.map((r: any) => r.workspace_id) || []).filter((id: any) => id);
 
       // 2. Fetch those workspaces
       let wsData: any[] = [];
@@ -196,7 +196,7 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
         .eq('username', member.username);
 
       if (wsData) setAllWorkspaces(wsData);
-      if (accessData) setMemberAccess(accessData.map(a => a.workspace_id));
+      if (accessData) setMemberAccess(accessData.map((a: any) => a.workspace_id));
 
       setIsAccessModalOpen(true);
     } catch (e) {
@@ -253,14 +253,14 @@ const AruneekaTeam = ({ selectedWorkspaceId }: { selectedWorkspaceId?: string })
           .eq('username', editingMember.username)
           .eq('workspace_id', workspaceId);
 
-        setMemberAccess(prev => prev.filter(id => id !== workspaceId));
+        setMemberAccess((prev: any[]) => prev.filter((id: string) => id !== workspaceId));
       }
     } catch (e: any) {
       alert("Gagal update akses: " + e.message);
     }
   };
 
-  const filteredMembers = members.filter(m => m.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || m.username?.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredMembers = members.filter((m: any) => m.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || m.username?.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const getRoleIcon = (role: string) => {
     switch (role) {
