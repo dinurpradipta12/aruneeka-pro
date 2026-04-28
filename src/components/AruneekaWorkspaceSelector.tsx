@@ -143,11 +143,11 @@ export const AruneekaWorkspaceSelector = ({
      const channel = supabase.channel('admin-selector-realtime-' + Math.random().toString(36).substr(2, 9))
        .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload: any) => {
           supabase.from('v2_agency_users').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
-            .then(({ count }) => setPendingUsersCount(count || 0));
+            .then(({ count }: any) => setPendingUsersCount(count || 0));
        })
        .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload: any) => {
           supabase.from('v2_agency_inbox').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
-            .then(({ count }) => setPendingInboxCount(count || 0));
+            .then(({ count }: any) => setPendingInboxCount(count || 0));
        })
        .subscribe();
 

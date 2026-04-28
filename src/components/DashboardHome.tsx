@@ -101,7 +101,7 @@ const DashboardHome = ({
         strategyCompletion: strategyProgress,
         activeProfiles: profileResponse.count || 0
       });
-      setStatusDistribution(Object.entries(statusCounts).map(([name, value]) => ({ name, value: value as number })));
+      setStatusDistribution(Object.entries(statusCounts).map(([name, value]: [string, any]) => ({ name, value: value as number })));
       setNextToPost(closestContent);
       setRecentOutput(recentResponse.data || []);
     } catch (e) {
@@ -139,7 +139,7 @@ const DashboardHome = ({
           { label: 'Strategy Milestone', value: `${stats.strategyCompletion}%`, sub: 'Checklist completion', icon: <CheckCircle2/>, color: 'text-amethyst-primary', bg: 'bg-amethyst-light/20' },
           { label: 'Production Volume', value: stats.totalContent, sub: 'Total content units', icon: <Layers/>, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Account Matrix', value: stats.activeProfiles, sub: 'Connected profiles', icon: <TrendingUp/>, color: 'text-orange-600', bg: 'bg-orange-50' },
-        ].map((item, i) => (
+        ].map((item: any, i: number) => (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} key={i} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all relative overflow-hidden">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${item.bg} ${item.color} group-hover:scale-110 transition-transform`}>{item.icon}</div>
             <div>
@@ -212,7 +212,7 @@ const DashboardHome = ({
                     <Layers size={18} className="text-slate-200"/>
                  </div>
                  <div className="flex-1 space-y-4">
-                    {statusDistribution.map((item, i) => (
+                    {statusDistribution.map((item: any, i: number) => (
                       <div key={i} className="space-y-1.5">
                          <div className="flex items-center justify-between text-[10px] font-black">
                             <span className="text-slate-400">{item.name}</span>
@@ -243,7 +243,7 @@ const DashboardHome = ({
             <button onClick={() => window.location.href = '/content'} className="text-[10px] font-black uppercase text-amethyst-primary tracking-widest hover:underline px-4">View All Plans</button>
          </div>
          <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 scrollbar-hide">
-            {recentOutput.length > 0 ? recentOutput.map((item, i) => (
+            {recentOutput.length > 0 ? recentOutput.map((item: any, i: number) => (
                <motion.div 
                  initial={{ opacity: 0, x: 20 }} 
                  animate={{ opacity: 1, x: 0 }} 

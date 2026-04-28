@@ -48,22 +48,22 @@ const AruneekaCalendar = ({ contentPlans = [], onSelectContent }: { contentPlans
        </div>
 
        <div className="grid grid-cols-7 border-b border-emerald-50 bg-slate-50/30">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d: string) => (
             <div key={d} className="py-4 text-center text-[10px] font-black text-emerald-300 tracking-widest uppercase">{d}</div>
           ))}
        </div>
 
        <div className="grid grid-cols-7 auto-rows-[160px]">
-          {days.map((day, i) => (
+          {days.map((day: any, i: number) => (
             <div key={i} className={`p-4 border-r border-b border-emerald-50 relative group hover:bg-emerald-50 transition-all ${!day ? 'bg-slate-50/10' : ''}`}>
                {day && (
                  <div className="space-y-3">
                     <span className="text-sm font-black text-slate-300 group-hover:text-emerald-600 transition-colors">{day}</span>
                     <div className="space-y-2">
                        {contentPlans
-                         .filter(p => p.due_date && new Date(p.due_date).getDate() === day && new Date(p.due_date).getMonth() === currentDate.getMonth())
+                         .filter((p: ContentPlan) => p.due_date && new Date(p.due_date).getDate() === day && new Date(p.due_date).getMonth() === currentDate.getMonth())
                          .slice(0, 3)
-                         .map((p, idx) => (
+                         .map((p: ContentPlan, idx: number) => (
                           <motion.div 
                             initial={{ opacity: 0, x: -5 }}
                             animate={{ opacity: 1, x: 0 }}

@@ -134,7 +134,7 @@ const AruneekaUpgradeModal = ({ isOpen, onClose, user }: AruneekaUpgradeModalPro
                   ) : paymentStep === 'select' ? (
                     <motion.div key="select" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {availablePackages.map((pkg) => (
+                        {availablePackages.map((pkg: any) => (
                           <div 
                             key={pkg.id} 
                             onClick={() => setSelectedPkg(pkg)}
@@ -164,7 +164,7 @@ const AruneekaUpgradeModal = ({ isOpen, onClose, user }: AruneekaUpgradeModalPro
                                   } catch (e) {
                                     list = [];
                                   }
-                                  return list.slice(0, 5).map((feature, idx) => (
+                                  return list.slice(0, 5).map((feature: string, idx: number) => (
                                     <div key={idx} className="flex items-start gap-2.5">
                                       <div className="mt-1 w-3.5 h-3.5 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
                                         <Check size={8} strokeWidth={4}/>

@@ -105,7 +105,7 @@ const AruneekaAdminAppearance = () => {
           if (oldPath) {
             await supabase.storage.from('agency-assets').remove([oldPath]);
           }
-        } catch (e) {}
+        } catch (e: any) {}
       }
 
       // 2. Upload gambar baru

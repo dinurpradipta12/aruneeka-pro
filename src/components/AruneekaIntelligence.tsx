@@ -34,7 +34,7 @@ const AruneekaIntelligence = ({ selectedWorkspaceId }: AruneekaIntelligenceProps
           </div>
 
           <div className="space-y-6">
-             {workflow.map((s, i) => (
+             {workflow.map((s: any, i: number) => (
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -79,7 +79,7 @@ const AruneekaIntelligence = ({ selectedWorkspaceId }: AruneekaIntelligenceProps
                      "Real-time Intelligence Syncing",
                      "Automated Brand Voice Shield",
                      "Multi-Channel Kinetic Guard"
-                   ].map((text, i) => (
+                   ].map((text: string, i: number) => (
                      <div key={i} className="flex items-center gap-6 group">
                        <div className="w-3 h-3 rounded-full bg-purple-600 shadow-[0_0_15px_rgba(139,92,246,0.5)] group-hover:scale-150 transition-transform"/>
                        <p className="text-lg font-black italic tracking-tight text-white/90 group-hover:text-white transition-colors">{text}</p>

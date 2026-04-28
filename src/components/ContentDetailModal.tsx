@@ -165,7 +165,7 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
 
                 {/* Metric Cards */}
                 <div className="space-y-3">
-                  {platformCards.map((m, i) => (
+                  {platformCards.map((m: any, i: number) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -10 }}
@@ -231,7 +231,7 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
                               exit={{ opacity: 0, y: -8 }}
                               className="absolute top-full left-0 mt-2 w-44 bg-white rounded-2xl shadow-xl border border-amethyst-light/20 overflow-hidden z-[111] py-1.5"
                             >
-                              {Object.entries(statusConfig).map(([key, cfg]: any) => (
+                              {Object.entries(statusConfig).map(([key, cfg]: [string, any]) => (
                                 <button
                                   key={key}
                                   onClick={() => {
@@ -282,7 +282,7 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
                   <div className="space-y-3">
                     <h4 className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Production Progress</h4>
                     <div className="flex items-center gap-0">
-                      {workflow.map((step, i) => (
+                      {workflow.map((step: any, i: number) => (
                         <React.Fragment key={i}>
                           <div className="flex flex-col items-center gap-1.5">
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${step.done ? 'bg-amethyst-dark' : 'bg-slate-100'}`}>
@@ -311,7 +311,7 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
                         { label: 'Script', url: content.script_link, icon: <FileText size={16}/>, color: 'text-blue-500 bg-blue-50' },
                         { label: 'File/Content', url: content.content_link, icon: <Video size={16}/>, color: 'text-amethyst-primary bg-amethyst-light/30' },
                         { label: 'Live Post', url: content.post_link, icon: <ExternalLink size={16}/>, color: 'text-emerald-500 bg-emerald-50' },
-                      ].map((item, i) => (
+                      ].map((item: any, i: number) => (
                         item.url ? (
                           <a
                             key={i}
