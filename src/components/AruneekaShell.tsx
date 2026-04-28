@@ -99,8 +99,8 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'v2_agency_users', filter: `id=eq.${user?.id}` },
-          (payload: any) => {
-            const updatedUser = payload.new as any;
+          (payload) => {
+             const updatedUser = payload.new as any;
              console.log("Realtime Profile Update:", updatedUser);
 
              // If tier changed to something higher than free, show celebration!
@@ -235,39 +235,6 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [systemConfig, setSystemConfig] = useState<any>(null);
    const [isDismissed, setIsDismissed] = useState(false);
 
-   const handleSaveProfile = async () => {
-      if (!user?.id) return;
-      setIsSavingProfile(true);
-      try {
-         const updates: any = {
-            full_name: editForm.fullName,
-            avatar_url: editForm.avatar,
-            theme_color: `${editForm.displayRole}::${editForm.systemRole || user.role || 'Member'}`
-         };
-         if (editForm.password) {
-            updates.password = editForm.password;
-         }
-         
-         const { data, error } = await supabase
-            .from('v2_agency_users')
-            .update(updates)
-            .eq('id', user.id)
-            .select()
-            .single();
-            
-         if (error) throw error;
-         
-         setUser(data);
-         localStorage.setItem('aruneeka_user', JSON.stringify(data));
-         showToast('Persona updated successfully!', 'success');
-         setIsEditorOpen(false);
-      } catch (err: any) {
-         showToast('Failed to update persona: ' + err.message, 'error');
-      } finally {
-         setIsSavingProfile(false);
-      }
-   };
-
    const avatars = Array.from({ length: 12 }, (_, i) => `/assets/avatars/avatar${i + 1}.svg`);
 
    const parseRoles = (u: any) => {
@@ -360,14 +327,11 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             .maybeSingle();
 
          if (data) {
-            console.log("[Shell] Global Settings loaded:", data);
             setSystemConfig(data);
             const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
             if (dismissed === data.banner_message) {
                setIsDismissed(true);
             }
-         } else {
-            console.log("[Shell] No Global Settings found in v2_agency_settings");
          }
       };
       fetchGlobalSettings();
@@ -388,7 +352,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                table: "v2_agency_users",
                filter: `id=eq.${trackingUserId}`
              },
-             (payload: any) => {
+             (payload) => {
                const oldTier = subscriptionTier;
                const newTier = payload.new.subscription_tier;
                
@@ -427,7 +391,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
             // 2. Setup Realtime
             adminChannel = supabase.channel('system-admin-alerts')
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload: any) => {
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload) => {
                  if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
                     setPendingUsersCount(prev => prev + 1);
                     setLastNotification({ type: 'user', message: 'Ada User baru butuh verifikasi!' });
@@ -436,7 +400,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                     fetchAdminCounts(); // Refresh on updates to be sure
                  }
               })
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload: any) => {
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload) => {
                  if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
                     setPendingInboxCount(prev => prev + 1);
                     setLastNotification({ type: 'inbox', message: 'Permintaan perpanjangan / upgrade baru!' });
@@ -478,7 +442,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       if (profiles.length > 0) {
          const cachedProfileId = localStorage.getItem("aruneeka_selected_profile_id");
          if (cachedProfileId) {
-            const found = profiles.find((p: any) => p.id === cachedProfileId);
+            const found = profiles.find(p => p.id === cachedProfileId);
             if (found) setSelectedProfile(found);
          }
       }
@@ -598,7 +562,30 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       }
    };
 
+   const resetPublicLink = async () => {
+      if (!selectedWorkspace || !confirm("Generating a new link will break the old one. Continue?")) return;
+      setIsSavingShare(true);
+      try {
+         const newSlug = Math.random().toString(36).substring(2, 12);
+         const { error } = await supabase
+            .from('v2_agency_workspaces')
+            .update({ public_slug: newSlug })
+            .eq('id', selectedWorkspace.id);
 
+         if (error) throw error;
+         
+         setPublicSlug(newSlug);
+         const updatedWs = { ...selectedWorkspace, public_slug: newSlug };
+         setSelectedWorkspace(updatedWs);
+         localStorage.setItem('aruneeka_selected_workspace', JSON.stringify(updatedWs));
+      } catch (e: any) {
+         showToast("Gagal reset link: " + e.message, 'error');
+      } finally {
+         setIsSavingShare(false);
+      }
+   };
+
+   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${publicSlug}` : '';
 
    return (
       <WorkspaceContext.Provider value={{ 
@@ -804,6 +791,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                   </div>
                   <div className="relative z-50 flex flex-col items-end gap-10">
                      <div className="relative">
+                        <motion.button 
+                          id="tour-share-highlights" 
                           whileHover={{ scale: 1.02, y: -2 }} 
                           whileTap={{ scale: 0.98 }} 
                           onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)} 
@@ -896,7 +885,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              <div className="px-6 md:px-8 max-w-[1600px] mx-auto mt-4 relative z-20 hidden md:flex flex-col md:flex-row items-center justify-center gap-6">
                 <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
                    <div className="flex items-center gap-1">
-                      {navItems.map((item: any) => (
+                      {navItems.map((item) => (
                          <Link 
                            key={item.href} 
                            href={item.href} 
@@ -913,7 +902,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                 {['Superuser', 'developer'].includes(user?.role) && (
                    <nav className="bg-slate-900/5 backdrop-blur-lg border border-slate-200/50 rounded-2xl p-1.5 inline-flex items-center">
                       <div className="flex items-center gap-1">
-                         {adminItems.map((item: any) => {
+                         {adminItems.map((item) => {
                             const isUserAdmin = item.href === '/admin/users';
                             const isStyling = item.href === '/admin/appearance';
                             const count = isUserAdmin ? pendingUsersCount : (isStyling ? 0 : pendingInboxCount);
@@ -981,7 +970,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              </div>
 
             <main className="px-4 md:px-8 max-w-[1600px] mx-auto mt-6 md:mt-10 pb-32 md:pb-0">
-               {React.Children.map(children, (child: any) => React.isValidElement(child) ? React.cloneElement(child as any, { 
+               {React.Children.map(children, child => React.isValidElement(child) ? React.cloneElement(child as any, { 
                   selectedProfileId: selectedProfile?.id, 
                   selectedWorkspaceId: selectedWorkspace?.id,
                   subscriptionTier
@@ -994,7 +983,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white w-full max-w-4xl rounded-[50px] shadow-2xl overflow-hidden flex flex-col md:flex-row shadow-black/20">
                         <div className="md:w-1/3 p-10 bg-slate-50 border-r border-slate-100 flex flex-col gap-10">
                            <div className="space-y-4"><h3 className="text-2xl font-black tracking-tight">Identity studio</h3><p className="text-[10px] text-slate-400 font-bold">Select persona</p></div>
-                           <div className="grid grid-cols-3 gap-3">{avatars.map((url: string) => (<button key={url} onClick={() => setEditForm(prev => ({ ...prev, avatar: url }))} className={`aspect-square rounded-2xl p-2 transition-all ${editForm.avatar === url ? 'bg-amethyst-primary ring-4 ring-amethyst-light/30' : 'bg-white hover:bg-slate-100'}`}><img src={url} alt="Avatar" className="w-full h-full object-contain" /></button>))}</div>
+                           <div className="grid grid-cols-3 gap-3">{avatars.map(url => (<button key={url} onClick={() => setEditForm(prev => ({ ...prev, avatar: url }))} className={`aspect-square rounded-2xl p-2 transition-all ${editForm.avatar === url ? 'bg-amethyst-primary ring-4 ring-amethyst-light/30' : 'bg-white hover:bg-slate-100'}`}><img src={url} alt="Avatar" className="w-full h-full object-contain" /></button>))}</div>
                         </div>
                         <div className="flex-1 p-12 space-y-8 overflow-y-auto max-h-[85vh]">
                            <div className="grid grid-cols-2 gap-6">
