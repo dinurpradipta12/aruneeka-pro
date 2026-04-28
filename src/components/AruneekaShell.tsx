@@ -360,11 +360,14 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             .maybeSingle();
 
          if (data) {
+            console.log("[Shell] Global Settings loaded:", data);
             setSystemConfig(data);
             const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
             if (dismissed === data.banner_message) {
                setIsDismissed(true);
             }
+         } else {
+            console.log("[Shell] No Global Settings found in v2_agency_settings");
          }
       };
       fetchGlobalSettings();

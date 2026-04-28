@@ -22,17 +22,23 @@ const AruneekaUpdateDetector = () => {
         const savedVersion = localStorage.getItem('aruneeka_app_version');
         
         console.log(`[Version Check] Server: ${serverVersion}, Local: ${savedVersion}`);
+        
+        if (!serverVersion) {
+            console.warn("[Version Check] Server version is empty");
+            return;
+        }
 
         // 2. Performance-safe comparison
         if (!savedVersion) {
-            // Initial visit: establish baseline
+            console.log("[Version Check] Initializing local version");
             localStorage.setItem('aruneeka_app_version', serverVersion);
             setCurrentVersion(serverVersion);
         } else if (savedVersion !== serverVersion) {
-            // Version mismatch detected!
+            console.log("[Version Check] Update detected! Showing banner.");
             setHasUpdate(true);
             setCurrentVersion(serverVersion);
         } else {
+            console.log("[Version Check] App is up to date");
             setCurrentVersion(serverVersion);
         }
       } catch (e) {
