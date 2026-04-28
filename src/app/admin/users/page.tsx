@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import AruneekaAdminUsers from '@/components/AruneekaAdminUsers';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';

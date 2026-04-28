@@ -11,8 +11,8 @@ const AruneekaUpdateDetector = () => {
   useEffect(() => {
     const checkVersion = async () => {
       try {
-        const res = await fetch('/version.json?t=' + Date.now());
-        if (!res.ok) return;
+        const res = await fetch('/api/version?t=' + Date.now());
+        if (!res.ok) throw new Error("API Route failed");
         const data = await res.json();
         const serverVersion = data.version?.toString();
         

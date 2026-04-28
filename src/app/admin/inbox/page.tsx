@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Mail, CheckCircle2, XCircle, Clock, Package, MoreVertical, CreditCard, Trash2, Copy } from 'lucide-react';
