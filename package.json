@@ -1,10 +1,10 @@
 {
   "name": "aruneeka-pro",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "mkdir -p public && echo \"{\\\"version\\\": \\\"0.2.6\\\"}\" > public/version.json && next build",
+    "build": "mkdir -p public && echo \"{\\\"version\\\": \\\"0.2.8\\\"}\" > public/version.json && next build",
     "start": "next start",
     "lint": "eslint"
   },
