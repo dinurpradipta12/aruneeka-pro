@@ -26,8 +26,7 @@ export const metadata: Metadata = {
   },
 };
 
-import dynamic from "next/dynamic";
-const AruneekaUpdateDetector = dynamic(() => import("@/components/AruneekaUpdateDetector"), { ssr: false });
+import ClientOnlyUpdateDetector from "@/components/ClientOnlyUpdateDetector";
 
 export default function RootLayout({
   children,
@@ -41,7 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}
-        <AruneekaUpdateDetector />
+        <ClientOnlyUpdateDetector />
       </body>
     </html>
   );
