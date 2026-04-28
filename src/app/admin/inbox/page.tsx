@@ -310,7 +310,7 @@ export default function AdminInboxPage() {
                </div>
 
                <div className="grid grid-cols-1 gap-4">
-                  {messages.map((msg) => (
+                  {messages.map((msg: any) => (
                     <div key={msg.id} className="bg-white border border-slate-100 rounded-[32px] p-8 flex items-center justify-between group hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
                        <div className="flex items-center gap-6">
                           <div className="w-14 h-14 bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-100 shadow-inner">
@@ -416,7 +416,7 @@ export default function AdminInboxPage() {
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {packages.map((pkg) => (
+                  {packages.map((pkg: any) => (
                     <div key={pkg.id} className="bg-white border border-slate-100 rounded-[48px] p-10 flex flex-col justify-between group hover:border-amethyst-primary/30 hover:shadow-2xl hover:shadow-amethyst-primary/10 transition-all duration-700 relative overflow-hidden">
                        <div className="absolute top-0 right-0 w-32 h-32 bg-amethyst-light/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                        

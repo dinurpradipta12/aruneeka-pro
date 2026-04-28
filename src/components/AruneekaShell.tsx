@@ -918,7 +918,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              <div className="px-6 md:px-8 max-w-[1600px] mx-auto mt-4 relative z-20 hidden md:flex flex-col md:flex-row items-center justify-center gap-6">
                 <nav className="bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl p-1.5 inline-flex items-center shadow-xl shadow-amethyst-primary/5">
                    <div className="flex items-center gap-1">
-                      {navItems.map((item) => (
+                      {navItems.map((item: any) => (
                          <Link 
                            key={item.href} 
                            href={item.href} 

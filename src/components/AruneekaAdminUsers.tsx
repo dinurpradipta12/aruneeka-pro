@@ -511,7 +511,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                   });
 
                   // Ensure we have at least 2 points for a line
-                  const result = Object.entries(periods).map(([name, value]) => ({ name, value }));
+                  const result = Object.entries(periods).map(([name, value]: [string, any]) => ({ name, value }));
                   if (result.length === 1) {
                      return [{ name: '', value: 0 }, ...result];
                   }
