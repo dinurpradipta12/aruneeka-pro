@@ -1,19 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import ClientPage from './ClientPage';
+import dynamic from 'next/dynamic';
+
+// next/dynamic + ssr:false VALID di Client Component (bukan Server Component)
+// Edge server hanya render null → browser yang load seluruh UI
+const ClientPage = dynamic(() => import('./ClientPage'), { ssr: false });
 
 export default function ClientPageWrapper() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="min-h-screen bg-slate-50" />;
-  }
-
   return <ClientPage />;
 }
-
