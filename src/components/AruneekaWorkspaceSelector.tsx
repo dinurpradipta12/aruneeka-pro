@@ -4,6 +4,7 @@ import { Building2, Plus, ArrowRight, Layout, Trash2, Settings, Users, Utensils,
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import AruneekaUpgradeModal from './AruneekaUpgradeModal';
+import AruneekaConfirmModal from './AruneekaConfirmModal';
 
 interface Workspace {
   id: string;
@@ -38,6 +39,10 @@ export const AruneekaWorkspaceSelector = ({
   const [showInviteSuccess, setShowInviteSuccess] = useState(false);
   const [lastInvitedUser, setLastInvitedUser] = useState<any>(null);
   const [userDeleting, setUserDeleting] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean, workspaceId: string | null }>({
+    isOpen: false,
+    workspaceId: null
+  });
 
   // Administrative Realtime States
   const [pendingUsersCount, setPendingUsersCount] = useState(0);
@@ -220,13 +225,19 @@ export const AruneekaWorkspaceSelector = ({
     }
   };
 
-  const handleDeleteWorkspace = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteWorkspace = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("Hapus brand ini? Semua data konten di dalamnya akan hilang permanen.")) return;
+    setDeleteConfirm({ isOpen: true, workspaceId: id });
+  };
+
+  const executeDeleteWorkspace = async () => {
+    const id = deleteConfirm.workspaceId;
+    if (!id) return;
     try {
       const { error } = await supabase.from('v2_agency_workspaces').delete().eq('id', id);
       if (error) throw error;
       fetchWorkspaces();
+      setDeleteConfirm({ isOpen: false, workspaceId: null });
     } catch (e) { alert("Gagal menghapus brand"); }
   };
 
@@ -1050,6 +1061,17 @@ export const AruneekaWorkspaceSelector = ({
           </div>
         )}
       </AnimatePresence>
+      
+      <AruneekaConfirmModal 
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, workspaceId: null })}
+        onConfirm={executeDeleteWorkspace}
+        title="Hapus Brand?"
+        message="Semua data konten di dalamnya akan hilang permanen. Tindakan ini tidak dapat dibatalkan."
+        type="danger"
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+      />
     </div>
   );
 };
