@@ -40,11 +40,19 @@ const platformIcons: any = {
 const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, onSave, editData, selectedWorkspaceId, selectedProfileId }) => {
   const [profiles, setProfiles] = useState<any[]>([]);
   
+  const platformFormats: any = {
+    instagram: ['Carousel', 'Single Feeds', 'Reels', 'Story', 'Instagram Ads'],
+    tiktok: ['Carousel', 'Tiktok Video', 'Tiktok Ads', 'Story'],
+    threads: ['Long Threads', 'Single Threads'],
+    linkedin: ['Linkedin Post', 'Linkedin Carousel'],
+  };
+
   const defaultValues = {
     title: '',
     headline: '',
     description: '',
     platform: '',
+    content_format: '',
     content_pillar: 'Education',
     target_account: '',
     status: 'Draft',
@@ -56,6 +64,7 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
 
   const [formData, setFormData] = useState(defaultValues);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isFormatCustom, setIsFormatCustom] = useState(false);
 
   const fetchProfiles = async () => {
     try {
@@ -89,12 +98,18 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (editData && isOpen) {
+      const platform = editData.platform?.toLowerCase() || '';
+      const formats = platformFormats[platform] || [];
+      const isCustom = editData.content_format && !formats.includes(editData.content_format);
+      
+      setIsFormatCustom(isCustom);
       setFormData({
         ...defaultValues,
         ...editData,
         title: editData.title || '',
         headline: editData.headline || editData.title || '',
         description: editData.description || '',
+        content_format: editData.content_format || '',
         script_link: editData.script_link || '',
         content_link: editData.content_link || '',
         post_link: editData.post_link || '',
@@ -115,22 +130,28 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
       setFormData({
         ...defaultValues,
         target_account: initialTarget,
-        platform: initialPlatform
+        platform: initialPlatform,
+        content_format: ''
       });
+      setIsFormatCustom(false);
     }
   }, [editData, isOpen, selectedProfileId, profiles]);
 
   const handleAccountChange = (id: string) => {
     const selected = profiles.find(p => p.id === id);
+    const newPlatform = selected?.platform?.toLowerCase() || '';
     setFormData({
       ...formData,
       target_account: id,
-      platform: selected?.platform || ''
+      platform: newPlatform,
+      content_format: '' // Reset format when platform changes
     });
+    setIsFormatCustom(false);
     setIsAccountOpen(false);
   };
 
   const selectedAccount = profiles.find(p => p.id === formData.target_account);
+  const currentFormats = formData.platform ? (platformFormats[formData.platform.toLowerCase()] || []) : [];
 
   if (!isOpen) return null;
 
@@ -230,6 +251,56 @@ const NewContentWizard: React.FC<NewContentWizardProps> = ({ isOpen, onClose, on
                  </div>
 
                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                       <div className="space-y-3 col-span-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Content Format</label>
+                          <div className="flex gap-4">
+                             {isFormatCustom || currentFormats.length === 0 ? (
+                                <div className="flex-1 relative group">
+                                   <input 
+                                     value={formData.content_format} 
+                                     onChange={e => setFormData({...formData, content_format: e.target.value})} 
+                                     placeholder="Custom format (e.g. Webinar, Blog...)" 
+                                     className="w-full h-16 bg-slate-50 border-none rounded-2xl pl-14 pr-6 text-xs font-bold outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" 
+                                   />
+                                   <div className="absolute left-5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white shadow-sm border border-slate-50 text-amethyst-primary"><Layers size={14}/></div>
+                                   {currentFormats.length > 0 && (
+                                      <button 
+                                         onClick={() => { setIsFormatCustom(false); setFormData({...formData, content_format: ''}); }}
+                                         className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-amethyst-primary uppercase tracking-widest hover:underline"
+                                      >
+                                         Use Preset
+                                      </button>
+                                   )}
+                                </div>
+                             ) : (
+                                <div className="flex-1 relative">
+                                   <select 
+                                     value={formData.content_format} 
+                                     onChange={e => {
+                                        if (e.target.value === 'custom') {
+                                           setIsFormatCustom(true);
+                                           setFormData({...formData, content_format: ''});
+                                        } else {
+                                           setFormData({...formData, content_format: e.target.value});
+                                        }
+                                     }}
+                                     className="w-full h-16 bg-slate-50 rounded-2xl pl-14 pr-12 text-sm font-black outline-none appearance-none cursor-pointer"
+                                   >
+                                      <option value="">Select Format</option>
+                                      {currentFormats.map((f: string) => (
+                                        <option key={f} value={f}>{f}</option>
+                                      ))}
+                                      <option value="custom">+ Lainnya (Custom)</option>
+                                   </select>
+                                   <div className="absolute left-5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white shadow-sm border border-slate-50 text-amethyst-primary"><Layers size={14}/></div>
+                                   <ChevronDown size={14} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                                </div>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+
                     {[{ id: 'script_link', label: 'Script Link', icon: <FileText size={14}/>, color: 'text-amber-500' },
                       { id: 'content_link', label: 'Production Link (RAW)', icon: <Video size={14}/>, color: 'text-blue-500' },
                       { id: 'post_link', label: 'Final URL (IG/TT)', icon: <LinkIcon size={14}/>, color: 'text-rose-500' }

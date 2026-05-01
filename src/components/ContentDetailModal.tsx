@@ -283,11 +283,18 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
                   {/* Title & Pillar */}
                   <div className="space-y-3">
                     <h2 className="text-3xl font-extrabold text-amethyst-dark tracking-tight leading-tight">{content.title}</h2>
-                    {content.content_pillar && (
-                      <span className="inline-flex items-center gap-2 px-3 py-1 bg-amethyst-light text-amethyst-dark text-[9px] font-black uppercase tracking-widest rounded-lg">
-                        <Target size={10}/> {content.content_pillar}
-                      </span>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {content.content_pillar && (
+                        <span className="inline-flex items-center gap-2 px-3 py-1 bg-amethyst-light text-amethyst-dark text-[9px] font-black uppercase tracking-widest rounded-lg">
+                          <Target size={10}/> {content.content_pillar}
+                        </span>
+                      )}
+                      {content.content_format && (
+                        <span className="inline-flex items-center gap-2 px-3 py-1 bg-amethyst-mauve/20 text-amethyst-dark text-[9px] font-black uppercase tracking-widest rounded-lg border border-amethyst-mauve/30">
+                          <Layers size={10}/> {content.content_format}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Content Workflow Progress */}

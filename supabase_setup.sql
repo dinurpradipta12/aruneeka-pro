@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS v2_agency_content_plans (
     due_date TIMESTAMP WITH TIME ZONE,
     status TEXT DEFAULT 'Draft',
     platform TEXT,
+    content_format TEXT,
     content_pillar TEXT,
     target_account TEXT,
     script_link TEXT,

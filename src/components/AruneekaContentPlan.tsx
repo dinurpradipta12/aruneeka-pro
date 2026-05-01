@@ -45,6 +45,7 @@ const platforms = [
   { id: 'threads', label: 'Threads' },
   { id: 'youtube', label: 'YouTube' },
   { id: 'facebook', label: 'Facebook' },
+  { id: 'linkedin', label: 'LinkedIn' },
 ];
 
 const platformIcons: any = {
@@ -53,6 +54,7 @@ const platformIcons: any = {
   threads: <img src="https://cdn.simpleicons.org/threads/916DD5" className="w-4.5 h-4.5" alt="Threads" />,
   youtube: <img src="https://cdn.simpleicons.org/youtube/916DD5" className="w-4.5 h-4.5" alt="YouTube" />,
   facebook: <img src="https://cdn.simpleicons.org/facebook/916DD5" className="w-4.5 h-4.5" alt="Facebook" />,
+  linkedin: <img src="https://cdn.simpleicons.org/linkedin/916DD5" className="w-4.5 h-4.5" alt="LinkedIn" />,
 };
 
 const statusStyles: any = {
@@ -840,6 +842,7 @@ const AruneekaContentPlan = ({
                    <tr className="text-[10px] font-bold text-amethyst-primary/40 uppercase tracking-[0.1em] border-b border-amethyst-light">
                       <th className="text-left pb-6 px-4">Content / Pillar</th>
                       <th className="text-left pb-6 px-4">Platform</th>
+                      <th className="text-left pb-6 px-4">Format</th>
                       <th className="text-left pb-6 px-4">Phase</th>
                       <th className="text-left pb-6 px-4">Pic</th>
                       <th 
@@ -883,6 +886,9 @@ const AruneekaContentPlan = ({
                            <div className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-xl">
                               {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : '-'}
                            </div>
+                        </td>
+                        <td className="py-8 px-4">
+                           <span className="text-[10px] font-bold text-amethyst-dark/60 uppercase tracking-widest bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 whitespace-nowrap">{plan.content_format || "-"}</span>
                         </td>
                         <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
                            <div className="relative">
