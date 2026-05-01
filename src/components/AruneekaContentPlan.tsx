@@ -291,7 +291,7 @@ const AruneekaContentPlan = ({
         .delete({ count: 'exact' })
         .eq('id', cleanId);
       
-      if (!error && count > 0) {
+      if (!error && count && count > 0) {
         console.log("Successfully deleted from DB in background.");
         // Clear from local blacklist if successfully deleted from DB
         const deletedIds = JSON.parse(localStorage.getItem('aruneeka_locally_deleted_ids') || '[]');
@@ -318,13 +318,21 @@ const AruneekaContentPlan = ({
       const month = months[parts[1]];
       const year = parseInt(parts[2]);
       if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-        return new Date(year, month, day).toISOString().split('T')[0];
+        const d = new Date(year, month, day);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dayStr}`;
       }
     }
     
     // Fallback to standard JS Date
     const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+    if (isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}`;
   };
 
   const mapStatus = (statusStr: string) => {
@@ -348,7 +356,7 @@ const AruneekaContentPlan = ({
     }
 
     if (p.due_date) {
-      const pDate = new Date(p.due_date).toISOString().split('T')[0];
+      const pDate = p.due_date.substring(0, 10);
       dateMatch = pDate >= dateRange.start && pDate <= dateRange.end;
     } else {
       dateMatch = true; 
@@ -550,9 +558,9 @@ const AruneekaContentPlan = ({
                >
                   <Calendar size={16} className="text-amethyst-primary" />
                   <div className="flex items-center gap-2">
-                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.start).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.start + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
                      <div className="w-4 h-px bg-slate-200" />
-                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.end).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.end + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                   </div>
                   <ChevronDown size={14} className={`text-amethyst-primary transition-transform ${isRangeOpen ? 'rotate-180' : ''}`}/>
                </button>
@@ -1167,7 +1175,7 @@ const AruneekaContentPlan = ({
                    </div>
                    <div>
                       <h3 className="text-3xl font-bold text-amethyst-dark tracking-tight">
-                         {new Date(dateRange.start).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                         {new Date(dateRange.start + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                       </h3>
                       <div className="text-xs font-normal text-amethyst-primary flex items-center gap-2">
                          <div className="w-1.5 h-1.5 bg-amethyst-primary rounded-full animate-pulse"/>
@@ -1176,14 +1184,16 @@ const AruneekaContentPlan = ({
                    </div>
                 </div>
 
-                <div className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                 <div className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
                    <button 
                      onClick={() => {
-                        const s = new Date(dateRange.start);
-                        const e = new Date(dateRange.end);
+                        const s = new Date(dateRange.start + 'T00:00:00');
+                        const e = new Date(dateRange.end + 'T00:00:00');
                         s.setMonth(s.getMonth() - 1);
                         e.setMonth(e.getMonth() - 1);
-                        setDateRange({ start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] });
+                        
+                        const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        setDateRange({ start: format(s), end: format(e) });
                      }}
                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"
                    >
@@ -1194,7 +1204,9 @@ const AruneekaContentPlan = ({
                         const now = new Date();
                         const s = new Date(now.getFullYear(), now.getMonth(), 1);
                         const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                        setDateRange({ start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] });
+                        
+                        const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        setDateRange({ start: format(s), end: format(e) });
                      }}
                      className="px-6 py-2 bg-amethyst-dark text-white text-[10px] font-bold uppercase tracking-widest rounded-xl mx-2 shadow-lg"
                    >
@@ -1202,11 +1214,13 @@ const AruneekaContentPlan = ({
                    </button>
                    <button 
                      onClick={() => {
-                        const s = new Date(dateRange.start);
-                        const e = new Date(dateRange.end);
+                        const s = new Date(dateRange.start + 'T00:00:00');
+                        const e = new Date(dateRange.end + 'T00:00:00');
                         s.setMonth(s.getMonth() + 1);
                         e.setMonth(e.getMonth() + 1);
-                        setDateRange({ start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] });
+                        
+                        const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        setDateRange({ start: format(s), end: format(e) });
                      }}
                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"
                    >
@@ -1227,7 +1241,7 @@ const AruneekaContentPlan = ({
              {/* Calendar Grid */}
              <div className="grid grid-cols-7 grid-rows-5 h-[auto] min-h-[700px]">
                 {(() => {
-                  const startDateObj = new Date(dateRange.start);
+                  const startDateObj = new Date(dateRange.start + 'T00:00:00');
                   const monthIndex = startDateObj.getMonth();
                   const yearVal = startDateObj.getFullYear();
 
@@ -1249,10 +1263,10 @@ const AruneekaContentPlan = ({
                                     yearVal === now.getFullYear();
                     
                     const dayContent = filteredPlans.filter((p: any) => {
-                      const d = new Date(p.due_date);
-                      return d.getDate() === dayNum && 
-                             d.getMonth() === monthIndex && 
-                             d.getFullYear() === yearVal;
+                      if (!p.due_date) return false;
+                      const pDate = p.due_date.substring(0, 10);
+                      const cellDate = `${yearVal}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                      return pDate === cellDate;
                     });
 
                     return (
