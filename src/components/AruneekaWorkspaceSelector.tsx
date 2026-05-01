@@ -206,14 +206,7 @@ export const AruneekaWorkspaceSelector = ({
 
       await Promise.all([
         supabase.from('v2_agency_strategy_checklist').insert(defaultStrategy),
-        supabase.from('v2_agency_kpi_targets').insert(defaultKPIs),
-        supabase.from('v2_agency_settings').upsert({
-          id: ws.id,
-          agency_name: newBrandName,
-          login_hero_bg_color: '#916DD5',
-          login_page_bg_color: '#f8fafc',
-          updated_at: new Date().toISOString()
-        })
+        supabase.from('v2_agency_kpi_targets').insert(defaultKPIs)
       ]);
 
       setNewBrandName('');

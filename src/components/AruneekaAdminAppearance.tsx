@@ -46,6 +46,11 @@ const AruneekaAdminAppearance = () => {
     agency_name: string;
     is_banner_active: boolean;
     banner_message: string;
+    hero_title: string;
+    hero_subtitle: string;
+    hero_overlay_opacity: number;
+    hero_text_align: 'left' | 'center' | 'right';
+    hero_text_size: number;
   }
 
   const [config, setConfig] = useState<AppearanceConfig>({
@@ -54,7 +59,12 @@ const AruneekaAdminAppearance = () => {
     login_hero_image: '',
     agency_name: 'Aruneeka Pro',
     is_banner_active: false,
-    banner_message: ''
+    banner_message: '',
+    hero_title: 'Welcome to Aruneeka Content Plan',
+    hero_subtitle: 'Sistem manajemen konten terpadu untuk performa agensi maksimal.',
+    hero_overlay_opacity: 0.4,
+    hero_text_align: 'left',
+    hero_text_size: 80
   });
 
 
@@ -65,8 +75,7 @@ const AruneekaAdminAppearance = () => {
       const { data, error } = await supabase
         .from('v2_agency_settings')
         .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
+        .eq('id', '00000000-0000-0000-0000-000000000000')
         .maybeSingle();
       
       if (data) {
@@ -76,7 +85,12 @@ const AruneekaAdminAppearance = () => {
           login_hero_image: data.login_hero_image || '',
           agency_name: data.agency_name || 'Aruneeka Pro',
           is_banner_active: data.is_banner_active || false,
-          banner_message: data.banner_message || ''
+          banner_message: data.banner_message || '',
+          hero_title: data.hero_title || 'Welcome to Aruneeka Content Plan',
+          hero_subtitle: data.hero_subtitle || 'Sistem manajemen konten terpadu untuk performa agensi maksimal.',
+          hero_overlay_opacity: data.hero_overlay_opacity ?? 0.4,
+          hero_text_align: data.hero_text_align || 'left',
+          hero_text_size: data.hero_text_size || 80
         });
       }
     } catch (e) {
@@ -152,17 +166,15 @@ const AruneekaAdminAppearance = () => {
          login_page_bg_color: config.login_page_bg_color,
          login_hero_image: config.login_hero_image,
          agency_name: config.agency_name,
+         hero_title: config.hero_title,
+         hero_subtitle: config.hero_subtitle,
+         hero_overlay_opacity: config.hero_overlay_opacity,
+         hero_text_align: config.hero_text_align,
+         hero_text_size: config.hero_text_size,
          updated_at: new Date().toISOString()
       };
 
-      const { data: existingBranding } = await supabase
-        .from('v2_agency_settings')
-        .select('id')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const brandingId = existingBranding?.id || '00000000-0000-0000-0000-000000000000';
+      const brandingId = '00000000-0000-0000-0000-000000000000';
       await supabase.from('v2_agency_settings').upsert({ id: brandingId, ...settingsPayload });
 
       setShowSuccess(true);
@@ -185,14 +197,7 @@ const AruneekaAdminAppearance = () => {
 
     setIsBroadcasting(true);
     try {
-      const { data: existing } = await supabase
-        .from('v2_agency_settings')
-        .select('id')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-        
-      const brandingId = existing?.id || '00000000-0000-0000-0000-000000000000';
+      const brandingId = '00000000-0000-0000-0000-000000000000';
 
       const { error } = await supabase.from('v2_agency_settings').upsert({
         id: brandingId,
@@ -310,6 +315,73 @@ const AruneekaAdminAppearance = () => {
                        </label>
                     )}
                     <p className="text-[9px] text-slate-400 font-medium italic pl-1">Saran: Gunakan gambar dengan rasio 16:9 atau portrait untuk hasil terbaik.</p>
+                 </div>
+
+                 <div className="space-y-6 pt-2">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Hero Display Text</label>
+                       <input 
+                         value={config.hero_title}
+                         onChange={(e) => setConfig({...config, hero_title: e.target.value})}
+                         className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
+                         placeholder="Hero Headline"
+                       />
+                       <textarea 
+                         value={config.hero_subtitle}
+                         onChange={(e) => setConfig({...config, hero_subtitle: e.target.value})}
+                         className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xs font-medium text-slate-600 outline-none focus:ring-2 ring-amethyst-light/30 transition-all resize-none h-20"
+                         placeholder="Hero Description"
+                       />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Text Alignment</label>
+                          <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100">
+                             {(['left', 'center', 'right'] as const).map((align) => (
+                                <button 
+                                  key={align}
+                                  onClick={() => setConfig({...config, hero_text_align: align})}
+                                  className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${config.hero_text_align === align ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400'}`}
+                                >
+                                   {align}
+                                </button>
+                             ))}
+                          </div>
+                       </div>
+
+                       <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Overlay Opacity</label>
+                             <span className="text-[10px] font-black text-amethyst-primary">{Math.round(config.hero_overlay_opacity * 100)}%</span>
+                          </div>
+                          <input 
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={config.hero_overlay_opacity}
+                            onChange={(e) => setConfig({...config, hero_overlay_opacity: parseFloat(e.target.value)})}
+                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-amethyst-primary"
+                          />
+                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                       <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Headline Text Size</label>
+                          <span className="text-[10px] font-black text-amethyst-primary">{config.hero_text_size}px</span>
+                       </div>
+                       <input 
+                         type="range"
+                         min="20"
+                         max="120"
+                         step="1"
+                         value={config.hero_text_size}
+                         onChange={(e) => setConfig({...config, hero_text_size: parseInt(e.target.value)})}
+                         className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-amethyst-primary"
+                       />
+                    </div>
                  </div>
 
                  <div className="grid grid-cols-2 gap-4">
@@ -469,15 +541,38 @@ const AruneekaAdminAppearance = () => {
                 {/* Left Side Hero */}
                 <div 
                   className="w-[45%] h-full relative transition-colors duration-700"
-                  style={{ backgroundColor: config.login_hero_bg_color }}
                 >
+                   <div 
+                     className="absolute inset-0 transition-colors duration-700"
+                     style={{ 
+                       backgroundColor: config.login_hero_bg_color,
+                       opacity: config.hero_overlay_opacity 
+                     }}
+                   />
                    {config.login_hero_image && (
                      <div 
                         className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-50"
                         style={{ backgroundImage: `url(${config.login_hero_image})` }}
                      />
                    )}
-                   <div className="absolute inset-0 p-6 flex flex-col justify-between" />
+                   <div className={`absolute inset-0 p-6 flex flex-col justify-center ${
+                     config.hero_text_align === 'center' ? 'items-center text-center' : 
+                     config.hero_text_align === 'right' ? 'items-end text-right' : 'items-start text-left'
+                   }`}>
+                      <div className="space-y-2 w-full">
+                         <div className={`h-0.5 w-8 bg-white/40 rounded-full mb-3 ${
+                           config.hero_text_align === 'center' ? 'mx-auto' : 
+                           config.hero_text_align === 'right' ? 'ml-auto' : ''
+                         }`} />
+                         <h5 
+                            className="font-black text-white leading-[0.95] line-clamp-3 tracking-tighter"
+                            style={{ fontSize: `${config.hero_text_size / 5.5}px` }}
+                         >
+                            {config.hero_title}
+                         </h5>
+                         <p className="text-[7px] font-medium text-white/70 line-clamp-2 italic">{config.hero_subtitle}</p>
+                      </div>
+                   </div>
                 </div>
                 {/* Right Side Form */}
                 <div className="flex-1 bg-white p-8 flex flex-col justify-center gap-4">

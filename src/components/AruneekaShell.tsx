@@ -330,8 +330,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
          const { data } = await supabase
             .from('v2_agency_settings')
             .select('*')
-            .order('updated_at', { ascending: false })
-            .limit(1)
+            .eq('id', '00000000-0000-0000-0000-000000000000')
             .maybeSingle();
 
          if (data) {
@@ -347,7 +346,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
       fetchGlobalSettings();
 
       const channel = supabase.channel('global-settings-realtime')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'v2_agency_settings' }, (payload) => {
+        .on('postgres_changes', { 
+           event: 'UPDATE', 
+           schema: 'public', 
+           table: 'v2_agency_settings',
+           filter: 'id=eq.00000000-0000-0000-0000-000000000000'
+        }, (payload) => {
            setSystemConfig(payload.new);
            const dismissed = localStorage.getItem('aruneeka_dismissed_announcement');
            if (dismissed !== payload.new.banner_message) {
