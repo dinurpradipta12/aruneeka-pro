@@ -537,13 +537,13 @@ const AruneekaAdminAppearance = () => {
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1),transparent)] z-[1]" />
               
               {/* Scale Down Actual Structure */}
-              <div className="w-[85%] h-[80%] bg-white/95 backdrop-blur-md rounded-[32px] overflow-hidden flex shadow-2xl scale-95 md:scale-100 transition-transform duration-500 group-hover:scale-[1.02] relative z-[2]">
+              <div className="w-[90%] h-[85%] bg-white/95 backdrop-blur-md rounded-[32px] overflow-hidden flex shadow-2xl scale-95 md:scale-100 transition-transform duration-500 group-hover:scale-[1.02] relative z-[2]">
                 {/* Left Side Hero */}
                 <div 
-                  className="w-[45%] h-full relative transition-colors duration-700"
+                  className="w-[45%] h-full relative transition-colors duration-700 overflow-hidden"
                 >
                    <div 
-                     className="absolute inset-0 transition-colors duration-700"
+                     className="absolute inset-0 transition-all duration-700"
                      style={{ 
                        backgroundColor: config.login_hero_bg_color,
                        opacity: config.hero_overlay_opacity 
@@ -551,26 +551,28 @@ const AruneekaAdminAppearance = () => {
                    />
                    {config.login_hero_image && (
                      <div 
-                        className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-50"
+                        className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-40"
                         style={{ backgroundImage: `url(${config.login_hero_image})` }}
                      />
                    )}
-                   <div className={`absolute inset-0 p-6 flex flex-col justify-center ${
+                   <div className={`absolute inset-0 p-4 flex flex-col justify-center ${
                      config.hero_text_align === 'center' ? 'items-center text-center' : 
                      config.hero_text_align === 'right' ? 'items-end text-right' : 'items-start text-left'
                    }`}>
-                      <div className="space-y-2 w-full">
-                         <div className={`h-0.5 w-8 bg-white/40 rounded-full mb-3 ${
+                      <div className="w-full" style={{ maxWidth: '85%' }}>
+                         <div className={`h-[2px] w-6 bg-gradient-to-r from-white to-transparent rounded-full mb-3 ${
                            config.hero_text_align === 'center' ? 'mx-auto' : 
-                           config.hero_text_align === 'right' ? 'ml-auto' : ''
+                           config.hero_text_align === 'right' ? 'ml-auto rotate-180' : ''
                          }`} />
                          <h5 
-                            className="font-black text-white leading-[0.95] line-clamp-3 tracking-tighter"
-                            style={{ fontSize: `${config.hero_text_size / 5.5}px` }}
+                            className="font-black text-white leading-[0.95] tracking-tight drop-shadow-xl"
+                            style={{ fontSize: `${config.hero_text_size / 4.8}px` }}
                          >
                             {config.hero_title}
                          </h5>
-                         <p className="text-[7px] font-medium text-white/70 line-clamp-2 italic">{config.hero_subtitle}</p>
+                         <p className="text-[6px] font-medium text-white/80 mt-2 leading-relaxed italic opacity-90 line-clamp-2">
+                            {config.hero_subtitle}
+                         </p>
                       </div>
                    </div>
                 </div>
