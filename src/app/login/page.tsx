@@ -236,57 +236,62 @@ const LoginPage = () => {
           )}
 
           {/* Hero Text Content */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 1, ease: "circOut" }}
-            className={`relative z-10 w-full max-w-2xl px-4 ${
-              settings?.hero_text_align === 'center' ? 'text-center mx-auto' : 
-              settings?.hero_text_align === 'right' ? 'text-right ml-auto' : 'text-left'
-            }`}
-          >
-             {/* Decorative Element */}
-             <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: 80 }}
-                transition={{ delay: 0.8, duration: 1 }}
-                className={`h-2 bg-gradient-to-r from-white to-transparent rounded-full mb-10 ${
-                  settings?.hero_text_align === 'center' ? 'mx-auto' : 
-                  settings?.hero_text_align === 'right' ? 'ml-auto rotate-180' : ''
-                }`} 
-             />
-             
-             <div className="space-y-8">
-                <h1 
-                  className="font-black tracking-tight leading-[0.95] text-white drop-shadow-2xl"
-                  style={{ fontSize: `${settings?.hero_text_size || 80}px` }}
-                >
-                   {settings?.hero_title || "Welcome to Aruneeka Pro"}
-                </h1>
-                
-                <div className={`p-1 rounded-3xl inline-block ${
-                  settings?.hero_text_align === 'center' ? 'mx-auto' : 
-                  settings?.hero_text_align === 'right' ? 'ml-auto' : ''
-                }`}>
-                   <p className="text-xl md:text-2xl font-medium text-white/90 leading-relaxed max-w-xl drop-shadow-lg italic">
-                      {settings?.hero_subtitle || "Rencanakan strategi konten terbaik untuk agensi Anda di sini."}
-                   </p>
-                </div>
-             </div>
+          <AnimatePresence>
+            {(settings?.is_hero_text_active ?? true) && (
+              <motion.div 
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 30 }}
+                transition={{ delay: 0.4, duration: 1, ease: "circOut" }}
+                className={`relative z-10 w-full max-w-2xl px-4 ${
+                  settings?.hero_text_align === 'center' ? 'text-center mx-auto' : 
+                  settings?.hero_text_align === 'right' ? 'text-right ml-auto' : 'text-left'
+                }`}
+              >
+                 {/* Decorative Element */}
+                 <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: 80 }}
+                    transition={{ delay: 0.8, duration: 1 }}
+                    className={`h-2 bg-gradient-to-r from-white to-transparent rounded-full mb-10 ${
+                      settings?.hero_text_align === 'center' ? 'mx-auto' : 
+                      settings?.hero_text_align === 'right' ? 'ml-auto rotate-180' : ''
+                    }`} 
+                 />
+                 
+                 <div className="space-y-8">
+                    <h1 
+                      className="font-black tracking-tight leading-[0.95] text-white drop-shadow-2xl"
+                      style={{ fontSize: `${settings?.hero_text_size || 80}px` }}
+                    >
+                       {settings?.hero_title || "Welcome to Aruneeka Pro"}
+                    </h1>
+                    
+                    <div className={`p-1 rounded-3xl inline-block ${
+                      settings?.hero_text_align === 'center' ? 'mx-auto' : 
+                      settings?.hero_text_align === 'right' ? 'ml-auto' : ''
+                    }`}>
+                       <p className="text-xl md:text-2xl font-medium text-white/90 leading-relaxed max-w-xl drop-shadow-lg italic">
+                          {settings?.hero_subtitle || "Rencanakan strategi konten terbaik untuk agensi Anda di sini."}
+                       </p>
+                    </div>
+                 </div>
 
-             <div className={`flex items-center gap-4 pt-12 ${
-               settings?.hero_text_align === 'center' ? 'justify-center' : 
-               settings?.hero_text_align === 'right' ? 'justify-end' : 'justify-start'
-             }`}>
-                <div className="h-px w-12 bg-white/20" />
-                <div className="flex gap-2">
-                   <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
-                   <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                   <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
-                </div>
-                <div className="h-px w-12 bg-white/20" />
-             </div>
-          </motion.div>
+                 <div className={`flex items-center gap-4 pt-12 ${
+                   settings?.hero_text_align === 'center' ? 'justify-center' : 
+                   settings?.hero_text_align === 'right' ? 'justify-end' : 'justify-start'
+                 }`}>
+                    <div className="h-px w-12 bg-white/20" />
+                    <div className="flex gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
+                       <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                       <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+                    </div>
+                    <div className="h-px w-12 bg-white/20" />
+                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* RIGHT COLUMN: LOGIN FORM */}

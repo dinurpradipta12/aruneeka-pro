@@ -51,6 +51,7 @@ const AruneekaAdminAppearance = () => {
     hero_overlay_opacity: number;
     hero_text_align: 'left' | 'center' | 'right';
     hero_text_size: number;
+    is_hero_text_active: boolean;
   }
 
   const [config, setConfig] = useState<AppearanceConfig>({
@@ -64,7 +65,8 @@ const AruneekaAdminAppearance = () => {
     hero_subtitle: 'Sistem manajemen konten terpadu untuk performa agensi maksimal.',
     hero_overlay_opacity: 0.4,
     hero_text_align: 'left',
-    hero_text_size: 80
+    hero_text_size: 80,
+    is_hero_text_active: true
   });
 
 
@@ -90,7 +92,8 @@ const AruneekaAdminAppearance = () => {
           hero_subtitle: data.hero_subtitle || 'Sistem manajemen konten terpadu untuk performa agensi maksimal.',
           hero_overlay_opacity: data.hero_overlay_opacity ?? 0.4,
           hero_text_align: data.hero_text_align || 'left',
-          hero_text_size: data.hero_text_size || 80
+          hero_text_size: data.hero_text_size || 80,
+          is_hero_text_active: data.is_hero_text_active ?? true
         });
       }
     } catch (e) {
@@ -171,6 +174,7 @@ const AruneekaAdminAppearance = () => {
          hero_overlay_opacity: config.hero_overlay_opacity,
          hero_text_align: config.hero_text_align,
          hero_text_size: config.hero_text_size,
+         is_hero_text_active: config.is_hero_text_active,
          updated_at: new Date().toISOString()
       };
 
@@ -318,8 +322,20 @@ const AruneekaAdminAppearance = () => {
                  </div>
 
                  <div className="space-y-6 pt-2">
-                    <div className="space-y-3">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Hero Display Text</label>
+                    <div className="flex items-center justify-between pl-1">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hero Display Text</label>
+                       <label className="relative inline-flex items-center cursor-pointer scale-75">
+                          <input 
+                            type="checkbox" 
+                            checked={config.is_hero_text_active} 
+                            onChange={(e) => setConfig({...config, is_hero_text_active: e.target.checked})}
+                            className="sr-only peer" 
+                          />
+                          <div className="w-11 h-6 bg-slate-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amethyst-primary"></div>
+                       </label>
+                    </div>
+
+                    <div className={`space-y-3 transition-all duration-500 ${config.is_hero_text_active ? 'opacity-100 pointer-events-auto' : 'opacity-40 pointer-events-none'}`}>
                        <input 
                          value={config.hero_title}
                          onChange={(e) => setConfig({...config, hero_title: e.target.value})}
@@ -560,19 +576,23 @@ const AruneekaAdminAppearance = () => {
                      config.hero_text_align === 'right' ? 'items-end text-right' : 'items-start text-left'
                    }`}>
                       <div className="w-full" style={{ maxWidth: '85%' }}>
-                         <div className={`h-[2px] w-6 bg-gradient-to-r from-white to-transparent rounded-full mb-3 ${
-                           config.hero_text_align === 'center' ? 'mx-auto' : 
-                           config.hero_text_align === 'right' ? 'ml-auto rotate-180' : ''
-                         }`} />
-                         <h5 
-                            className="font-black text-white leading-[0.95] tracking-tight drop-shadow-xl"
-                            style={{ fontSize: `${config.hero_text_size / 4.8}px` }}
-                         >
-                            {config.hero_title}
-                         </h5>
-                         <p className="text-[6px] font-medium text-white/80 mt-2 leading-relaxed italic opacity-90 line-clamp-2">
-                            {config.hero_subtitle}
-                         </p>
+                         {config.is_hero_text_active && (
+                           <>
+                             <div className={`h-[2px] w-6 bg-gradient-to-r from-white to-transparent rounded-full mb-3 ${
+                               config.hero_text_align === 'center' ? 'mx-auto' : 
+                               config.hero_text_align === 'right' ? 'ml-auto rotate-180' : ''
+                             }`} />
+                             <h5 
+                                className="font-black text-white leading-[0.95] tracking-tight drop-shadow-xl"
+                                style={{ fontSize: `${config.hero_text_size / 4.8}px` }}
+                             >
+                                {config.hero_title}
+                             </h5>
+                             <p className="text-[6px] font-medium text-white/80 mt-2 leading-relaxed italic opacity-90 line-clamp-2">
+                                {config.hero_subtitle}
+                             </p>
+                           </>
+                         )}
                       </div>
                    </div>
                 </div>
