@@ -26,7 +26,8 @@ import {
   Package,
   CheckCircle2,
   CreditCard,
-  ArrowLeft
+  ArrowLeft,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -270,19 +271,58 @@ const AruneekaAnalytics = ({
     };
   }, [data, profiles, selectedProfileId]);
 
+  const currentPeriodLabel = useMemo(() => {
+    if (activeRange === 'This Month') {
+      return `Bulan ${new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+    }
+    if (activeRange === 'Last Month') {
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      return `Bulan ${lastMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+    }
+    if (activeRange === 'Custom Range' && customStart && customEnd) {
+      const start = new Date(customStart).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      const end = new Date(customEnd).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `${start} - ${end}`;
+    }
+    return activeRange;
+  }, [activeRange, customStart, customEnd]);
+
 
   const stats = useMemo(() => {
     const common = {
-      views: { label: 'Total Views', value: metrics.totalViews >= 1000 ? `${(metrics.totalViews / 1000).toFixed(1)}K` : metrics.totalViews, trend: '100%', icon: <Eye size={16} className="text-blue-500"/>, bg: 'bg-blue-50' },
-      interactions: { label: 'Total Interactions', value: metrics.totalInteractions.toLocaleString(), trend: '100%', icon: <Sparkles size={16} className="text-amethyst-dark"/>, bg: 'bg-amethyst-light/30' },
-      er: { label: 'Engagement Rate', value: `${metrics.engagementRate.toFixed(2)}%`, trend: '100%', icon: <TrendingUp size={16} className="text-rose-500"/>, bg: 'bg-rose-50' },
+      views: { 
+        label: 'Total Views', 
+        value: metrics.totalViews >= 1000 ? `${(metrics.totalViews / 1000).toFixed(1)}K` : metrics.totalViews, 
+        trend: '100%', 
+        icon: <Eye size={16} className="text-blue-500"/>, 
+        bg: 'bg-blue-50',
+        hint: 'Total berapa kali konten Anda dilihat (termasuk pengulangan).'
+      },
+      interactions: { 
+        label: 'Total Interactions', 
+        value: metrics.totalInteractions.toLocaleString(), 
+        trend: '100%', 
+        icon: <Sparkles size={16} className="text-amethyst-dark"/>, 
+        bg: 'bg-amethyst-light/30' ,
+        hint: 'Total jumlah Like + Comment + Share + Save pada konten Anda.'
+      },
+      er: { 
+        label: 'Engagement Rate', 
+        value: `${metrics.engagementRate.toFixed(2)}%`, 
+        trend: '100%', 
+        icon: <TrendingUp size={16} className="text-rose-500"/>, 
+        bg: 'bg-rose-50',
+        hint: '(Total Interaksi / Total Views) x 100%. Mengukur efektivitas konten dalam menarik interaksi.'
+      },
       content: { 
         label: 'Content Uploaded', 
         value: metrics.contentUploaded.toString(), 
         trend: '100%', 
         icon: <Layout size={16} className="text-emerald-500"/>, 
         bg: 'bg-emerald-50',
-        subValue: `${Math.round(metrics.contentUploaded / (dailyMetrics.length || 1))} content / hari`
+        subValue: `${Math.round(metrics.contentUploaded / (dailyMetrics.length || 1))} content / hari`,
+        hint: 'Jumlah konten yang berhasil dipublikasikan (status: Uploaded).'
       } as any,
       follows: { 
         label: 'New Followers', 
@@ -290,11 +330,33 @@ const AruneekaAnalytics = ({
         trend: '100%', 
         icon: <Users size={16} className="text-orange-500"/>, 
         bg: 'bg-orange-50', 
-        subValue: `${metrics.totalFollowersOverall.toLocaleString()} Total` 
+        subValue: `${metrics.totalFollowersOverall.toLocaleString()} Total`,
+        hint: 'Jumlah pengikut baru yang didapatkan selama periode ini.'
       } as any,
-      reach: { label: 'Total Reach', value: metrics.totalReach >= 1000 ? `${(metrics.totalReach / 1000).toFixed(1)}K` : metrics.totalReach, trend: '100%', icon: <Activity size={16} className="text-indigo-500"/>, bg: 'bg-indigo-50' },
-      reposts: { label: 'Total Reposts', value: metrics.totalReposts.toLocaleString(), trend: '100%', icon: <Share2 size={16} className="text-cyan-500"/>, bg: 'bg-cyan-50' },
-      retention: { label: 'Avg Retention', value: `${metrics.avgRetention.toFixed(1)}%`, trend: '100%', icon: <MousePointer2 size={16} className="text-purple-500"/>, bg: 'bg-purple-50' },
+      reach: { 
+        label: 'Total Reach', 
+        value: metrics.totalReach >= 1000 ? `${(metrics.totalReach / 1000).toFixed(1)}K` : metrics.totalReach, 
+        trend: '100%', 
+        icon: <Activity size={16} className="text-indigo-500"/>, 
+        bg: 'bg-indigo-50',
+        hint: 'Jumlah akun unik yang melihat konten Anda setidaknya satu kali.'
+      },
+      reposts: { 
+        label: 'Total Reposts', 
+        value: metrics.totalReposts.toLocaleString(), 
+        trend: '100%', 
+        icon: <Share2 size={16} className="text-cyan-500"/>, 
+        bg: 'bg-cyan-50',
+        hint: 'Total berapa kali konten Anda dibagikan ulang oleh pengguna lain.'
+      },
+      retention: { 
+        label: 'Avg Retention', 
+        value: `${metrics.avgRetention.toFixed(1)}%`, 
+        trend: '100%', 
+        icon: <MousePointer2 size={16} className="text-purple-500"/>, 
+        bg: 'bg-purple-50',
+        hint: 'Rata-rata persentase durasi tonton audiens dibandingkan total durasi video.'
+      },
     };
 
     if (activePlatform.includes('instagram')) {
@@ -443,23 +505,48 @@ const AruneekaAnalytics = ({
                     animate={{ opacity: 1, y: 0 }} 
                     transition={{ delay: i * 0.05 }} 
                     key={i} 
-                    className={`relative bg-white p-5 rounded-[24px] border border-slate-50 shadow-premium group transition-all hover:shadow-lg flex flex-col justify-between overflow-hidden ${isLocked ? 'cursor-default' : ''}`}
+                    className={`relative bg-white p-5 rounded-[24px] border border-slate-50 shadow-premium group transition-all hover:shadow-lg flex flex-col justify-between ${isLocked ? 'cursor-default' : ''}`}
                   >
                      <div className={`flex flex-col h-full justify-between transition-all duration-500 ${isLocked ? 'blur-[8px] opacity-30 select-none grayscale' : ''}`}>
-                        <div className="flex items-start justify-between mb-4">
-                           <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
-                              {React.cloneElement(stat.icon as any, { size: 14 })}
-                           </div>
-                           <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-500">
-                              <TrendingUp size={9}/> {stat.trend}
-                           </div>
-                        </div>
-                        <div className="space-y-0.5">
-                           <p className="text-[9px] font-bold text-slate-300 leading-none truncate">{stat.label}</p>
-                           <h3 className="text-xl font-bold text-amethyst-dark tracking-tight">{stat.value}</h3>
-                           {stat.subValue && <p className="text-[8px] font-bold text-slate-400 truncate">{stat.subValue}</p>}
-                        </div>
-                     </div>
+                         <div className="flex items-start justify-between mb-4">
+                            <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
+                               {React.cloneElement(stat.icon as any, { size: 14 })}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                               <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-500">
+                                  <TrendingUp size={9}/> {stat.trend}
+                               </div>
+                               
+                               {/* Hint/Tooltip Icon */}
+                               <div className="relative group/hint">
+                                  <div className="p-1 text-slate-300 hover:text-amethyst-primary cursor-help transition-colors">
+                                     <HelpCircle size={12}/>
+                                  </div>
+                                  
+                                  {/* Tooltip Popup */}
+                                  <div className="absolute right-[-10px] top-full mt-2 w-60 bg-amethyst-light p-5 rounded-2xl shadow-[0_20px_50px_rgba(172,139,238,0.15)] opacity-0 invisible group-hover/hint:opacity-100 group-hover/hint:visible transition-all z-[100] pointer-events-none border border-white">
+                                     <div className="absolute -top-1 right-3 w-2.5 h-2.5 bg-amethyst-light rotate-45" />
+                                     <div className="flex items-center justify-between mb-4 border-b border-amethyst-mauve/20 pb-3">
+                                        <div className="flex items-center gap-2">
+                                           <div className="w-1 h-3 bg-amethyst-dark rounded-full" />
+                                           <p className="text-[10px] font-black uppercase tracking-widest text-amethyst-dark">Insight</p>
+                                        </div>
+                                        <span className="text-[9px] font-bold text-amethyst-dark/60 italic">{currentPeriodLabel}</span>
+                                     </div>
+                                     <p className="text-[11px] font-bold text-amethyst-dark/80 leading-relaxed italic">{stat.hint}</p>
+                                     <div className="mt-4 pt-3 border-t border-amethyst-mauve/10">
+                                        <p className="text-[9px] text-amethyst-dark/40 font-medium leading-tight">Data dihitung otomatis berdasarkan filter periode aktif.</p>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+                         <div className="space-y-0.5">
+                            <p className="text-[9px] font-bold text-slate-300 leading-none truncate">{stat.label}</p>
+                            <h3 className="text-xl font-bold text-amethyst-dark tracking-tight">{stat.value}</h3>
+                            {stat.subValue && <p className="text-[8px] font-bold text-slate-400 truncate">{stat.subValue}</p>}
+                         </div>
+                      </div>
 
                      {/* Subscribe Overlay */}
                      {isLocked && (
