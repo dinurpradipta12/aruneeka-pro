@@ -544,885 +544,676 @@ const AruneekaContentPlan = ({
   return (
     <div className="space-y-8 pb-20">
       {/* Header Area */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 md:gap-6">
          <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-amethyst-dark tracking-tight">Content Production Line</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-amethyst-dark tracking-tight">Content Production Line</h2>
             <p className="text-sm text-slate-400 font-normal italic">Manage your content lifecycle from strategy to publishing.</p>
          </div>
 
-         <div className="flex flex-wrap items-center gap-3 md:gap-4">
-            <div className="relative">
-               <button id="tour-content-period" 
-                  onClick={() => setIsRangeOpen(!isRangeOpen)}
-                  className="flex items-center gap-4 bg-white border border-amethyst-light rounded-2xl px-6 py-3 shadow-sm hover:border-amethyst-primary transition-all group"
-               >
-                  <Calendar size={16} className="text-amethyst-primary" />
-                  <div className="flex items-center gap-2">
-                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.start + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
-                     <div className="w-4 h-px bg-slate-200" />
-                     <span className="text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.end + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  </div>
-                  <ChevronDown size={14} className={`text-amethyst-primary transition-transform ${isRangeOpen ? 'rotate-180' : ''}`}/>
-               </button>
-
-               <AnimatePresence>
-                 {isRangeOpen && (
-                   <>
-                     <div className="fixed inset-0 z-[110]" onClick={() => setIsRangeOpen(false)}/>
-                     <motion.div 
-                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                       className="absolute top-full right-0 mt-3 w-[320px] bg-white rounded-[32px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[111] p-6 space-y-6"
-                     >
-                        <div className="space-y-4">
-                           <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1 italic">Start Range</label>
-                              <input 
-                                 type="date" 
-                                 value={dateRange.start}
-                                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                 className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
-                              />
-                           </div>
-                           <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1 italic">End Range</label>
-                              <input 
-                                 type="date" 
-                                 value={dateRange.end}
-                                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                 className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
-                              />
-                           </div>
-                        </div>
-                        <button 
-                           onClick={() => setIsRangeOpen(false)}
-                           className="w-full py-3 bg-amethyst-dark text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amethyst-dark/20 hover:bg-black transition-all"
-                        >
-                           Apply Filter
-                        </button>
-                     </motion.div>
-                   </>
-                 )}
-               </AnimatePresence>
-            </div>
-
-            {/* View Switcher Tabs */}
-             <div id="tour-view-mode" className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center relative z-[100]">
-               <button 
-                 onClick={() => {
-                   setLocalView('table');
-                   onViewChange?.('table');
-                 }}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${currentView === 'table' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-               >
-                 <List size={14} /> List
-               </button>
-               <button 
-                 onClick={() => {
-                    const usrStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
-                    const usr = usrStr ? JSON.parse(usrStr) : null;
-                    const isPwr = usr?.role === 'Superuser' || usr?.role === 'developer';
-                    if (subscriptionTier === 'free' && !isPwr) {
-                      setLockedFeature({ 
-                        title: 'Kanban Visualizer', 
-                        desc: 'Kelola alur kerja konten Anda dengan drag-and-drop Kanban board yang intuitif.',
-                        icon: <Kanban size={32} />
-                      });
-                      setIsLockModalOpen(true);
-                      setIsMoreOpen(false);
-                      return;
-                    }
-                    setLocalView('kanban');
-                    onViewChange?.('kanban');
-                 }}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${currentView === 'kanban' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-               >
-                 <Kanban size={14} /> Kanban
-               </button>
-               <button 
-                 onClick={() => {
-                    const usrStr = typeof window !== 'undefined' ? localStorage.getItem('aruneeka_user') : null;
-                    const usr = usrStr ? JSON.parse(usrStr) : null;
-                    const isPwr = usr?.role === 'Superuser' || usr?.role === 'developer';
-                    if (subscriptionTier === 'free' && !isPwr) {
-                      setLockedFeature({ 
-                        title: 'Content Calendar', 
-                        desc: 'Visualisasikan jadwal konten Anda dalam format kalender yang rapi.',
-                        icon: <Calendar size={32} />
-                      });
-                      setIsLockModalOpen(true);
-                      setIsMoreOpen(false);
-                      return;
-                    }
-                    setLocalView('calendar');
-                    onViewChange?.('calendar');
-                 }}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-[14px] text-[10px] font-bold transition-all ${currentView === 'calendar' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-               >
-                 <Calendar size={14} /> Calendar
-               </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-
-             {!isPublic && (
-               <div className="flex items-center gap-2">
-                  <button 
-                     id="tour-create-content"
-                     onClick={() => onNewContent?.()}
-                     className="flex items-center gap-3 px-8 py-3.5 bg-amethyst-dark text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-105 active:scale-95 transition-all"
-                  >
-                     <Plus size={16}/> New Content
-                  </button>
-
+         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full lg:w-auto">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+               <div className="flex items-center gap-2 w-full md:w-auto">
                   <div className="relative">
-                     <button id="tour-content-actions" 
-                        onClick={() => setIsMoreOpen(!isMoreOpen)}
-                        className={`w-12 h-12 flex items-center justify-center bg-white border border-amethyst-light rounded-[16px] text-amethyst-primary hover:border-amethyst-primary transition-all shadow-sm ${isMoreOpen ? 'ring-2 ring-amethyst-light' : ''}`}
+                     <button id="tour-content-period" 
+                        onClick={() => setIsRangeOpen(!isRangeOpen)}
+                        className="flex items-center gap-2 md:gap-4 bg-white border border-amethyst-light rounded-2xl w-fit px-3 md:px-6 py-2.5 md:py-3 shadow-sm hover:border-amethyst-primary transition-all group"
                      >
-                        <MoreVertical size={20}/>
+                        <Calendar size={16} className="text-amethyst-primary shrink-0" />
+                        <div className="flex items-center gap-1.5 md:gap-2">
+                           <span className="text-[9px] md:text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.start + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                           <div className="w-3 md:w-4 h-px bg-slate-200" />
+                           <span className="text-[9px] md:text-[10px] font-black text-amethyst-dark tracking-wider">{new Date(dateRange.end + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                        <ChevronDown size={14} className={`text-amethyst-primary transition-transform shrink-0 ${isRangeOpen ? 'rotate-180' : ''}`}/>
                      </button>
 
                      <AnimatePresence>
-                        {isMoreOpen && (
-                           <>
-                              <div className="fixed inset-0 z-[120]" onClick={() => setIsMoreOpen(false)}/>
-                              <motion.div 
-                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                 className="absolute top-full right-0 mt-3 w-64 bg-white rounded-[28px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[121] py-3"
-                              >
-                                 <div className="px-5 py-2 mb-2 border-b border-slate-50">
-                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Content Actions</span>
+                       {isRangeOpen && (
+                         <>
+                           <div className="fixed inset-0 z-[110]" onClick={() => setIsRangeOpen(false)}/>
+                           <motion.div 
+                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                             animate={{ opacity: 1, y: 0, scale: 1 }}
+                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                             className="absolute top-full right-0 mt-3 w-[320px] bg-white rounded-[32px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[111] p-6 space-y-6"
+                           >
+                              <div className="space-y-4">
+                                 <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1 italic">Start Range</label>
+                                    <input 
+                                       type="date" 
+                                       value={dateRange.start}
+                                       onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                       className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
+                                    />
                                  </div>
-                                 
-                                 <button 
-                                    onClick={() => {
-                                       if (isImporting) return;
-                                       
-                                       const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
-                                       if (subscriptionTier === 'free' && !isPwr) {
-                                          const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
-                                          if (count >= 1) {
-                                             setLockedFeature({ 
-                                               title: 'Import Limit Reached', 
-                                               desc: 'Anda telah mencapai batas 1x import untuk paket Free. Silakan upgrade ke Pro untuk akses tanpa batas.',
-                                               icon: <Upload size={32} />
-                                             });
-                                             setIsLockModalOpen(true);
-                                             setIsMoreOpen(false);
-                                             return;
-                                          }
-                                       }
-                                       fileInputRef.current?.click();
-                                    }}
-                                    disabled={isImporting}
-                                    className={`w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                 >
-                                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                       {isImporting ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <Upload size={16}/>}
-                                    </div>
-                                    <div>
-                                       <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">{isImporting ? 'Importing...' : 'Import Konten Plan'}</p>
-                                       <p className="text-[8px] text-slate-400 font-bold">Upload file CSV template</p>
-                                    </div>
-                                 </button>
-
-                                 <a 
-                                    href="/contoh-template-kontenplan.csv"
-                                    download
-                                    className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
-                                    onClick={() => setIsMoreOpen(false)}
-                                 >
-                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                       <Download size={16}/>
-                                    </div>
-                                    <div>
-                                       <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Download Template</p>
-                                       <p className="text-[8px] text-slate-400 font-bold">Contoh format import CSV</p>
-                                    </div>
-                                 </a>
-
-                                 <button 
-                                    onClick={() => {
-                                       const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
-                                       if (subscriptionTier === 'free' && !isPwr) {
-                                          const count = parseInt(localStorage.getItem(`usage_export_${user?.id}`) || '0');
-                                          if (count >= 1) {
-                                             setLockedFeature({ 
-                                               title: 'Export Limit Reached', 
-                                               desc: 'Batas export 1x untuk paket Free telah tercapai. Nikmati export sepuasnya di paket Pro!',
-                                               icon: <FileSpreadsheet size={32} />
-                                             });
-                                             setIsLockModalOpen(true);
-                                             setIsMoreOpen(false);
-                                             return;
-                                          }
-                                          // Only increment IF we allow the export
-                                          localStorage.setItem(`usage_export_${user?.id}`, (count + 1).toString());
-                                       }
-                                       handleExportCSV();
-                                    }}
-                                    className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
-                                 >
-                                    <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                       <FileSpreadsheet size={16}/>
-                                    </div>
-                                    <div>
-                                       <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Export Konten Plan</p>
-                                       <p className="text-[8px] text-slate-400 font-bold">Download data saat ini</p>
-                                    </div>
-                                 </button>
-
-                                 <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    className="hidden" 
-                                    accept=".csv"
-                                    onChange={handleImportCSV}
-                                 />
-                              </motion.div>
-                           </>
-                        )}
+                                 <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-1 italic">End Range</label>
+                                    <input 
+                                       type="date" 
+                                       value={dateRange.end}
+                                       onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                       className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold text-amethyst-dark outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
+                                    />
+                                 </div>
+                              </div>
+                              <button 
+                                 onClick={() => setIsRangeOpen(false)}
+                                 className="w-full py-3 bg-amethyst-dark text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amethyst-dark/20 hover:bg-black transition-all"
+                              >
+                                 Apply Filter
+                              </button>
+                           </motion.div>
+                         </>
+                       )}
                      </AnimatePresence>
                   </div>
+                  
+                  <button 
+                     onClick={() => onNewContent?.()}
+                     className="md:hidden w-11 h-11 bg-amethyst-primary text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all shrink-0"
+                  >
+                     <Plus size={20} />
+                  </button>
                </div>
-             )}
-          </div>
-       </div>
+            </div>
+
+            {/* View Switcher Tabs - Hidden on Mobile */}
+            <div className="hidden md:flex items-center gap-3">
+               <div id="tour-view-mode" className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 items-center relative z-[100]">
+                  <button 
+                    onClick={() => {
+                      setLocalView('table');
+                      onViewChange?.('table');
+                    }}
+                    className={`flex items-center gap-2 flex-1 md:flex-none px-3 md:px-6 py-2.5 rounded-[14px] text-[9px] md:text-[10px] whitespace-nowrap font-bold transition-all ${currentView === 'table' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <List size={14} /> List
+                  </button>
+                  <button 
+                    onClick={() => {
+                       const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
+                       if (subscriptionTier === 'free' && !isPwr) {
+                         setLockedFeature({ 
+                           title: 'Kanban Visualizer', 
+                           desc: 'Kelola alur kerja konten Anda dengan drag-and-drop Kanban board yang intuitif.',
+                           icon: <Kanban size={32} />
+                         });
+                         setIsLockModalOpen(true);
+                         setIsMoreOpen(false);
+                         return;
+                       }
+                       setLocalView('kanban');
+                       onViewChange?.('kanban');
+                    }}
+                    className={`flex items-center gap-2 flex-1 md:flex-none px-3 md:px-6 py-2.5 rounded-[14px] text-[9px] md:text-[10px] whitespace-nowrap font-bold transition-all ${currentView === 'kanban' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <Kanban size={14} /> Kanban
+                  </button>
+                  <button 
+                    onClick={() => {
+                       const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
+                       if (subscriptionTier === 'free' && !isPwr) {
+                         setLockedFeature({ 
+                           title: 'Content Calendar', 
+                           desc: 'Visualisasikan jadwal konten Anda dalam format kalender yang rapi.',
+                           icon: <Calendar size={32} />
+                         });
+                         setIsLockModalOpen(true);
+                         setIsMoreOpen(false);
+                         return;
+                       }
+                       setLocalView('calendar');
+                       onViewChange?.('calendar');
+                    }}
+                    className={`flex items-center gap-2 flex-1 md:flex-none px-3 md:px-6 py-2.5 rounded-[14px] text-[9px] md:text-[10px] whitespace-nowrap font-bold transition-all ${currentView === 'calendar' ? 'bg-white text-amethyst-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <Calendar size={14} /> Calendar
+                  </button>
+               </div>
+
+               {!isPublic && (
+                  <div className="flex items-center gap-2">
+                     <button 
+                        id="tour-create-content"
+                        onClick={() => onNewContent?.()}
+                        className="flex items-center gap-3 px-6 py-3 bg-amethyst-primary text-white rounded-[16px] font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all"
+                     >
+                        <Plus size={16}/> <span className="hidden lg:inline">New Content</span><span className="lg:hidden">New</span>
+                     </button>
+
+                     <div className="relative">
+                        <button id="tour-content-actions" 
+                           onClick={() => setIsMoreOpen(!isMoreOpen)}
+                           className={`flex w-11 h-11 md:w-12 md:h-12 items-center justify-center bg-white border border-amethyst-light rounded-[16px] text-amethyst-primary hover:border-amethyst-primary transition-all shadow-sm ${isMoreOpen ? 'ring-2 ring-amethyst-light' : ''}`}
+                        >
+                           <MoreVertical size={20}/>
+                        </button>
+
+                        <AnimatePresence>
+                           {isMoreOpen && (
+                              <>
+                                 <div className="fixed inset-0 z-[120]" onClick={() => setIsMoreOpen(false)}/>
+                                 <motion.div 
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute top-full right-0 mt-3 w-64 bg-white rounded-[28px] shadow-2xl border border-amethyst-light/20 overflow-hidden z-[121] py-3"
+                                 >
+                                    <div className="px-5 py-2 mb-2 border-b border-slate-50">
+                                       <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Content Actions</span>
+                                    </div>
+                                    
+                                    <button 
+                                       onClick={() => {
+                                          if (isImporting) return;
+                                          
+                                          const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
+                                          if (subscriptionTier === 'free' && !isPwr) {
+                                             const count = parseInt(localStorage.getItem(`usage_import_${user?.id}`) || '0');
+                                             if (count >= 1) {
+                                                setLockedFeature({ 
+                                                  title: 'Import Limit Reached', 
+                                                  desc: 'Anda telah mencapai batas 1x import untuk paket Free. Silakan upgrade ke Pro untuk akses tanpa batas.',
+                                                  icon: <Upload size={32} />
+                                                });
+                                                setIsLockModalOpen(true);
+                                                setIsMoreOpen(false);
+                                                return;
+                                             }
+                                          }
+                                          fileInputRef.current?.click();
+                                       }}
+                                       disabled={isImporting}
+                                       className={`w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                       <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                          {isImporting ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <Upload size={16}/>}
+                                       </div>
+                                       <div>
+                                          <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">{isImporting ? 'Importing...' : 'Import Konten Plan'}</p>
+                                          <p className="text-[8px] text-slate-400 font-bold">Upload file CSV template</p>
+                                       </div>
+                                    </button>
+
+                                    <a 
+                                       href="/contoh-template-kontenplan.csv"
+                                       download
+                                       className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
+                                       onClick={() => setIsMoreOpen(false)}
+                                    >
+                                       <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                          <Download size={16}/>
+                                       </div>
+                                       <div>
+                                          <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Download Template</p>
+                                          <p className="text-[8px] text-slate-400 font-bold">Contoh format import CSV</p>
+                                       </div>
+                                    </a>
+
+                                    <button 
+                                       onClick={() => {
+                                          const isPwr = user?.role === 'Superuser' || user?.role === 'developer';
+                                          if (subscriptionTier === 'free' && !isPwr) {
+                                             const count = parseInt(localStorage.getItem(`usage_export_${user?.id}`) || '0');
+                                             if (count >= 1) {
+                                                setLockedFeature({ 
+                                                  title: 'Export Limit Reached', 
+                                                  desc: 'Batas export 1x untuk paket Free telah tercapai. Nikmati export sepuasnya di paket Pro!',
+                                                  icon: <FileSpreadsheet size={32} />
+                                                });
+                                                setIsLockModalOpen(true);
+                                                setIsMoreOpen(false);
+                                                return;
+                                             }
+                                             localStorage.setItem(`usage_export_${user?.id}`, (count + 1).toString());
+                                          }
+                                          handleExportCSV();
+                                       }}
+                                       className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-all group text-left"
+                                    >
+                                       <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                          <FileSpreadsheet size={16}/>
+                                       </div>
+                                       <div>
+                                          <p className="text-[10px] font-black text-amethyst-dark uppercase tracking-wider">Export Konten Plan</p>
+                                          <p className="text-[8px] text-slate-400 font-bold">Download data saat ini</p>
+                                       </div>
+                                    </button>
+
+                                    <input 
+                                       type="file" 
+                                       ref={fileInputRef} 
+                                       className="hidden" 
+                                       accept=".csv"
+                                       onChange={handleImportCSV}
+                                    />
+                                 </motion.div>
+                              </>
+                           )}
+                        </AnimatePresence>
+                     </div>
+                  </div>
+               )}
+            </div>
+         </div>
       </div>
 
       <div className="space-y-8">
-        {/* Platform Filter Pills */}
-        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
-           {platforms.map((p: any) => (
-             <button
-               key={p.id}
-               onClick={() => setFilter(p.id)}
-               className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
-                 filter === p.id 
-                 ? 'bg-amethyst-dark text-white shadow-sm' 
-                 : 'bg-white text-amethyst-primary/60 border border-amethyst-light hover:bg-amethyst-light/30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
-               }`}
-             >
-               {p.label}
-             </button>
-           ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {isLocalLoading ? (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-[24px] p-6 border border-amethyst-light shadow-sm flex items-center justify-between gap-6 animate-pulse"
+         {/* Platform Filter Pills */}
+         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
+            {platforms.map((p: any) => (
+              <button
+                key={p.id}
+                onClick={() => setFilter(p.id)}
+                className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+                  filter === p.id 
+                  ? 'bg-amethyst-dark text-white shadow-sm' 
+                  : 'bg-white text-amethyst-primary/60 border border-amethyst-light hover:bg-amethyst-light/30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
+                }`}
               >
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-1/2 bg-slate-100 rounded-md animate-pulse" />
-                  <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Memuat data strategi...</div>
-                </div>
-                <div className="w-8 h-8 bg-slate-50 rounded-lg" />
-                <div className="w-24 h-8 bg-slate-50 rounded-xl" />
-                <div className="w-20 h-4 bg-slate-50 rounded-md" />
-                <div className="flex gap-2">
-                  <div className="w-20 h-8 bg-slate-50 rounded-lg" />
-                  <div className="w-20 h-8 bg-slate-50 rounded-lg" />
-                </div>
-              </motion.div>
+                {p.label}
+              </button>
             ))}
-          </div>
-        ) : currentView === 'table' ? (
-          <motion.div 
-            key="table"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-white rounded-[32px] border border-amethyst-light shadow-sm overflow-hidden p-10"
-          >
-             <table className="w-full">
-                <thead>
-                   <tr className="text-[10px] font-bold text-amethyst-primary/40 uppercase tracking-[0.1em] border-b border-amethyst-light">
-                      <th className="text-left pb-6 px-4">Content / Pillar</th>
-                      <th className="text-left pb-6 px-4">Platform</th>
-                      <th className="text-left pb-6 px-4">Format</th>
-                      <th className="text-left pb-6 px-4">Phase</th>
-                      <th className="text-left pb-6 px-4">Pic</th>
-                      <th 
-                          className="text-left pb-6 px-4 cursor-pointer hover:text-amethyst-primary transition-colors group/sort"
-                          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                       >
-                          <div className="flex items-center gap-1.5">
-                             Due Date
-                             <span className="text-amethyst-primary/30 group-hover/sort:text-amethyst-primary transition-colors">
-                                {sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>}
-                             </span>
-                          </div>
-                       </th>
-                      <th className="text-left pb-6 px-4">Assets</th>
-                      <th className="text-left pb-6 px-4">Live Link</th>
-                      {!isPublic && <th className="text-right pb-6 px-4">Action</th>}
-                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {sortedPlans.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-20 text-center">
-                        <div className="flex flex-col items-center justify-center text-gray-400">
-                          <div className="mb-4 rounded-full bg-gray-50 p-4">
-                            <Calendar className="h-8 w-8" />
-                          </div>
-                           <p className="text-lg font-medium text-gray-600">Tambahkan konten untuk mulai mengelola kontenmu</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedPlans.map((plan: any, i: number) => (
-                     <tr key={plan.id || i} className={`group hover:bg-amethyst-light/10 transition-all cursor-pointer ${plan.status?.toLowerCase() === 'uploaded' ? 'opacity-60 hover:opacity-100' : ''}`} onClick={() => onSelectContent?.(plan)}>
-                        <td className="py-8 px-4">
-                           <div className="space-y-1">
-                              <h4 className={`text-sm font-bold text-amethyst-dark ${plan.status?.toLowerCase() === 'uploaded' ? 'line-through decoration-amethyst-primary/40' : ''}`}>{plan.title}</h4>
-                              <span className="inline-block px-2 py-0.5 bg-amethyst-light text-amethyst-dark text-[8px] font-bold uppercase tracking-widest rounded-md">{plan.content_pillar || 'edu'}</span>
-                           </div>
-                        </td>
-                        <td className="py-8 px-4">
-                           <div className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-xl">
-                              {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : '-'}
-                           </div>
-                        </td>
-                        <td className="py-8 px-4">
-                           <span className="text-[10px] font-bold text-amethyst-dark/60 uppercase tracking-widest bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 whitespace-nowrap">{plan.content_format || "-"}</span>
-                        </td>
-                        <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
-                           <div className="relative">
-                              <button
-                                onClick={(e: any) => {
-                                  if (isPublic) return;
-                                  e.stopPropagation();
-                                  setOpenStatusId(openStatusId === plan.id ? null : plan.id);
-                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  setStatusDropPos({ top: rect.bottom + 6, left: rect.left });
-                                }}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[9px] font-bold tracking-tight uppercase transition-all ${isPublic ? 'cursor-default' : 'hover:opacity-80'} ${
-                                  statusStyles[plan.status?.toLowerCase()] || 'bg-slate-50 text-slate-400'
-                                }`}
-                              >
-                                {plan.status || 'Draft'}
-                                {!isPublic && <ChevronDown size={10} className={`transition-transform ${openStatusId === plan.id ? 'rotate-180' : ''}`}/>}
-                              </button>
-                           </div>
-                        </td>
-                        <td className="py-8 px-4 text-xs font-normal text-amethyst-dark/60">{plan.author_name || "-"}</td>
-                        <td className="py-8 px-4">
-                           <div className="text-xs font-bold text-amethyst-dark/80">
-                             {plan.due_date 
-                               ? new Date(plan.due_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
-                               : 'Unscheduled'
-                             }
-                           </div>
-                        </td>
-                        <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
-                            <div className="flex items-center gap-3">
-                               {/* Script Asset */}
-                               {editingAsset?.id === plan.id && editingAsset?.type === 'script' ? (
-                                 <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                                    <input 
-                                       autoFocus
-                                       value={tempLink}
-                                       onChange={(e: any) => setTempLink(e.target.value)}
-                                       placeholder="Script URL..."
-                                       className="w-32 h-9 bg-white border border-amethyst-primary/30 rounded-xl px-3 text-[9px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300 shadow-sm"
-                                    />
-                                    <button 
-                                       onClick={() => {
-                                          plan.script_link = tempLink;
-                                          if (onInlineUpdate) onInlineUpdate(plan.id, 'script_link', tempLink);
-                                          setEditingAsset(null);
-                                       }}
-                                       className="px-3 py-2 bg-amethyst-dark text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all"
-                                    >
-                                       Save
-                                    </button>
-                                    <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
-                                       <X size={12}/>
-                                    </button>
-                                 </div>
-                               ) : (
-                                 <button 
-                                   onClick={() => {
-                                      if (isPublic && !plan.script_link) return;
-                                      if (isPublic) { window.open(plan.script_link, '_blank'); return; }
-                                      setEditingAsset({ id: plan.id, type: 'script' });
-                                      setTempLink(plan.script_link || '');
-                                   }}
-                                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all shadow-sm ${
-                                      plan.script_link 
-                                      ? 'bg-amethyst-light text-amethyst-dark hover:bg-white border border-amethyst-light/50' 
-                                      : 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light'
-                                   }`}
-                                 >
-                                    <FileText size={12}/> {plan.script_link ? 'Lihat Script' : 'Input Script'}
-                                 </button>
-                               )}
+         </div>
 
-                               {/* Content Asset */}
-                               {editingAsset?.id === plan.id && editingAsset?.type === 'content' ? (
-                                 <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                                    <input 
-                                       autoFocus
-                                       value={tempLink}
-                                       onChange={(e: any) => setTempLink(e.target.value)}
-                                       placeholder="Content URL..."
-                                       className="w-32 h-8 bg-white border border-amethyst-primary/30 rounded-xl px-3 text-[8px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300 shadow-sm"
-                                    />
-                                    <button 
-                                       onClick={() => {
-                                          plan.content_link = tempLink;
-                                          if (onInlineUpdate) onInlineUpdate(plan.id, 'content_link', tempLink);
-                                          setEditingAsset(null);
-                                       }}
-                                       className="px-3 py-1.5 bg-amethyst-primary text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all"
-                                    >
-                                       Save
-                                    </button>
-                                    <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
-                                       <X size={10}/>
-                                    </button>
-                                 </div>
-                               ) : (
-                                 <button 
-                                    onClick={() => {
-                                       if (isPublic && !plan.content_link) return;
-                                       if (isPublic) { window.open(plan.content_link, '_blank'); return; }
-                                       setEditingAsset({ id: plan.id, type: 'content' });
-                                       setTempLink(plan.content_link || '');
-                                    }}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all shadow-sm ${
-                                       plan.content_link 
-                                       ? 'bg-amethyst-mauve/20 text-amethyst-dark hover:bg-white border border-amethyst-mauve/30' 
-                                       : 'bg-amethyst-light/30 text-amethyst-primary hover:bg-white border border-transparent hover:border-amethyst-light'
-                                    }`}
-                                 >
-                                    <Video size={12}/> {plan.content_link ? 'Lihat Konten' : 'Input Konten'}
-                                 </button>
-                               )}
-                            </div>
-                        </td>
-                        <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
-                           {(editingAsset?.id === plan.id && editingAsset?.type === 'post' && !isPublic) ? (
-                             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                                <input 
-                                  autoFocus
-                                  value={tempLink}
-                                  onChange={(e: any) => setTempLink(e.target.value)}
-                                  placeholder="Paste link..."
-                                  className="w-40 h-8 bg-slate-50 border border-amethyst-primary/30 rounded-xl px-3 text-[8px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    plan.post_link = tempLink;
-                                    if (onInlineUpdate) onInlineUpdate(plan.id, 'post_link', tempLink);
-                                    setEditingAsset(null);
-                                  }}
-                                  className="px-3 py-1.5 bg-amethyst-dark text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
-                                >
-                                  Save
-                                </button>
-                                <button 
-                                  onClick={() => setEditingAsset(null)}
-                                  className="p-1 text-slate-300 hover:text-rose-500 transition-colors"
-                                >
-                                  <X size={12}/>
-                                </button>
-                             </div>
-                           ) : plan.post_link ? (
-                             <a 
-                               href={plan.post_link} 
-                               target="_blank" 
-                               rel="noreferrer"
-                               className="flex items-center gap-1.5 px-3 py-1.5 bg-amethyst-light text-amethyst-dark rounded-lg text-[8px] font-bold uppercase border border-amethyst-light hover:bg-white transition-all w-fit"
-                             >
-                               <ExternalLink size={12}/> View Post
-                             </a>
-                           ) : (
-                             <button 
-                               onClick={() => {
-                                 if (isPublic) return;
-                                 setEditingAsset({ id: plan.id, type: 'post' });
-                                 setTempLink('');
-                               }}
-                               className={`flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase border border-transparent transition-all ${isPublic ? 'cursor-default' : 'hover:border-amethyst-light'}`}
-                             >
-                                {isPublic ? 'N/A' : <><Plus size={12}/> Input Post Link</>}
-                             </button>
-                           )}
-                        </td>
-                        {!isPublic && (
-                           <td className="py-8 px-4 text-right">
-                              <div className="flex items-center justify-end gap-1 text-slate-200">
-                                  {plan.status.toLowerCase() === 'uploaded' && (
-                                    <button 
-                                      onClick={(e: any) => { e.stopPropagation(); onInsight?.(plan); }}
-                                      className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${
-                                        plan.metrics_updated 
-                                        ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' 
-                                        : 'bg-[#9333EA] text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] hover:scale-105 active:scale-95'
-                                      }`}
-                                      title={plan.metrics_updated ? 'View Insights' : 'Input Metrics Insight'}
-                                    >
-                                      <TrendingUp size={12}/> {plan.metrics_updated ? 'Insights' : 'Add Metrics'}
-                                      {!plan.metrics_updated && (
-                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-white animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"/>
-                                      )}
-                                    </button>
-                                  )}
-                                 <button 
-                                   onClick={(e: any) => { 
-                                      e.stopPropagation(); 
-                                      if (onEditContent) onEditContent(plan);
-                                   }}
-                                   className="p-2 hover:text-amethyst-primary transition-colors text-amethyst-primary/60"
-                                   title="Edit Content"
-                                 >
-                                   <Pencil size={14}/>
-                                 </button>
-                                 <button 
-                                   onClick={(e: any) => { 
-                                     e.stopPropagation(); 
-                                     setIsDeletingId(plan.id);
-                                     setIsConfirmOpen(true);
-                                   }}
-                                   className="p-2 hover:text-rose-500 transition-colors text-amethyst-primary/60"
-                                   title="Delete Content"
-                                 >
-                                   <Trash2 size={14}/>
-                                 </button>
+         <AnimatePresence mode="wait">
+            {isLocalLoading ? (
+               <div key="loading" className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                     <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="bg-white rounded-[24px] p-6 border border-amethyst-light shadow-sm flex items-center justify-between gap-6 animate-pulse"
+                     >
+                        <div className="flex-1 space-y-2">
+                           <div className="h-4 w-1/2 bg-slate-100 rounded-md animate-pulse" />
+                           <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Memuat data strategi...</div>
+                        </div>
+                        <div className="w-8 h-8 bg-slate-50 rounded-lg" />
+                        <div className="w-24 h-8 bg-slate-50 rounded-xl" />
+                        <div className="w-20 h-4 bg-slate-50 rounded-md" />
+                        <div className="flex gap-2">
+                           <div className="w-20 h-8 bg-slate-50 rounded-lg" />
+                           <div className="w-20 h-8 bg-slate-50 rounded-lg" />
+                        </div>
+                     </motion.div>
+                  ))}
+               </div>
+            ) : (
+               <div key="content" className="space-y-6">
+                  {/* MOBILE CARD VIEW */}
+                  <div className="md:hidden space-y-4">
+                     {sortedPlans.length === 0 ? (
+                        <div className="py-20 text-center bg-white rounded-[32px] border border-amethyst-light shadow-sm">
+                           <div className="flex flex-col items-center justify-center text-gray-400">
+                              <div className="mb-4 rounded-full bg-gray-50 p-4">
+                                 <Calendar className="h-8 w-8" />
                               </div>
-                           </td>
-                        )}
-                     </tr>
-                    ))
-                  )}
-                </tbody>
-             </table>
-          </motion.div>
-        ) : currentView === 'kanban' ? (
-          <motion.div 
-            key="kanban"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="flex gap-6 overflow-x-auto pb-8 no-scrollbar"
-          >
-             {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map((status: string) => (
-                <div key={status} className="flex-shrink-0 w-80 space-y-6">
-                   <div className="flex items-center justify-between px-4">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-amethyst-dark/40">{status}</h3>
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${statusStyles[status.toLowerCase()] || 'bg-slate-100 text-slate-400'}`}>
-                         {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length}
-                      </span>
-                   </div>
-                   <div className="space-y-4">
-                      {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).map((plan: any, i: number) => (
-                        <div 
-                          key={plan.id || i} 
-                          onClick={() => onSelectContent?.(plan)}
-                          className="bg-white p-6 rounded-[24px] border border-amethyst-light shadow-sm hover:scale-[1.02] transition-all cursor-pointer space-y-4 group"
-                        >
-                           <div className="flex items-center justify-between">
-                              <span className="px-2 py-0.5 bg-amethyst-light text-amethyst-dark text-[8px] font-bold uppercase tracking-widest rounded-md">{plan.content_pillar || 'edu'}</span>
-                              <div className="flex items-center gap-2">
-                                 {platformIcons[plan.platform?.toLowerCase()] || ''}
-                                 <span className="text-[9px] font-normal text-amethyst-dark/20 uppercase truncate max-w-[60px]">
-                                    {plan.platform}
-                                 </span>
+                              <p className="text-lg font-medium text-gray-600">Belum ada konten</p>
+                           </div>
+                        </div>
+                     ) : (
+                        sortedPlans.map((plan: any, i: number) => (
+                           <motion.div 
+                              key={plan.id || i}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              onClick={() => onSelectContent?.(plan)}
+                              className="bg-white rounded-[28px] p-6 border border-amethyst-light shadow-sm space-y-4 active:scale-[0.98] transition-all"
+                           >
+                              <div className="flex justify-between items-start gap-4">
+                                 <div className="space-y-1.5 flex-1">
+                                    <div className="flex items-center gap-2">
+                                       <span className="px-2 py-0.5 bg-amethyst-light text-amethyst-dark text-[8px] font-bold uppercase tracking-widest rounded-md">{plan.content_pillar || 'edu'}</span>
+                                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{new Date(plan.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                                    </div>
+                                    <h4 className="text-sm font-bold text-amethyst-dark leading-snug line-clamp-2">{plan.title}</h4>
+                                 </div>
+                                 <div className="flex flex-col items-end gap-2 shrink-0">
+                                    <div className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl">
+                                       {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : '-'}
+                                    </div>
+                                    {!isPublic && (
+                                       <div className="flex items-center gap-1">
+                                          <button 
+                                             onClick={(e: any) => { e.stopPropagation(); onEditContent?.(plan); }} 
+                                             className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-amethyst-primary/60 hover:text-amethyst-primary active:scale-90 transition-all"
+                                          >
+                                             <Pencil size={12} />
+                                          </button>
+                                          <button 
+                                             onClick={(e: any) => { e.stopPropagation(); setIsDeletingId(plan.id); setIsConfirmOpen(true); }} 
+                                             className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-amethyst-primary/60 hover:text-rose-500 active:scale-90 transition-all"
+                                          >
+                                             <Trash2 size={12} />
+                                          </button>
+                                       </div>
+                                    )}
+                                 </div>
                               </div>
-                           </div>
-                           <h4 className="text-sm font-bold text-amethyst-dark group-hover:text-amethyst-primary transition-colors">{plan.title}</h4>
-                           <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                              <div className="w-6 h-6 rounded-full bg-amethyst-light border border-white"/>
-                              <span className="text-[9px] font-normal text-amethyst-dark/40 italic">{new Date(plan.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
-                           </div>
-                        </div>
-                      ))}
-                      {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
-                        <div className="h-24 border-2 border-dashed border-slate-50 rounded-3xl flex items-center justify-center">
-                           <p className="text-[10px] font-bold text-slate-200 tracking-widest">No Tasks</p>
-                        </div>
-                      )}
-                   </div>
-                </div>
-             ))}
-          </motion.div>
-        ) : currentView === 'calendar' ? (
-          <motion.div 
-            key="calendar"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-white rounded-[32px] border border-amethyst-light shadow-sm overflow-hidden flex flex-col"
-          >
-             {/* Calendar Header */}
-             <div className="p-10 flex items-center justify-between border-b border-amethyst-light">
-                <div className="flex items-center gap-6">
-                   <div className="w-14 h-14 bg-amethyst-light text-amethyst-dark rounded-2xl flex items-center justify-center border border-amethyst-light/50">
-                      <Calendar size={24}/>
-                   </div>
-                   <div>
-                      <h3 className="text-3xl font-bold text-amethyst-dark tracking-tight">
-                         {new Date(dateRange.start + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                      </h3>
-                      <div className="text-xs font-normal text-amethyst-primary flex items-center gap-2">
-                         <div className="w-1.5 h-1.5 bg-amethyst-primary rounded-full animate-pulse"/>
-                         {sortedPlans.length} Tasks in this range
-                      </div>
-                   </div>
-                </div>
 
-                 <div className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-                   <button 
-                     onClick={() => {
-                        const s = new Date(dateRange.start + 'T00:00:00');
-                        const e = new Date(dateRange.end + 'T00:00:00');
-                        s.setMonth(s.getMonth() - 1);
-                        e.setMonth(e.getMonth() - 1);
-                        
-                        const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                        setDateRange({ start: format(s), end: format(e) });
-                     }}
-                     className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"
-                   >
-                     <ChevronLeft size={20}/>
-                   </button>
-                   <button 
-                     onClick={() => {
-                        const now = new Date();
-                        const s = new Date(now.getFullYear(), now.getMonth(), 1);
-                        const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                        
-                        const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                        setDateRange({ start: format(s), end: format(e) });
-                     }}
-                     className="px-6 py-2 bg-amethyst-dark text-white text-[10px] font-bold uppercase tracking-widest rounded-xl mx-2 shadow-lg"
-                   >
-                     This Month
-                   </button>
-                   <button 
-                     onClick={() => {
-                        const s = new Date(dateRange.start + 'T00:00:00');
-                        const e = new Date(dateRange.end + 'T00:00:00');
-                        s.setMonth(s.getMonth() + 1);
-                        e.setMonth(e.getMonth() + 1);
-                        
-                        const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                        setDateRange({ start: format(s), end: format(e) });
-                     }}
-                     className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"
-                   >
-                     <ChevronRight size={20}/>
-                   </button>
-                </div>
-             </div>
-
-             {/* Weekday Labels */}
-             <div className="grid grid-cols-7 border-b border-amethyst-light bg-slate-50/50">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day: string) => (
-                  <div key={day} className="py-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-amethyst-primary/40">
-                     {day}
+                              <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                                 <div className="flex gap-2">
+                                    <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[9px] font-bold uppercase tracking-wider">{plan.content_format || 'Format'}</span>
+                                 </div>
+                                 <div className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${plan.status?.toUpperCase() === 'UPLOADED' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                                    {plan.status || 'DRAFT'}
+                                 </div>
+                              </div>
+                           </motion.div>
+                        ))
+                     )}
                   </div>
-                ))}
-             </div>
 
-             {/* Calendar Grid */}
-             <div className="grid grid-cols-7 grid-rows-5 h-[auto] min-h-[700px]">
-                {(() => {
-                  const startDateObj = new Date(dateRange.start + 'T00:00:00');
-                  const monthIndex = startDateObj.getMonth();
-                  const yearVal = startDateObj.getFullYear();
+                  {/* DESKTOP VIEWS */}
+                  <div className="hidden md:block">
+                     {currentView === 'table' ? (
+                        <motion.div 
+                           key="table"
+                           initial={{ opacity: 0, y: 20 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           exit={{ opacity: 0, y: -20 }}
+                           className="bg-white rounded-[32px] border border-amethyst-light shadow-sm overflow-hidden p-10"
+                        >
+                           <table className="w-full">
+                              <thead>
+                                 <tr className="text-[10px] font-bold text-amethyst-primary/40 uppercase tracking-[0.1em] border-b border-amethyst-light">
+                                    <th className="text-left pb-6 px-4">Content / Pillar</th>
+                                    <th className="text-left pb-6 px-4">Platform</th>
+                                    <th className="text-left pb-6 px-4">Format</th>
+                                    <th className="text-left pb-6 px-4">Phase</th>
+                                    <th className="text-left pb-6 px-4">Pic</th>
+                                    <th className="text-left pb-6 px-4 cursor-pointer hover:text-amethyst-primary transition-colors group/sort" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+                                       <div className="flex items-center gap-1.5">
+                                          Due Date
+                                          <span className="text-amethyst-primary/30 group-hover/sort:text-amethyst-primary transition-colors">
+                                             {sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>}
+                                          </span>
+                                       </div>
+                                    </th>
+                                    <th className="text-left pb-6 px-4">Assets</th>
+                                    <th className="text-left pb-6 px-4">Live Link</th>
+                                    {!isPublic && <th className="text-right pb-6 px-4">Action</th>}
+                                 </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 bg-white">
+                                 {sortedPlans.length === 0 ? (
+                                    <tr>
+                                       <td colSpan={isPublic ? 8 : 9} className="py-20 text-center">
+                                          <div className="flex flex-col items-center justify-center text-gray-400">
+                                             <div className="mb-4 rounded-full bg-gray-50 p-4">
+                                                <Calendar className="h-8 w-8" />
+                                             </div>
+                                             <p className="text-lg font-medium text-gray-600">Tambahkan konten untuk mulai mengelola kontenmu</p>
+                                          </div>
+                                       </td>
+                                    </tr>
+                                 ) : (
+                                    sortedPlans.map((plan: any, i: number) => (
+                                       <tr key={plan.id || i} className={`group hover:bg-amethyst-light/10 transition-all cursor-pointer ${plan.status?.toLowerCase() === 'uploaded' ? 'opacity-60 hover:opacity-100' : ''}`} onClick={() => onSelectContent?.(plan)}>
+                                          <td className="py-8 px-4">
+                                             <div className="space-y-1">
+                                                <h4 className={`text-sm font-bold text-amethyst-dark ${plan.status?.toLowerCase() === 'uploaded' ? 'line-through decoration-amethyst-primary/40' : ''}`}>{plan.title}</h4>
+                                                <span className="inline-block px-2 py-0.5 bg-amethyst-light text-amethyst-dark text-[8px] font-bold uppercase tracking-widest rounded-md">{plan.content_pillar || 'edu'}</span>
+                                             </div>
+                                          </td>
+                                          <td className="py-8 px-4">
+                                             <div className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-xl">
+                                                 {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : "-"}
 
-                  const firstDay = new Date(yearVal, monthIndex, 1).getDay();
-                  const daysInMonth = new Date(yearVal, monthIndex + 1, 0).getDate();
-                  
-                  // Generate total cells (35 or 42 depending on how it stretches)
-                  const totalCells = firstDay + daysInMonth > 35 ? 42 : 35;
-                  const cellIndices = Array.from({ length: totalCells }, ((_: any, i: number) => i));
-                  
-                  return cellIndices.map((cellIdx: number) => {
-                    const dayNum = cellIdx - firstDay + 1;
-                    const isValidDay = dayNum > 0 && dayNum <= daysInMonth;
-                    
-                    const now = new Date();
-                    const isToday = isValidDay && 
-                                    dayNum === now.getDate() && 
-                                    monthIndex === now.getMonth() && 
-                                    yearVal === now.getFullYear();
-                    
-                    const dayContent = filteredPlans.filter((p: any) => {
-                      if (!p.due_date) return false;
-                      const pDate = p.due_date.substring(0, 10);
-                      const cellDate = `${yearVal}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                      return pDate === cellDate;
-                    });
+                                             </div>
+                                          </td>
+                                          <td className="py-8 px-4">
+                                             <span className="text-[10px] font-bold text-amethyst-dark/60 uppercase tracking-widest bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 whitespace-nowrap">{plan.content_format || "-"}</span>
+                                          </td>
+                                          <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
+                                             <div className="relative">
+                                                <button
+                                                   onClick={(e: any) => {
+                                                      if (isPublic) return;
+                                                      e.stopPropagation();
+                                                      setOpenStatusId(openStatusId === plan.id ? null : plan.id);
+                                                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                      setStatusDropPos({ top: rect.bottom + 6, left: rect.left });
+                                                   }}
+                                                   className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[9px] font-bold tracking-tight uppercase transition-all ${isPublic ? 'cursor-default' : 'hover:opacity-80'} ${
+                                                      statusStyles[plan.status?.toLowerCase()] || 'bg-slate-50 text-slate-400'
+                                                   }`}
+                                                >
+                                                   {plan.status || 'Draft'}
+                                                   {!isPublic && <ChevronDown size={10} className={`transition-transform ${openStatusId === plan.id ? 'rotate-180' : ''}`}/>}
+                                                </button>
+                                             </div>
+                                          </td>
+                                          <td className="py-8 px-4 text-xs font-normal text-amethyst-dark/60">{plan.author_name || "-"}</td>
+                                          <td className="py-8 px-4">
+                                             <div className="text-xs font-bold text-amethyst-dark/80">
+                                                {plan.due_date 
+                                                   ? new Date(plan.due_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
+                                                   : 'Unscheduled'
+                                                }
+                                             </div>
+                                          </td>
+                                          <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
+                                             <div className="flex items-center gap-3">
+                                                {editingAsset?.id === plan.id && editingAsset?.type === 'script' ? (
+                                                   <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                                      <input autoFocus value={tempLink} onChange={(e: any) => setTempLink(e.target.value)} placeholder="Script URL..." className="w-32 h-9 bg-white border border-amethyst-primary/30 rounded-xl px-3 text-[9px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300 shadow-sm" />
+                                                      <button onClick={() => { if (onInlineUpdate) onInlineUpdate(plan.id, 'script_link', tempLink); setEditingAsset(null); }} className="px-3 py-2 bg-amethyst-dark text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all">Save</button>
+                                                      <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors"><X size={12}/></button>
+                                                   </div>
+                                                ) : (
+                                                   <button onClick={() => { if (isPublic && !plan.script_link) return; if (isPublic) { window.open(plan.script_link, '_blank'); return; } setEditingAsset({ id: plan.id, type: 'script' }); setTempLink(plan.script_link || ''); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all shadow-sm ${plan.script_link ? 'bg-amethyst-light text-amethyst-dark hover:bg-white border border-amethyst-light/50' : 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light'}`}>
+                                                      <FileText size={12}/> {plan.script_link ? 'Lihat Script' : 'Input Script'}
+                                                   </button>
+                                                )}
 
-                    return (
-                      <div key={cellIdx} className={`border-r border-b border-slate-50 p-4 transition-all hover:bg-amethyst-light/20 flex flex-col gap-2 min-h-[140px] ${!isValidDay ? 'bg-slate-50/10 text-transparent pointer-events-none' : ''}`}>
-                         {isValidDay && (
-                           <>
-                             <div className="flex items-center justify-between pointer-events-none mb-1">
-                                <span className={`text-xs font-bold ${isToday ? 'w-7 h-7 bg-amethyst-dark text-white rounded-full flex items-center justify-center shadow-md' : 'text-slate-300'}`}>
-                                   {dayNum}
-                                </span>
-                             </div>
-                             
-                             <div className="flex flex-col gap-1.5 overflow-hidden">
-                                {dayContent.map((plan: any, idx: number) => (
-                                    <motion.div 
-                                      initial={{ opacity: 0, x: -5 }}
-                                      animate={{ opacity: 1, x: 0 }}
-                                      key={plan.id || idx}
-                                      onClick={(e: any) => { e.stopPropagation(); onSelectContent?.(plan); }}
-                                    className="px-3 py-2 bg-white border border-amethyst-light rounded-xl shadow-sm cursor-pointer hover:border-amethyst-dark transition-all"
-                                  >
-                                     <p className="text-[9px] font-bold text-amethyst-dark truncate leading-tight">{plan.title}</p>
-                                  </motion.div>
-                                ))}
-                             </div>
-                           </>
-                         )}
-                      </div>
-                    );
-                  });
-                })()}
-             </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
+                                                {editingAsset?.id === plan.id && editingAsset?.type === 'content' ? (
+                                                   <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                                      <input autoFocus value={tempLink} onChange={(e: any) => setTempLink(e.target.value)} placeholder="Content URL..." className="w-32 h-8 bg-white border border-amethyst-primary/30 rounded-xl px-3 text-[8px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300 shadow-sm" />
+                                                      <button onClick={() => { if (onInlineUpdate) onInlineUpdate(plan.id, 'content_link', tempLink); setEditingAsset(null); }} className="px-3 py-1.5 bg-amethyst-primary text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all">Save</button>
+                                                      <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors"><X size={10}/></button>
+                                                   </div>
+                                                ) : (
+                                                   <button onClick={() => { if (isPublic && !plan.content_link) return; if (isPublic) { window.open(plan.content_link, '_blank'); return; } setEditingAsset({ id: plan.id, type: 'content' }); setTempLink(plan.content_link || ''); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all shadow-sm ${plan.content_link ? 'bg-amethyst-mauve/20 text-amethyst-dark hover:bg-white border border-amethyst-mauve/30' : 'bg-amethyst-light/30 text-amethyst-primary hover:bg-white border border-transparent hover:border-amethyst-light'}`}>
+                                                      <Video size={12}/> {plan.content_link ? 'Lihat Konten' : 'Input Konten'}
+                                                   </button>
+                                                )}
+                                             </div>
+                                          </td>
+                                          <td className="py-8 px-4" onClick={(e: any) => e.stopPropagation()}>
+                                             {(editingAsset?.id === plan.id && editingAsset?.type === 'post' && !isPublic) ? (
+                                                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                                                   <input autoFocus value={tempLink} onChange={(e: any) => setTempLink(e.target.value)} placeholder="Paste link..." className="w-40 h-8 bg-slate-50 border border-amethyst-primary/30 rounded-xl px-3 text-[8px] font-bold text-amethyst-dark outline-none focus:border-amethyst-dark/30 transition-all placeholder:text-slate-300" />
+                                                   <button onClick={() => { if (onInlineUpdate) onInlineUpdate(plan.id, 'post_link', tempLink); setEditingAsset(null); }} className="px-3 py-1.5 bg-amethyst-dark text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all">Save</button>
+                                                   <button onClick={() => setEditingAsset(null)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors"><X size={12}/></button>
+                                                </div>
+                                             ) : plan.post_link ? (
+                                                <a href={plan.post_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-amethyst-light text-amethyst-dark rounded-lg text-[8px] font-bold uppercase border border-amethyst-light hover:bg-white transition-all w-fit"><ExternalLink size={12}/> View Post</a>
+                                             ) : (
+                                                <button onClick={() => { if (isPublic) return; setEditingAsset({ id: plan.id, type: 'post' }); setTempLink(''); }} className={`flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase border border-transparent transition-all ${isPublic ? 'cursor-default' : 'hover:border-amethyst-light'}`}>
+                                                   {isPublic ? 'N/A' : <><Plus size={12}/> Input Post Link</>}
+                                                </button>
+                                             )}
+                                          </td>
+                                          {!isPublic && (
+                                             <td className="py-8 px-4 text-right">
+                                                <div className="flex items-center justify-end gap-1 text-slate-200">
+                                                   {plan.status?.toLowerCase() === 'uploaded' && (
+                                                      <button onClick={(e: any) => { e.stopPropagation(); onInsight?.(plan); }} className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-[9px] font-bold uppercase tracking-widest ${plan.metrics_updated ? 'bg-slate-50 text-slate-400 hover:bg-white border border-transparent hover:border-amethyst-light opacity-60 font-medium' : 'bg-[#9333EA] text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] hover:scale-105 active:scale-95'}`}>
+                                                         <TrendingUp size={12}/> {plan.metrics_updated ? 'Insights' : 'Add Metrics'}
+                                                         {!plan.metrics_updated && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-white animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"/>}
+                                                      </button>
+                                                   )}
+                                                   <button onClick={(e: any) => { e.stopPropagation(); onEditContent?.(plan); }} className="p-2 hover:text-amethyst-primary transition-colors text-amethyst-primary/60"><Pencil size={14}/></button>
+                                                   <button onClick={(e: any) => { e.stopPropagation(); setIsDeletingId(plan.id); setIsConfirmOpen(true); }} className="p-2 hover:text-rose-500 transition-colors text-amethyst-primary/60"><Trash2 size={14}/></button>
+                                                </div>
+                                             </td>
+                                          )}
+                                       </tr>
+                                    ))
+                                 )}
+                              </tbody>
+                           </table>
+                        </motion.div>
+                     ) : currentView === 'kanban' ? (
+                        <motion.div key="kanban" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex gap-6 overflow-x-auto pb-8 no-scrollbar">
+                           {['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded'].map((status: string) => (
+                              <div key={status} className="flex-shrink-0 w-80 space-y-6">
+                                 <div className="flex items-center justify-between px-4">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-amethyst-dark/40">{status}</h3>
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${statusStyles[status.toLowerCase()] || 'bg-slate-100 text-slate-400'}`}>
+                                       {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length}
+                                    </span>
+                                 </div>
+                                 <div className="space-y-4">
+                                    {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).map((plan: any, i: number) => (
+                                       <div key={plan.id || i} onClick={() => onSelectContent?.(plan)} className="bg-white p-6 rounded-[24px] border border-amethyst-light shadow-sm hover:scale-[1.02] transition-all cursor-pointer space-y-4 group">
+                                          <div className="flex items-center justify-between">
+                                             <span className="px-2 py-0.5 bg-amethyst-light text-amethyst-dark text-[8px] font-bold uppercase tracking-widest rounded-md">{plan.content_pillar || 'edu'}</span>
+                                             <div className="flex items-center gap-2">
+                                                {platformIcons[plan.platform?.toLowerCase()] || ''}
+                                                <span className="text-[9px] font-normal text-amethyst-dark/20 uppercase truncate max-w-[60px]">{plan.platform}</span>
+                                             </div>
+                                          </div>
+                                          <h4 className="text-sm font-bold text-amethyst-dark group-hover:text-amethyst-primary transition-colors">{plan.title}</h4>
+                                          <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                                             <div className="w-6 h-6 rounded-full bg-amethyst-light border border-white"/>
+                                             <span className="text-[9px] font-normal text-amethyst-dark/40 italic">{new Date(plan.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                                          </div>
+                                       </div>
+                                    ))}
+                                    {sortedPlans.filter((p: any) => p.status?.toLowerCase() === status.toLowerCase()).length === 0 && (
+                                       <div className="h-24 border-2 border-dashed border-slate-50 rounded-3xl flex items-center justify-center">
+                                          <p className="text-[10px] font-bold text-slate-200 tracking-widest">No Tasks</p>
+                                       </div>
+                                    )}
+                                 </div>
+                              </div>
+                           ))}
+                        </motion.div>
+                     ) : currentView === 'calendar' ? (
+                        <motion.div key="calendar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-[32px] border border-amethyst-light shadow-sm overflow-hidden flex flex-col">
+                           <div className="p-10 flex items-center justify-between border-b border-amethyst-light">
+                              <div className="flex items-center gap-6">
+                                 <div className="w-14 h-14 bg-amethyst-light text-amethyst-dark rounded-2xl flex items-center justify-center border border-amethyst-light/50"><Calendar size={24}/></div>
+                                 <div>
+                                    <h3 className="text-3xl font-bold text-amethyst-dark tracking-tight">{new Date(dateRange.start + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</h3>
+                                    <div className="text-xs font-normal text-amethyst-primary flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amethyst-primary rounded-full animate-pulse"/>{sortedPlans.length} Tasks in this range</div>
+                                 </div>
+                              </div>
+                              <div className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                                 <button onClick={() => { const s = new Date(dateRange.start + 'T00:00:00'); const e = new Date(dateRange.end + 'T00:00:00'); s.setMonth(s.getMonth() - 1); e.setMonth(e.getMonth() - 1); const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; setDateRange({ start: format(s), end: format(e) }); }} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"><ChevronLeft size={20}/></button>
+                                 <button onClick={() => { const now = new Date(); const s = new Date(now.getFullYear(), now.getMonth(), 1); const e = new Date(now.getFullYear(), now.getMonth() + 1, 0); const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; setDateRange({ start: format(s), end: format(e) }); }} className="px-6 py-2 bg-amethyst-dark text-white text-[10px] font-bold uppercase tracking-widest rounded-xl mx-2 shadow-lg">This Month</button>
+                                 <button onClick={() => { const s = new Date(dateRange.start + 'T00:00:00'); const e = new Date(dateRange.end + 'T00:00:00'); s.setMonth(s.getMonth() + 1); e.setMonth(e.getMonth() + 1); const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; setDateRange({ start: format(s), end: format(e) }); }} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-amethyst-dark transition-all"><ChevronRight size={20}/></button>
+                              </div>
+                           </div>
+                           <div className="grid grid-cols-7 border-b border-amethyst-light bg-slate-50/50">
+                              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day: string) => (<div key={day} className="py-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-amethyst-primary/40">{day}</div>))}
+                           </div>
+                           <div className="grid grid-cols-7 grid-rows-5 h-[auto] min-h-[700px]">
+                              {(() => {
+                                 const startDateObj = new Date(dateRange.start + 'T00:00:00');
+                                 const monthIndex = startDateObj.getMonth();
+                                 const yearVal = startDateObj.getFullYear();
+                                 const firstDay = new Date(yearVal, monthIndex, 1).getDay();
+                                 const daysInMonth = new Date(yearVal, monthIndex + 1, 0).getDate();
+                                 const totalCells = firstDay + daysInMonth > 35 ? 42 : 35;
+                                 const cellIndices = Array.from({ length: totalCells }, ((_: any, i: number) => i));
+                                 return cellIndices.map((cellIdx: number) => {
+                                    const dayNum = cellIdx - firstDay + 1;
+                                    const isValidDay = dayNum > 0 && dayNum <= daysInMonth;
+                                    const now = new Date();
+                                    const isToday = isValidDay && dayNum === now.getDate() && monthIndex === now.getMonth() && yearVal === now.getFullYear();
+                                    const dayContent = filteredPlans.filter((p: any) => { if (!p.due_date) return false; const pDate = p.due_date.substring(0, 10); const cellDate = `${yearVal}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`; return pDate === cellDate; });
+                                    return (
+                                       <div key={cellIdx} className={`border-r border-b border-slate-50 p-4 transition-all hover:bg-amethyst-light/20 flex flex-col gap-2 min-h-[140px] ${!isValidDay ? 'bg-slate-50/10 text-transparent pointer-events-none' : ''}`}>
+                                          {isValidDay && (
+                                             <>
+                                                <div className="flex items-center justify-between pointer-events-none mb-1">
+                                                   <span className={`text-xs font-bold ${isToday ? 'w-7 h-7 bg-amethyst-dark text-white rounded-full flex items-center justify-center shadow-md' : 'text-slate-300'}`}>{dayNum}</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1.5 overflow-hidden">
+                                                   {dayContent.map((plan: any, idx: number) => (
+                                                      <motion.div initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} key={plan.id || idx} onClick={(e: any) => { e.stopPropagation(); onSelectContent?.(plan); }} className="px-3 py-2 bg-white border border-amethyst-light rounded-xl shadow-sm cursor-pointer hover:border-amethyst-dark transition-all">
+                                                         <p className="text-[9px] font-bold text-amethyst-dark truncate leading-tight">{plan.title}</p>
+                                                      </motion.div>
+                                                   ))}
+                                                </div>
+                                             </>
+                                          )}
+                                       </div>
+                                    );
+                                 });
+                              })()}
+                           </div>
+                        </motion.div>
+                     ) : null}
+                  </div>
+               </div>
+            )}
+         </AnimatePresence>
+      </div>
 
-      {/* Fixed-position Status Dropdown Portal — renders outside table overflow */}
+      {/* Fixed-position Status Dropdown Portal */}
       <AnimatePresence>
-        {openStatusId && statusDropPos && openPlan && (
-          <div key="status-dropdown-portal">
-            <div className="fixed inset-0 z-[200]" onClick={() => setOpenStatusId(null)}/>
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              style={{ position: 'fixed', top: statusDropPos.top, left: statusDropPos.left, zIndex: 201 }}
-              className="w-44 bg-white rounded-2xl shadow-2xl border border-amethyst-light/20 overflow-hidden py-1.5"
-            >
-              {(['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded']).map((s: string) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    if (onStatusChange) onStatusChange(openPlan.id, s);
-                    openPlan.status = s;
-                    setOpenStatusId(null);
-                  }}
-                  className={`w-full px-4 py-3 text-left flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-slate-50 ${
-                    openPlan.status?.toLowerCase() === s.toLowerCase() ? 'bg-amethyst-light/30 text-amethyst-dark' : 'text-slate-400'
-                  }`}
-                >
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    s === 'Draft' ? 'bg-slate-400' :
-                    s === 'In Progress' ? 'bg-blue-400' :
-                    s === 'Review' ? 'bg-orange-400' :
-                    s === 'Approved' ? 'bg-emerald-600' : 'bg-amethyst-primary'
-                  }`}/>
-                  {s}
-                </button>
-              ))}
-            </motion.div>
-          </div>
-        )}
+         {openStatusId && statusDropPos && openPlan && (
+            <div key="status-dropdown-portal">
+               <div className="fixed inset-0 z-[200]" onClick={() => setOpenStatusId(null)}/>
+               <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} style={{ position: 'fixed', top: statusDropPos.top, left: statusDropPos.left, zIndex: 201 }} className="w-44 bg-white rounded-2xl shadow-2xl border border-amethyst-light/20 overflow-hidden py-1.5">
+                  {(['Draft', 'In Progress', 'Review', 'Approved', 'Uploaded']).map((s: string) => (
+                     <button key={s} onClick={() => { if (onStatusChange) onStatusChange(openPlan.id, s); openPlan.status = s; setOpenStatusId(null); }} className={`w-full px-4 py-3 text-left flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-slate-50 ${openPlan.status?.toLowerCase() === s.toLowerCase() ? 'bg-amethyst-light/30 text-amethyst-dark' : 'text-slate-400'}`}>
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s === 'Draft' ? 'bg-slate-400' : s === 'In Progress' ? 'bg-blue-400' : s === 'Review' ? 'bg-orange-400' : s === 'Approved' ? 'bg-emerald-600' : 'bg-amethyst-primary'}`}/>
+                        {s}
+                     </button>
+                  ))}
+               </motion.div>
+            </div>
+         )}
       </AnimatePresence>
 
       {/* Feature Locked Modal */}
       <AnimatePresence>
-        {isLockModalOpen && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.9, y: 20 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-               className="bg-white w-full max-w-sm rounded-[44px] shadow-2xl overflow-hidden border border-white/20 relative"
-            >
-               {/* Pattern Decor */}
-               <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                  <Zap size={120} />
-               </div>
-
-               <div className="p-10 space-y-8 flex flex-col items-center text-center">
-                  <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-amber-300 to-amber-500 text-white flex items-center justify-center shadow-2xl shadow-amber-500/20">
-                    {lockedFeature.icon}
+         {isLockModalOpen && (
+            <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+               <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm rounded-[44px] shadow-2xl overflow-hidden border border-white/20 relative">
+                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none"><Zap size={120} /></div>
+                  <div className="p-10 space-y-8 flex flex-col items-center text-center">
+                     <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-amber-300 to-amber-500 text-white flex items-center justify-center shadow-2xl shadow-amber-500/20">{lockedFeature.icon}</div>
+                     <div className="space-y-3">
+                        <div className="flex items-center justify-center gap-2"><span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md border border-amber-100 flex items-center gap-1"><Sparkles size={10}/> Pro Feature</span></div>
+                        <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">{lockedFeature.title}</h3>
+                        <p className="text-xs text-slate-400 font-bold leading-relaxed">{lockedFeature.desc}</p>
+                     </div>
+                     <div className="w-full space-y-3">
+                        <button onClick={() => { setIsLockModalOpen(false); openUpgrade(); }} className="w-full py-4 rounded-2xl bg-amethyst-dark text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-[1.02] active:scale-95 transition-all">Upgrade to unlock</button>
+                        <button onClick={() => setIsLockModalOpen(false)} className="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Mungkin Nanti</button>
+                     </div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-center gap-2">
-                       <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md border border-amber-100 flex items-center gap-1">
-                         <Sparkles size={10}/> Pro Feature
-                       </span>
-                    </div>
-                    <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">{lockedFeature.title}</h3>
-                    <p className="text-xs text-slate-400 font-bold leading-relaxed">{lockedFeature.desc}</p>
-                  </div>
-
-                  <div className="w-full space-y-3">
-                    <button 
-                      onClick={() => {
-                        setIsLockModalOpen(false);
-                        openUpgrade();
-                      }}
-                      className="w-full py-4 rounded-2xl bg-amethyst-dark text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 hover:scale-[1.02] active:scale-95 transition-all"
-                    >
-                      Upgrade to unlock
-                    </button>
-                    <button 
-                      onClick={() => setIsLockModalOpen(false)}
-                      className="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
-                    >
-                      Mungkin Nanti
-                    </button>
-                  </div>
-               </div>
-            </motion.div>
-          </div>
-        )}
+               </motion.div>
+            </div>
+         )}
       </AnimatePresence>
 
       <AruneekaConfirmModal
-        isOpen={feedbackModal.isOpen}
-        onClose={() => {
-          const shouldReload = feedbackModal.type === 'success';
-          setFeedbackModal((prev: any) => ({ ...prev, isOpen: false }));
-          if (shouldReload) {
-             setRefreshCounter(prev => prev + 1);
-          }
-        }}
-        onConfirm={() => {
-          const shouldReload = feedbackModal.type === 'success';
-          setFeedbackModal((prev: any) => ({ ...prev, isOpen: false }));
-          if (shouldReload) {
-             setRefreshCounter(prev => prev + 1);
-          }
-        }}
-        title={feedbackModal.title}
-        message={feedbackModal.message}
-        type={feedbackModal.type}
+         isOpen={feedbackModal.isOpen}
+         onClose={() => { const shouldReload = feedbackModal.type === 'success'; setFeedbackModal((prev: any) => ({ ...prev, isOpen: false })); if (shouldReload) setRefreshCounter(prev => prev + 1); }}
+         onConfirm={() => { const shouldReload = feedbackModal.type === 'success'; setFeedbackModal((prev: any) => ({ ...prev, isOpen: false })); if (shouldReload) setRefreshCounter(prev => prev + 1); }}
+         title={feedbackModal.title}
+         message={feedbackModal.message}
+         type={feedbackModal.type}
       />
 
       <AruneekaConfirmModal 
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={handleExecuteDelete}
-        title="Hapus Konten"
-        message="Apakah Anda yakin ingin menghapus konten ini? Tindakan ini akan menghapus data secara permanen dari database."
-        type="danger"
+         isOpen={isConfirmOpen}
+         onClose={() => setIsConfirmOpen(false)}
+         onConfirm={handleExecuteDelete}
+         title="Hapus Konten"
+         message="Apakah Anda yakin ingin menghapus konten ini? Tindakan ini akan menghapus data secara permanen dari database."
+         type="danger"
       />
     </div>
   );

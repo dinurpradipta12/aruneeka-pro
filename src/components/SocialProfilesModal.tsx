@@ -180,7 +180,7 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
     <>
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl" />
           
           <motion.div 

@@ -16,7 +16,10 @@ import {
   Clock,
   Calendar,
   Zap,
-  Sparkles
+  Sparkles,
+  ChevronRight,
+  Package,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -168,20 +171,20 @@ const AnalyticsCard = ({ title, value, trend, color, data, maxVal }: any) => {
       <motion.div 
          layout
          onClick={() => setIsExpanded(!isExpanded)}
-         className={`bg-white border cursor-pointer group rounded-[32px] p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden relative ${isExpanded ? 'ring-2 ring-slate-100' : 'border-slate-100'}`}
+         className={`bg-white border cursor-pointer group rounded-[32px] p-6 md:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden relative ${isExpanded ? 'ring-2 ring-slate-100' : 'border-slate-100'}`}
       >
          <div className="flex items-center justify-between relative z-10">
             <div className="space-y-1">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
                <div className="flex items-center gap-3">
-                  <h3 className="text-3xl font-black text-slate-800">{value}</h3>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-800">{value}</h3>
                   <span className={`px-2 py-1 ${bgColors[color]} ${textColors[color]} rounded-lg text-[9px] font-black uppercase tracking-widest`}>
                      {trend}
                   </span>
                </div>
             </div>
-            <div className={`w-12 h-12 ${bgColors[color]} ${textColors[color]} rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110`}>
-               {title.includes('Active') ? <Zap size={20} /> : title.includes('Member') ? <Users size={20} /> : <ShieldCheck size={20} />}
+            <div className={`w-10 h-10 md:w-12 md:h-12 ${bgColors[color]} ${textColors[color]} rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110`}>
+               {title.includes('Active') ? <Zap size={18} className="md:w-5 md:h-5" /> : title.includes('Member') ? <Users size={18} className="md:w-5 md:h-5" /> : <ShieldCheck size={18} className="md:w-5 md:h-5" />}
             </div>
          </div>
 
@@ -204,7 +207,7 @@ const AnalyticsCard = ({ title, value, trend, color, data, maxVal }: any) => {
             )}
          </AnimatePresence>
 
-         <div className="absolute bottom-4 right-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+         <div className="absolute bottom-3 md:bottom-4 right-6 md:right-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Click to {isExpanded ? 'close' : 'expand'}</span>
             <ArrowUpDown size={10} className="text-slate-300" />
          </div>
@@ -349,12 +352,10 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       console.log("Starting Nuclear Scrub for user:", targetUserId);
 
       // --- PHASE 1: INDIVIDUAL PERSONAL DATA ---
-      // Clear personal inbox & memberships
       await supabase.from('v2_agency_inbox').delete().eq('user_id', targetUserId);
       await supabase.from('v2_agency_workspace_members').delete().eq('user_id', targetUserId);
 
       // --- PHASE 2: WORKSPACE & DEPENDENCIES ---
-      // Find all workspaces owned by this user
       const { data: workspaces } = await supabase
         .from('v2_agency_workspaces')
         .select('id')
@@ -364,7 +365,6 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
         for (const ws of workspaces) {
           const wsId = ws.id;
           
-          // Clear all dependent tables for this workspace
           await Promise.all([
             supabase.from('v2_agency_content_plans').delete().eq('workspace_id', wsId),
             supabase.from('v2_agency_kpi_targets').delete().eq('workspace_id', wsId),
@@ -374,7 +374,6 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
             supabase.from('v2_agency_social_profiles').delete().eq('workspace_id', wsId)
           ]);
 
-          // Clear all squad members personal data for this workspace
           const { data: squadMembers } = await supabase
             .from('v2_agency_users')
             .select('id')
@@ -386,15 +385,12 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
             await supabase.from('v2_agency_workspace_members').delete().in('user_id', memberIds);
           }
 
-          // BREAK THE LINK: Nullify or Delete the workspace
-          // We'll try to delete it directly first as it's cleaner
           const { error: wsDelError } = await supabase
             .from('v2_agency_workspaces')
             .delete()
             .eq('id', wsId);
 
           if (wsDelError) {
-             // If delete fails, try to nullify the owner_id so we can at least delete the user
              await supabase.from('v2_agency_workspaces').update({ owner_id: null }).eq('id', wsId);
           }
         }
@@ -402,20 +398,17 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
 
       // --- PHASE 3: FINAL SQUAD & USER PURGE ---
       if (workspaceId) {
-        // Delete all users in that workspace_id (including the owner)
         const { error: finalUsersError } = await supabase
           .from('v2_agency_users')
           .delete()
           .eq('workspace_id', workspaceId);
 
         if (finalUsersError) {
-           // Fallback: Just delete the target user if the squad wipe fails
            await supabase.from('v2_agency_users').delete().eq('id', targetUserId);
         }
         
         setUsers((prev: any[]) => prev.filter((u: any) => (u as any).workspace_id !== workspaceId));
       } else {
-        // Just delete the target user
         const { error: finalUserError } = await supabase
           .from('v2_agency_users')
           .delete()
@@ -446,11 +439,11 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
     switch(role) {
       case 'Superuser': return 'bg-black text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest';
       case 'Admin': return 'bg-amethyst-primary/10 text-amethyst-primary px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-amethyst-primary/20';
+      case 'developer': return 'bg-amethyst-primary text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest';
       default: return 'bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest';
     }
   };
 
-  // High-priority override for master developer account
   const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('aruneeka_user') || '{}') : {};
   const isDevOrSuper = currentUser?.role === 'developer' || currentUser?.role === 'Superuser' || storedUser?.role === 'developer' || storedUser?.role === 'Superuser';
   const isMasterAccount = currentUser?.username === 'arunika' || storedUser?.username === 'arunika';
@@ -474,17 +467,17 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
   return (
     <div className="space-y-8 pb-10">
       {/* Header & Stats */}
-      <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-8 md:gap-10">
          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-1">
                <div className="flex items-center gap-3 text-amethyst-primary">
-                  <ShieldCheck size={20} />
+                  <ShieldCheck size={18} className="md:w-5 md:h-5" />
                   <span className="text-[10px] font-black uppercase tracking-[0.3em]">System Administration</span>
                </div>
-               <h2 className="text-4xl font-black text-slate-800 tracking-tight">User Management</h2>
+               <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">User Management</h2>
             </div>
 
-            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 w-fit">
                <Clock size={14} className="text-slate-400" />
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Sync Active</span>
             </div>
@@ -497,7 +490,6 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                const invitedMembers = users.filter((u: any) => u.role === 'Member');
                const totalPop = users.length + pendingUsers.length;
 
-               // Helper to process growth data
                const getGrowthData = () => {
                   const periods: { [key: string]: number } = {};
                   const sortedUsers = [...users, ...pendingUsers].sort((a: any, b: any) => 
@@ -510,11 +502,8 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
                      periods[period] = (periods[period] || 0) + 1;
                   });
 
-                  // Ensure we have at least 2 points for a line
                   const result = Object.entries(periods).map(([name, value]: [string, any]) => ({ name, value }));
-                  if (result.length === 1) {
-                     return [{ name: '', value: 0 }, ...result];
-                  }
+                  if (result.length === 1) return [{ name: '', value: 0 }, ...result];
                   return result;
                };
 
@@ -523,30 +512,9 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
 
                return (
                   <>
-                     <AnalyticsCard 
-                        title="Total Population"
-                        value={totalPop}
-                        trend="+12%"
-                        color="indigo"
-                        data={chartData}
-                        maxVal={maxVal}
-                     />
-                     <AnalyticsCard 
-                        title="Active Now"
-                        value={activeUsers.length}
-                        trend="Live"
-                        color="emerald"
-                        data={chartData}
-                        maxVal={maxVal}
-                     />
-                     <AnalyticsCard 
-                        title="Invited Members"
-                        value={invitedMembers.length}
-                        trend="Team"
-                        color="amethyst"
-                        data={chartData}
-                        maxVal={maxVal}
-                     />
+                     <AnalyticsCard title="Total Population" value={totalPop} trend="+12%" color="indigo" data={chartData} maxVal={maxVal} />
+                     <AnalyticsCard title="Active Now" value={activeUsers.length} trend="Live" color="emerald" data={chartData} maxVal={maxVal} />
+                     <AnalyticsCard title="Invited Members" value={invitedMembers.length} trend="Team" color="amethyst" data={chartData} maxVal={maxVal} />
                   </>
                );
             })()}
@@ -556,12 +524,7 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
       {/* WAITING LIST / APPROVAL QUEUE */}
       <AnimatePresence>
         {pendingUsers.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-4"
-          >
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4">
              <div className="flex items-center justify-between px-6">
                 <div className="flex items-center gap-2 text-amber-500">
                    <Clock className="animate-pulse" size={16} />
@@ -572,49 +535,12 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pendingUsers.map((pUser: any) => (
-                   <motion.div 
-                     layout
-                     key={pUser.id}
-                     className="bg-amber-50 border border-amber-100 rounded-[32px] p-6 flex flex-col justify-between gap-4 group hover:shadow-lg hover:shadow-amber-500/10 transition-all"
-                   >
+                   <motion.div layout key={pUser.id} className="bg-amber-50 border border-amber-100 rounded-[32px] p-6 flex flex-col justify-between gap-4 group hover:shadow-lg hover:shadow-amber-500/10 transition-all">
                       <div className="flex items-center gap-4">
-                         {pUser.avatar_url ? (
-                            <img src={pUser.avatar_url} alt={pUser.full_name} className="w-12 h-12 object-contain" />
-                         ) : (
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-500 font-black shadow-sm border border-amber-200">
-                               {pUser.full_name?.[0] || 'U'}
-                            </div>
-                         )}
-                         <div>
-                            <p className="font-black text-slate-800 text-sm tracking-tight">{pUser.full_name}</p>
-                            <p className="text-[10px] text-amber-600 font-bold opacity-70 italic">@{pUser.username}</p>
-                         </div>
+                         {pUser.avatar_url ? <img src={pUser.avatar_url} alt={pUser.full_name} className="w-12 h-12 object-contain" /> : <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-500 font-black shadow-sm border border-amber-200">{pUser.full_name?.[0] || 'U'}</div>}
+                         <div><p className="font-black text-slate-800 text-sm tracking-tight">{pUser.full_name}</p><p className="text-[10px] text-amber-600 font-bold opacity-70 italic">@{pUser.username}</p></div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                         <button 
-                           onClick={() => handleApprove(pUser.id)}
-                           disabled={approvingId === pUser.id}
-                           className="flex-1 py-3 bg-white text-emerald-500 border border-emerald-100 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                         >
-                            {approvingId === pUser.id ? (
-                               <>
-                                 <motion.div 
-                                   animate={{ rotate: 360 }}
-                                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                                 >
-                                   <Clock size={12} />
-                                 </motion.div>
-                                 Processing...
-                               </>
-                            ) : (
-                               'Approve'
-                            )}
-                         </button>
-                         <button className="px-4 py-3 bg-white text-slate-400 border border-slate-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">
-                            Ignore
-                         </button>
-                      </div>
+                      <div className="flex items-center gap-2"><button onClick={() => handleApprove(pUser.id)} disabled={approvingId === pUser.id} className="flex-1 py-3 bg-white text-emerald-500 border border-emerald-100 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">{approvingId === pUser.id ? (<><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Clock size={12} /></motion.div>Processing...</>) : ('Approve')}</button><button className="px-4 py-3 bg-white text-slate-400 border border-slate-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">Ignore</button></div>
                    </motion.div>
                 ))}
              </div>
@@ -622,345 +548,107 @@ const AruneekaAdminUsers = ({ subscriptionTier = 'free' }: AruneekaAdminUsersPro
         )}
       </AnimatePresence>
 
-      {/* Manual Expiry Edit Modal */}
-      <AnimatePresence>
-        {editingUser && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl relative z-10 space-y-8" 
-            >
-               <div className="text-center space-y-2">
-                  <div className="w-16 h-16 bg-amethyst-primary/10 text-amethyst-primary rounded-[24px] flex items-center justify-center mx-auto mb-4">
-                     <Calendar size={28} />
-                  </div>
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Adjust Expiry Date</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
-                     Manual override for {editingUser.full_name}
-                  </p>
-               </div>
-
-               <div className="space-y-4">
-                  <div className="space-y-1.5">
-                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">New Expiry Date</label>
-                     <input 
-                       type="date"
-                       value={newExpiry}
-                       onChange={(e) => setNewExpiry(e.target.value)}
-                       className="w-full bg-slate-50 border-none rounded-2xl p-5 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/10 transition-all text-slate-800"
-                     />
-                  </div>
-               </div>
-
-               <div className="flex flex-col gap-3">
-                  <button 
-                    onClick={handleUpdateExpiry}
-                    disabled={isUpdating}
-                    className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                     {isUpdating ? 'Updating...' : 'Apply Changes'}
-                  </button>
-                  <button onClick={() => setEditingUser(null)} className="w-full py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">
-                     Cancel
-                  </button>
-               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* Control Bar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm">
          <div className="relative w-full md:w-96">
             <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
-            <input 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or username..."
-              className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 text-xs font-bold text-slate-800 outline-none focus:ring-2 ring-amethyst-light/30 transition-all"
-            />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by name or username..." className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 text-xs font-bold text-slate-800 outline-none focus:ring-2 ring-amethyst-light/30 transition-all" />
          </div>
 
-         <div className="flex items-center gap-3">
+         <div className="flex items-center gap-3 w-full md:w-auto">
             <button className="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all">
                <Filter size={18} />
             </button>
             {((users.length + pendingUsers.length) >= 2 && subscriptionTier === 'free' && !(currentUser?.role === 'Superuser' || currentUser?.role === 'developer')) ? (
-              <button 
-                onClick={() => alert("limit 2 users reached. upgrade to pro to invite more team members.")}
-                className="flex items-center gap-3 px-8 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold text-[10px] tracking-tight border border-slate-200 cursor-not-allowed"
-              >
-                 <ShieldCheck size={16} /> 
-                 Upgrade to invite more
-              </button>
+              <button onClick={() => alert("limit 2 users reached. upgrade to pro to invite more team members.")} className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold text-[10px] tracking-tight border border-slate-200 cursor-not-allowed"><ShieldCheck size={16} /> Upgrade to invite more</button>
             ) : (
-              <button className="flex items-center gap-3 px-8 py-4 bg-amethyst-dark text-white rounded-2xl font-bold text-[10px] tracking-tight hover:bg-black transition-all shadow-lg shadow-amethyst-dark/20">
-                 <UserPlus size={16} />
-                 Register new user
-              </button>
+              <button className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-amethyst-dark text-white rounded-2xl font-bold text-[10px] tracking-tight hover:bg-black transition-all shadow-lg shadow-amethyst-dark/20"><UserPlus size={16} /> Register new user</button>
             )}
          </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white rounded-[40px] border border-slate-100 shadow-premium overflow-hidden">
-         <table className="w-full text-left border-collapse">
-            <thead>
-               <tr className="bg-slate-50/50 border-b border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <th className="px-8 py-6 text-left">User Profile</th>
-                  <th className="px-8 py-6 text-left">System Role</th>
-                  <th className="px-8 py-6 text-left">Active Package</th>
-                  <th className="px-8 py-6 text-left">Subscription Period</th>
-                  <th className="px-8 py-6 text-left">Usage Health</th>
-                  <th className="px-8 py-6 text-right">Settings</th>
-               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-               {filteredUsers.map((user: any) => {
-                  // Calculate Days Left
-                  const expiryDate = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
-                  const startDate = user.created_at ? new Date(user.created_at) : null;
-                  const now = new Date();
-                  const diffTime = expiryDate ? expiryDate.getTime() - now.getTime() : 0;
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      {/* Data Table / Mobile List */}
+      <div className="space-y-4">
+         {/* Desktop Table View */}
+         <div className="hidden md:block bg-white rounded-[40px] border border-slate-100 shadow-premium overflow-hidden">
+            <table className="w-full text-left border-collapse">
+               <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                     <th className="px-8 py-6">User Profile</th>
+                     <th className="px-8 py-6">System Role</th>
+                     <th className="px-8 py-6">Active Package</th>
+                     <th className="px-8 py-6">Subscription Period</th>
+                     <th className="px-8 py-6">Usage Health</th>
+                     <th className="px-8 py-6 text-right">Settings</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-50">
+                  {filteredUsers.map((user: any) => {
+                     const expiryDate = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
+                     const isUnlimited = user.role === 'Superuser' || user.role === 'developer' || user.role === 'Admin';
+                     const expiryStr = isUnlimited ? 'Never' : (expiryDate ? expiryDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'None');
+                     return (
+                       <motion.tr layout key={user.id} className="hover:bg-slate-50/30 transition-colors group">
+                          <td className="px-8 py-6"><div className="flex items-center gap-4">{user.avatar_url ? <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 object-contain" /> : <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg border border-amethyst-light/10 shadow-inner">{user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}</div>}<div className="space-y-0.5"><p className="font-black text-slate-800 tracking-tight">{user.full_name || 'Anonymous User'}</p><p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p></div></div></td>
+                          <td className="px-8 py-6"><span className={getRoleStyle(user.role)}>{user.role}</span></td>
+                          <td className="px-8 py-6">{isUnlimited ? (<div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border bg-black text-white border-black transition-all"><ShieldCheck size={12} className="animate-pulse" /><span className="text-[10px] font-black uppercase tracking-widest">System Master</span></div>) : (<select value={user.subscription_tier || 'free'} onChange={(e) => handleUpdateTier(user.id, e.target.value)} disabled={isUpdating} className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : user.subscription_tier === 'pro' || user.subscription_tier === 'single_creator' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`} style={{backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,backgroundSize: '12px'}}><option value="free">Free Starter</option><option value="pro">Single Creator</option><option value="agency">Agency Pro</option></select>)}</td>
+                          <td className="px-8 py-6 text-[12px] font-bold text-slate-500 italic">{expiryStr}</td>
+                          <td className="px-8 py-6"><div className="flex items-center gap-2 text-[11px] font-black text-emerald-500 bg-emerald-50 px-3 py-1.5 rounded-full w-fit border border-emerald-100"><Activity size={12} /><span>OPTIMAL</span></div></td>
+                          <td className="px-8 py-6 text-right"><button className="p-3 text-slate-300 hover:text-amethyst-primary transition-colors"><MoreHorizontal size={20}/></button></td>
+                       </motion.tr>
+                     );
+                  })}
+               </tbody>
+            </table>
+         </div>
+
+         {/* Mobile List View */}
+         <div className="md:hidden space-y-4">
+            {filteredUsers.map((user: any) => (
+               <motion.div layout key={user.id} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-premium flex flex-col gap-6">
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                        {user.avatar_url ? <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 object-contain" /> : <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg">{user.full_name?.charAt(0)}</div>}
+                        <div><p className="font-black text-slate-800 text-base tracking-tight">{user.full_name}</p><p className="text-[11px] text-slate-400 font-bold italic">@{user.username}</p></div>
+                     </div>
+                     <button className="p-3 bg-slate-50 text-slate-300 rounded-xl"><MoreHorizontal size={18}/></button>
+                  </div>
                   
-                  const isExpired = expiryDate && diffDays <= 0;
-                  const isNearExpiry = expiryDate && diffDays > 0 && diffDays <= 7;
-                  const isUnlimited = user.role === 'Superuser' || user.role === 'developer';
-                  const expiryStr = isUnlimited ? 'Never' : (expiryDate ? expiryDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'None');
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                     <div className="space-y-1">
+                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Role</p>
+                        <span className={getRoleStyle(user.role)}>{user.role}</span>
+                     </div>
+                     <div className="space-y-1">
+                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Status</p>
+                        <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-500 uppercase"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"/> Active</div>
+                     </div>
+                  </div>
 
-                  return (
-                    <motion.tr 
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      key={user.id} 
-                      className="hover:bg-slate-50/30 transition-colors group"
-                    >
-                       <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                             {user.avatar_url ? (
-                                <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 object-contain" />
-                             ) : (
-                                <div className="w-12 h-12 rounded-2xl bg-amethyst-light/20 flex items-center justify-center text-amethyst-dark font-black text-lg border border-amethyst-light/10 shadow-inner">
-                                   {user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
-                                </div>
-                             )}
-                             <div className="space-y-0.5">
-                                <p className="font-black text-slate-800 tracking-tight">{user.full_name || 'Anonymous User'}</p>
-                                <div className="flex flex-col gap-1">
-                                   <p className="text-xs text-slate-400 font-bold tracking-tight">@{user.username}</p>
-                                   {(user.parent_user_id || (user.workspace_id && user.role?.toLowerCase() !== 'owner' && user.role?.toLowerCase() !== 'superuser' && user.role?.toLowerCase() !== 'developer')) && (
-                                      <div className="flex items-center gap-1.5 mt-1 px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg w-fit group-hover:bg-amethyst-primary/5 group-hover:border-amethyst-primary/10 transition-all">
-                                         <UserPlus size={10} className="text-amethyst-primary" />
-                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                                            Invited by:{' '}
-                                            <span className="text-amethyst-primary">
-                                               {users.find((u: any) => u.id === user.parent_user_id)?.full_name || 
-                                                users.find((u: any) => u.workspace_id === user.workspace_id && (u.role?.toLowerCase() === 'owner' || u.role?.toLowerCase() === 'admin'))?.full_name || 
-                                                'Principal Owner'}
-                                            </span>
-                                         </span>
-                                      </div>
-                                   )}
-                                </div>
-                             </div>
-                          </div>
-                       </td>
-                       <td className="px-8 py-6">
-                          <span className={getRoleStyle(user.role)}>{user.role}</span>
-                       </td>
-                       <td className="px-8 py-6">
-                           {isUnlimited ? (
-                               <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border bg-black text-white border-black transition-all">
-                                  <ShieldCheck size={12} className="animate-pulse" />
-                                  <span className="text-[10px] font-black uppercase tracking-widest">Developer Pro</span>
-                               </div>
-                           ) : (
-                               <select 
-                                 value={user.subscription_tier || 'free'}
-                                 onChange={(e) => handleUpdateTier(user.id, e.target.value)}
-                                 disabled={isUpdating}
-                                 className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md active:scale-95 disabled:opacity-50 appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${
-                                    user.subscription_tier === 'agency' ? 'bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary' : 
-                                    user.subscription_tier === 'pro' || user.subscription_tier === 'single_creator' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'
-                                 }`}
-                                 style={{
-                                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-                                    backgroundSize: '12px'
-                                 }}
-                               >
-                                  <option value="free">Free Starter</option>
-                                  <option value="pro">Single Creator</option>
-                                  <option value="agency">Agency Pro</option>
-                                </select>
-                           )}
-                        </td>
-                        <td className="px-8 py-6">
-                            <div className="flex items-center gap-3">
-                                <div className="space-y-0.5 min-w-[80px]">
-                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Started</p>
-                                   <p className="text-[10px] font-black text-slate-700">
-                                      {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                                   </p>
-                                </div>
-                                <div className="w-4 h-px bg-slate-200" />
-                                <div className="space-y-0.5 min-w-[80px]">
-                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expires</p>
-                                   <button 
-                                     onClick={() => {
-                                        setEditingUser(user);
-                                        setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
-                                     }}
-                                     className={`text-[10px] font-black text-left hover:text-amethyst-primary transition-all flex items-center gap-1 group ${isExpired ? 'text-rose-500' : 'text-slate-700'}`}
-                                   >
-                                      {expiryStr}
-                                      <Calendar size={10} className="opacity-0 group-hover:opacity-100 transition-all text-amethyst-primary" />
-                                   </button>
-                                </div>
-                            </div>
-                        </td>
-                        <td className="px-8 py-6">
-                           {isUnlimited ? (
-                             <div className="flex items-center gap-2 text-amethyst-primary">
-                                <ShieldCheck size={14} className="opacity-60" />
-                                <div className="space-y-0.5">
-                                   <p className="text-[10px] font-black uppercase tracking-widest leading-none">Internal Account</p>
-                                   <p className="text-[8px] font-bold text-slate-300 italic">No constraints</p>
-                                </div>
-                             </div>
-                           ) : expiryDate ? (
-                             <div className="space-y-2 min-w-[140px]">
-                                <div className="flex items-center justify-between">
-                                   <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                     isExpired ? 'text-rose-500' : isNearExpiry ? 'text-amber-500' : 'text-emerald-500'
-                                   }`}>
-                                      {isExpired ? 'Expired' : isNearExpiry ? `${diffDays} days critical` : `${diffDays} days active`}
-                                   </span>
-                                   <span className="text-[9px] font-black text-slate-300">
-                                      {isExpired ? '0%' : `${Math.min(100, Math.ceil((diffDays / 30) * 100))}%`}
-                                   </span>
-                                </div>
-                                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                                   <motion.div 
-                                     initial={{ width: 0 }}
-                                     animate={{ width: isExpired ? '100%' : `${Math.min(100, (diffDays / 30) * 100)}%` }}
-                                     className={`h-full ${isExpired ? 'bg-rose-500' : isNearExpiry ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                   />
-                                </div>
-                             </div>
-                           ) : (
-                             <div className="flex items-center gap-2 text-slate-300 italic opacity-50">
-                                <AlertCircle size={12} />
-                                <span className="text-[10px] font-bold">Pending Setup</span>
-                             </div>
-                           )}
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                           <div className="flex items-center justify-end gap-2">
-                              <button 
-                                onClick={() => {
-                                   setEditingUser(user);
-                                   setNewExpiry(user.subscription_expiry ? new Date(user.subscription_expiry).toISOString().split('T')[0] : '');
-                                }}
-                                className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-white hover:text-amethyst-primary hover:shadow-sm transition-all border border-transparent hover:border-slate-100"
-                              >
-                                 <Edit3 size={14} />
-                              </button>
-                              <button 
-                                onClick={() => {
-                                   setUserToDelete(user);
-                                   setShowDeleteConfirm(true);
-                                }}
-                                className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent"
-                              >
-                                 <Trash2 size={14} />
-                              </button>
-                           </div>
-                        </td>
-                     </motion.tr>
-                  );
-               })}
-            </tbody>
-         </table>
-
-         {filteredUsers.length === 0 && (
-           <div className="py-32 flex flex-col items-center justify-center text-slate-300 space-y-4">
-              <Users size={64} className="opacity-10" />
-              <p className="text-xs font-black uppercase tracking-[0.3em]">Identity not found in database</p>
-           </div>
-         )}
+                  <div className="space-y-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-slate-400"><Package size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Plan</span></div>
+                        <p className="text-[10px] font-black text-amethyst-primary uppercase tracking-widest">{user.subscription_tier || 'Free'}</p>
+                     </div>
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-slate-400"><Calendar size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Expiry</span></div>
+                        <p className="text-[10px] font-bold text-slate-500 italic">{user.subscription_expiry ? new Date(user.subscription_expiry).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Never'}</p>
+                     </div>
+                  </div>
+               </motion.div>
+            ))}
+         </div>
       </div>
 
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* Manual Expiry Edit Modal */}
       <AnimatePresence>
-        {showDeleteConfirm && userToDelete && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
-             <motion.div 
-               initial={{ opacity: 0, scale: 0.9, y: 30 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.9, y: 30 }}
-               className="bg-white w-full max-w-sm rounded-[50px] shadow-2xl p-10 text-center space-y-8 relative overflow-hidden"
-             >
-                <div className="absolute top-0 left-0 w-full h-2 bg-rose-500" />
-                
-                <div className="space-y-3">
-                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[30px] flex items-center justify-center mx-auto mb-6 shadow-inner">
-                      <AlertCircle size={40} />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Hapus Akun User?</h3>
-                    <p className="text-xs font-bold text-slate-400 leading-relaxed px-4">
-                      Tindakan ini akan membuat <b>{userToDelete.full_name || userToDelete.username}</b> kehilangan seluruh akses ke Aruneeka selamanya.
-                    </p>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                    <button 
-                      onClick={confirmDelete}
-                      disabled={isDeletingUser}
-                      className="w-full py-5 bg-rose-500 text-white rounded-[24px] font-black text-[11px] uppercase tracking-[2px] shadow-xl shadow-rose-500/20 hover:bg-rose-600 transition-all flex items-center justify-center gap-3"
-                    >
-                      {isDeletingUser ? <Clock size={16} className="animate-spin" /> : 'Ya, Hapus Selama-lamanya'}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!isDeletingUser) {
-                           setShowDeleteConfirm(false);
-                           setUserToDelete(null);
-                        }
-                      }}
-                      className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-500 transition-all"
-                    >
-                      Batalkan
-                    </button>
-                </div>
-             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* SUCCESS NOTIFICATION MODAL */}
-      <AnimatePresence>
-        {showSuccessModal.show && (
-          <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[10000]">
-             <motion.div 
-               initial={{ opacity: 0, y: -50, scale: 0.9 }}
-               animate={{ opacity: 1, y: 0, scale: 1 }}
-               exit={{ opacity: 0, y: -50, scale: 0.9 }}
-               className="bg-white px-8 py-5 rounded-full shadow-2xl border border-emerald-100 flex items-center gap-4"
-             >
-                <div className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center">
-                   <CheckCircle2 size={24} />
-                </div>
-                <div>
-                   <p className="text-xs font-black text-slate-800 uppercase tracking-widest leading-none">Berhasil!</p>
-                   <p className="text-[10px] font-bold text-slate-400 mt-1">
-                      User telah berhasil {showSuccessModal.type === 'delete' ? 'dihapus dari sistem' : 'diperbarui'}.
-                   </p>
-                </div>
-             </motion.div>
+        {editingUser && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl relative z-10 space-y-8" >
+               <div className="text-center space-y-2"><div className="w-16 h-16 bg-amethyst-primary/10 text-amethyst-primary rounded-[24px] flex items-center justify-center mx-auto mb-4"><Calendar size={28} /></div><h3 className="text-xl font-black text-slate-800 tracking-tight">Adjust Expiry Date</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Manual override for {editingUser.full_name}</p></div>
+               <div className="space-y-4"><div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">New Expiry Date</label><input type="date" value={newExpiry} onChange={(e) => setNewExpiry(e.target.value)} className="w-full bg-slate-50 border-none rounded-2xl p-5 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/10 transition-all text-slate-800" /></div></div>
+               <div className="flex flex-col gap-3"><button onClick={handleUpdateExpiry} disabled={isUpdating} className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50">{isUpdating ? 'Updating...' : 'Apply Changes'}</button><button onClick={() => setEditingUser(null)} className="w-full py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">Cancel</button></div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

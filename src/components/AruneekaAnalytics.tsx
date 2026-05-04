@@ -2,47 +2,225 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Eye, 
-  TrendingUp, 
-  Users, 
-  Sparkles,
-  ArrowUpRight,
-  ChevronRight,
-  TrendingDown,
-  Layout,
-  MousePointer2,
-  Share2,
-  Calendar as CalendarIcon,
-  Activity,
-  Music,
-  AtSign,
-  Camera,
-  ExternalLink,
-  Check,
-  FileText,
-  Video,
-  Zap,
-  ShieldCheck,
-  Package,
-  CheckCircle2,
-  CreditCard,
-  ArrowLeft,
-  HelpCircle
+  Eye, TrendingUp, Users, Sparkles, ChevronRight, TrendingDown,
+  Layout, MousePointer2, Share2, Calendar as CalendarIcon, Activity,
+  ExternalLink, Package, ShieldCheck, HelpCircle, Zap, ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useWorkspace } from './AruneekaShell';
 
+// --- NEW COMPACT PERFORMANCE CHART (SMOOTH CURVE STYLE) ---
+
+const PerformanceChart = ({ data, activeMetric, maxVal }: { data: any[], activeMetric: string, maxVal: number }) => {
+   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+   if (data.length === 0) return null;
+   
+   const width = 800;
+   const height = 450; 
+   const paddingLeft = 50;
+   const paddingRight = 20;
+   const paddingTop = 40;
+   const paddingBottom = 60;
+   
+   const chartWidth = width - paddingLeft - paddingRight;
+   const chartHeight = height - paddingTop - paddingBottom;
+   
+   const key = activeMetric.toLowerCase();
+   
+   const getCoords = (i: number) => {
+      const x = (i / (data.length - 1 || 1)) * chartWidth + paddingLeft;
+      const y = paddingTop + chartHeight - ((Number(data[i][key]) / (maxVal || 1)) * chartHeight);
+      return { x, y };
+   };
+
+   // Generate Smooth Path (Cubic Bezier Interpolation)
+   const generateSmoothPath = () => {
+      if (data.length < 2) return "";
+      const coords = data.map((_, i) => getCoords(i));
+      let d = `M ${coords[0].x},${coords[0].y}`;
+      
+      for (let i = 0; i < coords.length - 1; i++) {
+         const curr = coords[i];
+         const next = coords[i + 1];
+         // Control points for smooth curves
+         const cp1x = curr.x + (next.x - curr.x) / 3;
+         const cp2x = curr.x + (next.x - curr.x) * 2 / 3;
+         d += ` C ${cp1x},${curr.y} ${cp2x},${next.y} ${next.x},${next.y}`;
+      }
+      return d;
+   };
+
+   const smoothPath = useMemo(generateSmoothPath, [data, activeMetric, maxVal]);
+   const areaPath = `${smoothPath} V ${paddingTop + chartHeight} H ${paddingLeft} Z`;
+
+   const yIndicators = [0, Math.ceil(maxVal * 0.25), Math.ceil(maxVal * 0.5), Math.ceil(maxVal * 0.75), maxVal];
+
+   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (width / rect.width);
+      const relativeX = x - paddingLeft;
+      const idx = Math.round((relativeX / chartWidth) * (data.length - 1));
+      if (idx >= 0 && idx < data.length) setHoveredIdx(idx);
+   };
+
+   return (
+      <div className="w-full relative aspect-[800/450]">
+         <svg 
+            viewBox={`0 0 ${width} ${height}`} 
+            preserveAspectRatio="none"
+            className="w-full h-full overflow-visible cursor-crosshair"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoveredIdx(null)}
+         >
+            <defs>
+               <linearGradient id="chartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#916DD5" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#916DD5" stopOpacity="0" />
+               </linearGradient>
+            </defs>
+
+            {/* Y-Axis Grid Lines */}
+            {yIndicators.map((val: number, i: number) => {
+               const y = paddingTop + chartHeight - (((val || 0) / (maxVal || 1)) * chartHeight);
+               return (
+                  <g key={`y-${i}`}>
+                     <line 
+                        x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} 
+                        stroke="#F1F5F9" strokeWidth="1" strokeDasharray="4,4"
+                     />
+                     <text 
+                        x={paddingLeft - 12} y={y} 
+                        textAnchor="end" alignmentBaseline="middle" 
+                        className="text-[10px] font-black fill-slate-300 tracking-tighter"
+                     >
+                        {val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}
+                     </text>
+                  </g>
+               );
+            })}
+
+            {/* Subtle Vertical Hover Line */}
+            <AnimatePresence>
+               {hoveredIdx !== null && (
+                  <motion.line
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     exit={{ opacity: 0 }}
+                     x1={getCoords(hoveredIdx).x}
+                     y1={paddingTop}
+                     x2={getCoords(hoveredIdx).x}
+                     y2={paddingTop + chartHeight}
+                     stroke="#E2E8F0"
+                     strokeWidth="1"
+                     strokeDasharray="4,4"
+                  />
+               )}
+            </AnimatePresence>
+
+            {/* Smooth Area */}
+            <motion.path 
+               key={'area-'+activeMetric}
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1, d: areaPath }}
+               transition={{ duration: 1, ease: 'easeOut' }}
+               fill="url(#chartGrad)"
+            />
+
+            {/* The Smooth Curve Line */}
+            <motion.path
+               key={'line-'+activeMetric}
+               fill="none"
+               stroke="#916DD5"
+               strokeWidth="4"
+               strokeLinecap="round"
+               strokeLinejoin="round"
+               d={smoothPath}
+               initial={{ pathLength: 0, opacity: 0 }}
+               animate={{ pathLength: 1, opacity: 1 }}
+               transition={{ duration: 1.5, ease: 'easeInOut' }}
+            />
+
+            {/* X-Axis Labels */}
+            {data.map((d: any, i: number) => {
+               if (data.length > 10 && i % 4 !== 0 && i !== data.length - 1) return null;
+               const { x } = getCoords(i);
+               return (
+                  <text 
+                     key={`x-${i}`}
+                     x={x} y={height - 20}
+                     textAnchor="middle"
+                     className="text-[10px] font-bold fill-slate-400 tracking-tight"
+                  >
+                     {d.day} {d.month.charAt(0).toUpperCase() + d.month.slice(1).toLowerCase()}
+                  </text>
+               );
+            })}
+
+            {/* Data Points (Preserved) */}
+            {data.map((d: any, i: number) => {
+               const val = Number(d[key]);
+               if (val === 0) return null;
+               const { x, y } = getCoords(i);
+               return (
+                  <g key={`pt-${i}`} className="group/pt">
+                     <motion.circle 
+                        cx={x} cy={y} r="4.5" 
+                        fill="white" 
+                        stroke="#916DD5" 
+                        strokeWidth="3"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.5 + (i * 0.02) }}
+                     />
+                  </g>
+               );
+            })}
+
+            {/* ABSOLUTE PRECISION HOVER TOOLTIP */}
+            <AnimatePresence>
+               {hoveredIdx !== null && (() => {
+                  const { x, y } = getCoords(hoveredIdx);
+                  const val = Number(data[hoveredIdx][key]);
+                  return (
+                     <foreignObject 
+                        key="tooltip-fo"
+                        x={x - 100} y={y - 120} 
+                        width="200" height="120"
+                        className="overflow-visible pointer-events-none"
+                     >
+                        <motion.div 
+                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                           animate={{ opacity: 1, y: 0, scale: 1 }}
+                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                           className="w-full h-full flex flex-col items-center justify-end pb-4"
+                        >
+                           <div className="bg-white/95 backdrop-blur-xl px-4 py-3 rounded-2xl shadow-2xl flex flex-col items-center gap-1 border border-white ring-1 ring-slate-100/50 relative">
+                              <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">
+                                 {data[hoveredIdx].day} {data[hoveredIdx].month.charAt(0).toUpperCase() + data[hoveredIdx].month.slice(1).toLowerCase()}
+                              </span>
+                              <div className="flex items-center gap-2 whitespace-nowrap">
+                                 <div className="w-2 h-2 bg-amethyst-primary rounded-full animate-pulse" />
+                                 <span className="text-sm font-black text-amethyst-dark tracking-tight">{val.toLocaleString()} {activeMetric}</span>
+                              </div>
+                              <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white/95 border-r border-b border-slate-100 rotate-45" />
+                           </div>
+                        </motion.div>
+                     </foreignObject>
+                  );
+               })()}
+            </AnimatePresence>
+         </svg>
+      </div>
+   );
+};
+
+// --- MAIN COMPONENT ---
+
 const AruneekaAnalytics = ({ 
-  selectedProfileId,
-  selectedWorkspaceId,
-  subscriptionTier = 'free',
-  isPublic = false
+  selectedProfileId, selectedWorkspaceId, subscriptionTier = 'free', isPublic = false 
 }: { 
-  selectedProfileId?: string,
-  selectedWorkspaceId?: string,
-  subscriptionTier?: string,
-  isPublic?: boolean
+  selectedProfileId?: string, selectedWorkspaceId?: string, subscriptionTier?: string, isPublic?: boolean 
 }) => {
   const [activeRange, setActiveRange] = useState('This Month');
   const [customStart, setCustomStart] = useState('');
@@ -51,1166 +229,301 @@ const AruneekaAnalytics = ({
   const [data, setData] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [openHintIdx, setOpenHintIdx] = useState<number | null>(null);
   
-  // Use context values if NOT public, otherwise use props
   const workspaceContext = useWorkspace();
   const currentTier = isPublic ? (subscriptionTier || 'free') : workspaceContext.subscriptionTier;
-  const openUpgrade = workspaceContext.openUpgrade;
-  const workspaceId = isPublic ? selectedWorkspaceId : (selectedWorkspaceId || workspaceContext.selectedWorkspaceId);
+  const { openUpgrade, openDetail, openMetrics, selectedWorkspaceId: ctxWsId, user } = workspaceContext;
+  const workspaceId = isPublic ? selectedWorkspaceId : (selectedWorkspaceId || ctxWsId);
 
-  // Helper for power user check
-  const getIsPowerUser = () => {
-    const role = (workspaceContext.user?.role || '').toLowerCase();
-    if (role === 'superuser' || role === 'developer') return true;
-    
-    // Fallback for public pages where context might be empty but user is logged in
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('aruneeka_user');
-      if (stored) {
-        try {
-          const u = JSON.parse(stored);
-          const r = (u.role || '').toLowerCase();
-          return r === 'superuser' || r === 'developer';
-        } catch(e) {}
-      }
+  const isPowerUserActual = useMemo(() => {
+    const role = (user?.role || '').toLowerCase();
+    return role === 'superuser' || role === 'developer';
+  }, [user]);
+
+  const currentMonthYear = useMemo(() => {
+    const d = new Date();
+    return `Bulan ${d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+  }, []);
+
+  const getV = (m: any, keys: string[]) => {
+    if (!m) return 0;
+    for (const k of keys) {
+      if (m[k] !== undefined) return Number(m[k]) || 0;
+      const lk = k.toLowerCase();
+      for (const ak in m) { if (ak.toLowerCase() === lk) return Number(m[ak]) || 0; }
     }
-    return false;
+    return 0;
   };
-  const isPowerUserActual = getIsPowerUser();
 
   const fetchData = async () => {
-    const isInitial = data.length === 0;
-    if (isInitial) setIsLoading(true);
-    
+    if (data.length === 0) setIsLoading(true);
     try {
       if (!workspaceId) return;
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('v2_agency_social_profiles')
-        .select('*')
-        .eq('workspace_id', workspaceId);
+      const { data: profileData } = await supabase.from('v2_agency_social_profiles').select('*').eq('workspace_id', workspaceId);
+      if (profileData) setProfiles(profileData);
       
-      if (!profileError && profileData) {
-        setProfiles(profileData);
-      }
-
-      // Fetch Content Plans
-      let query = supabase.from('v2_agency_content_plans')
-        .select('id, title, platform, content_pillar, due_date, metrics, status, post_link, author_name, author_avatar')
-        .eq('workspace_id', workspaceId);
-
-      // Filter by selected account if applicable
-      if (selectedProfileId) {
-        query = query.eq('target_account', selectedProfileId);
-      }
-
+      let query = supabase.from('v2_agency_content_plans').select('*').eq('workspace_id', workspaceId);
+      if (selectedProfileId) query = query.eq('target_account', selectedProfileId);
+      
+      const now = new Date();
       if (activeRange === 'This Month') {
-        const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        firstDay.setHours(0, 0, 0, 0);
+        firstDay.setHours(0,0,0,0);
         query = query.gte('due_date', firstDay.toISOString());
       } else if (activeRange === 'Last Month') {
-        const now = new Date();
-        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        firstDayLastMonth.setHours(0, 0, 0, 0);
-        const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        lastDayLastMonth.setHours(23, 59, 59, 999);
-        query = query.gte('due_date', firstDayLastMonth.toISOString()).lte('due_date', lastDayLastMonth.toISOString());
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+        firstDay.setHours(0,0,0,0); lastDay.setHours(23,59,59,999);
+        query = query.gte('due_date', firstDay.toISOString()).lte('due_date', lastDay.toISOString());
       } else if (activeRange === 'Custom Range' && customStart && customEnd) {
         query = query.gte('due_date', customStart).lte('due_date', customEnd);
       }
-
-      const { data: planData, error } = await query;
-      if (error) throw error;
+      
+      const { data: planData } = await query;
       setData(planData || []);
-    } catch (e) {
-      console.error("Critical Fetch Error:", e);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e) { console.error(e); } finally { setIsLoading(false); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [workspaceId, selectedProfileId, activeRange, customStart, customEnd, currentTier]);
+  useEffect(() => { fetchData(); }, [workspaceId, selectedProfileId, activeRange, customStart, customEnd, currentTier]);
 
-
-  // Group Data by Date for Charting
   const dailyMetrics = useMemo(() => {
     const grouped: any = {};
-    let startDate: Date;
-    let endDate: Date;
-    
-    if (activeRange === 'This Month') {
-      const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else if (activeRange === 'Last Month') {
-      const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-    } else if (activeRange === 'Custom Range' && customStart && customEnd) {
-      startDate = new Date(customStart);
-      endDate = new Date(customEnd);
-    } else {
-      const now = new Date();
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - 29);
-      endDate = now;
+    let startDate: Date; let endDate: Date; const now = new Date();
+    if (activeRange === 'This Month') { startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+    else if (activeRange === 'Last Month') { startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); endDate = new Date(now.getFullYear(), now.getMonth(), 0); }
+    else if (activeRange === 'Custom Range' && customStart && customEnd) { startDate = new Date(customStart); endDate = new Date(customEnd); }
+    else { startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+    const cur = new Date(startDate);
+    while (cur <= endDate) {
+      const dStr = cur.toISOString().split('T')[0];
+      grouped[dStr] = { views: 0, interactions: 0, followers: 0, date: dStr, day: cur.getDate(), month: cur.toLocaleDateString('id-ID', { month: 'short' }) };
+      cur.setDate(cur.getDate() + 1);
     }
-
-    // Ensure we have a valid range to prevent infinite loops
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return [];
-    }
-
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dayStr = d.toISOString().split('T')[0];
-      grouped[dayStr] = { views: 0, interactions: 0, followers: 0 };
-    }
-
-    data.forEach((p: any) => {
-      if (!p.due_date) return;
-      try {
-        const dayStr = new Date(p.due_date).toISOString().split('T')[0];
-        if (grouped[dayStr]) {
-          const m = p.metrics || {};
-          const plat = p.platform?.toLowerCase();
-          let inter = 0;
-          if (plat === 'threads') {
-            inter = (Number(m.likes) || 0) + (Number(m.replies) || 0) + (Number(m.reposts) || 0) + (Number(m.quotes) || 0);
-          } else {
-            inter = (Number(m.likes) || 0) + (Number(m.comments) || 0) + (Number(m.shares) || 0) + (Number(m.saves) || 0);
-          }
-
-          grouped[dayStr].views += Number(m.views || m.reach || 0);
-          grouped[dayStr].interactions += inter;
-          grouped[dayStr].followers += Number(m.new_followers || m.follows || 0);
-        }
-      } catch (e) { /* ignore individual date parsing errors */ }
+    data.forEach((item: any) => {
+      const d = (item.due_date || '').split('T')[0];
+      if (grouped[d]) {
+        const m = item.metrics || {};
+        grouped[d].views += getV(m, ["views", "impressions"]);
+        grouped[d].followers += getV(m, ["new_followers", "follows"]);
+        grouped[d].interactions += getV(m, ["likes"]) + getV(m, ["comments"]) + getV(m, ["shares"]) + getV(m, ["saves"]);
+      }
     });
-
-    return Object.entries(grouped).map(([date, vals]: any) => ({
-      date,
-      day: new Date(date).getDate(),
-      month: new Date(date).toLocaleDateString('id-ID', { month: 'short' }),
-      ...vals
-    })).sort((a: any, b: any) => a.date.localeCompare(b.date));
+    return Object.values(grouped).sort((a: any, b: any) => a.date.localeCompare(b.date));
   }, [data, activeRange, customStart, customEnd]);
 
   const activePlatform = useMemo(() => {
     if (!selectedProfileId) return 'all';
-    const profile = profiles.find((p: any) => p.id === selectedProfileId);
-    return profile?.platform?.toLowerCase() || 'all';
+    return profiles.find((p: any) => p.id === selectedProfileId)?.platform?.toLowerCase() || 'all';
   }, [selectedProfileId, profiles]);
 
-  // Global Metric Calculations - OPTIMIZED SINGLE PASS
   const metrics = useMemo(() => {
-    const totals = {
-      views: 0, reach: 0, interactions: 0, reposts: 0,
-      retentionSum: 0, uploadedCount: 0, followers: 0
-    };
-
+    const totals = { views: 0, reach: 0, interactions: 0, reposts: 0, uploadedCount: 0, followers: 0 };
     data.forEach((curr: any) => {
       const platform = curr.platform?.toLowerCase() || '';
-      
-      // Safety: If a profile is selected, only count contents matching that platform
-      // to avoid data pollution from misassigned account IDs
-      if (activePlatform !== 'all' && platform !== activePlatform) {
-        return;
-      }
-
+      if (activePlatform !== 'all' && platform !== activePlatform) return;
       const m = curr.metrics || {};
-
-      // Views & Reach
-      const v = Number(m.views || m.Views || m.impressions || m.Impressions || 0);
-      totals.views += v;
-      totals.reach += Number(m.reach || m.Reach || v);
-
-      // Interactions
-      let platformInteractions = Number(m.interactions || m.Interactions || 0);
-      if (platformInteractions === 0) {
-        if (platform === 'threads') {
-          platformInteractions = (Number(m.likes) || 0) + (Number(m.replies) || 0) + (Number(m.reposts) || 0) + (Number(m.quotes) || 0);
-        } else {
-          platformInteractions = (Number(m.likes) || 0) + (Number(m.comments) || 0) + (Number(m.shares) || 0) + (Number(m.saves) || 0);
-        }
-      }
-      totals.interactions += platformInteractions;
-
-      // Reposts & Others
-      totals.reposts += Number(m.reposts || m.shares || m.Reposts || m.Shares || 0);
-      totals.retentionSum += Number(m.avg_watch || m.avg_retention || m.retention || 0);
+      const v = getV(m, ["views", "impressions"]);
+      totals.views += v; totals.reach += getV(m, ["reach"]) || v;
+      totals.interactions += getV(m, ["likes"]) + getV(m, ["comments"]) + getV(m, ["shares"]) + getV(m, ["saves"]);
+      totals.reposts += getV(m, ["reposts"]);
       if (curr.status?.toLowerCase() === 'uploaded') totals.uploadedCount++;
-      totals.followers += Number(m.new_followers || m.follower_gain || m.Followers || m.follows || m.new_follows || 0);
+      totals.followers += getV(m, ["new_followers", "follows"]);
     });
-
-    const avgRetention = totals.uploadedCount > 0 ? totals.retentionSum / totals.uploadedCount : 0;
     
     const targetProfiles = selectedProfileId ? profiles.filter((p: any) => p.id === selectedProfileId) : profiles;
-
     const initialFollowers = targetProfiles.reduce((acc: number, curr: any) => {
-      const val = curr.followers ? String(curr.followers) : '0';
-      const multiplier = val.toLowerCase().includes('k') ? 1000 : val.toLowerCase().includes('m') ? 1000000 : 1;
-      const cleanVal = val.replace(/[^0-9.]/g, '');
-      return acc + ((val.toLowerCase().includes('k') || val.toLowerCase().includes('m')) ? (parseFloat(cleanVal) * multiplier) : (parseInt(val.replace(/\D/g, '')) || 0));
+      const val = String(curr.followers || '0');
+      const mult = val.toLowerCase().includes('k') ? 1000 : val.toLowerCase().includes('m') ? 1000000 : 1;
+      return acc + (parseFloat(val.replace(/[^0-9.]/g, '')) * mult);
     }, 0);
 
     return { 
-      totalViews: totals.views, 
-      totalReach: totals.reach, 
-      totalInteractions: totals.interactions, 
-      totalReposts: totals.reposts, 
-      avgRetention, 
-      contentUploaded: totals.uploadedCount, 
-      newFollowers: totals.followers, 
+      totalViews: totals.views, totalReach: totals.reach, totalInteractions: totals.interactions, totalReposts: totals.reposts, 
+      contentUploaded: totals.uploadedCount, newFollowers: totals.followers, 
       totalFollowersOverall: initialFollowers + totals.followers, 
       engagementRate: totals.views > 0 ? (totals.interactions / totals.views) * 100 : 0 
     };
-  }, [data, profiles, selectedProfileId]);
-
-  const currentPeriodLabel = useMemo(() => {
-    if (activeRange === 'This Month') {
-      return `Bulan ${new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
-    }
-    if (activeRange === 'Last Month') {
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      return `Bulan ${lastMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
-    }
-    if (activeRange === 'Custom Range' && customStart && customEnd) {
-      const start = new Date(customStart).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      const end = new Date(customEnd).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-      return `${start} - ${end}`;
-    }
-    return activeRange;
-  }, [activeRange, customStart, customEnd]);
-
+  }, [data, profiles, selectedProfileId, activePlatform]);
 
   const stats = useMemo(() => {
     const common = {
-      views: { 
-        label: 'Total Views', 
-        value: metrics.totalViews >= 1000 ? `${(metrics.totalViews / 1000).toFixed(1)}K` : metrics.totalViews, 
-        trend: '100%', 
-        icon: <Eye size={16} className="text-blue-500"/>, 
-        bg: 'bg-blue-50',
-        hint: 'Total berapa kali konten Anda dilihat (termasuk pengulangan).'
-      },
-      interactions: { 
-        label: 'Total Interactions', 
-        value: metrics.totalInteractions.toLocaleString(), 
-        trend: '100%', 
-        icon: <Sparkles size={16} className="text-amethyst-dark"/>, 
-        bg: 'bg-amethyst-light/30' ,
-        hint: 'Total jumlah Like + Comment + Share + Save pada konten Anda.'
-      },
-      er: { 
-        label: 'Engagement Rate', 
-        value: `${metrics.engagementRate.toFixed(2)}%`, 
-        trend: '100%', 
-        icon: <TrendingUp size={16} className="text-rose-500"/>, 
-        bg: 'bg-rose-50',
-        hint: '(Total Interaksi / Total Views) x 100%. Mengukur efektivitas konten dalam menarik interaksi.'
-      },
-      content: { 
-        label: 'Content Uploaded', 
-        value: metrics.contentUploaded.toString(), 
-        trend: '100%', 
-        icon: <Layout size={16} className="text-emerald-500"/>, 
-        bg: 'bg-emerald-50',
-        subValue: `${Math.round(metrics.contentUploaded / (dailyMetrics.length || 1))} content / hari`,
-        hint: 'Jumlah konten yang berhasil dipublikasikan (status: Uploaded).'
-      } as any,
-      follows: { 
-        label: 'New Followers', 
-        value: `+${metrics.newFollowers}`, 
-        trend: '100%', 
-        icon: <Users size={16} className="text-orange-500"/>, 
-        bg: 'bg-orange-50', 
-        subValue: `${metrics.totalFollowersOverall.toLocaleString()} Total`,
-        hint: 'Jumlah pengikut baru yang didapatkan selama periode ini.'
-      } as any,
-      reach: { 
-        label: 'Total Reach', 
-        value: metrics.totalReach >= 1000 ? `${(metrics.totalReach / 1000).toFixed(1)}K` : metrics.totalReach, 
-        trend: '100%', 
-        icon: <Activity size={16} className="text-indigo-500"/>, 
-        bg: 'bg-indigo-50',
-        hint: 'Jumlah akun unik yang melihat konten Anda setidaknya satu kali.'
-      },
-      reposts: { 
-        label: 'Total Reposts', 
-        value: metrics.totalReposts.toLocaleString(), 
-        trend: '100%', 
-        icon: <Share2 size={16} className="text-cyan-500"/>, 
-        bg: 'bg-cyan-50',
-        hint: 'Total berapa kali konten Anda dibagikan ulang oleh pengguna lain.'
-      },
-      retention: { 
-        label: 'Avg Retention', 
-        value: `${metrics.avgRetention.toFixed(1)}%`, 
-        trend: '100%', 
-        icon: <MousePointer2 size={16} className="text-purple-500"/>, 
-        bg: 'bg-purple-50',
-        hint: 'Rata-rata persentase durasi tonton audiens dibandingkan total durasi video.'
-      },
+      views: { label: 'Total views', value: metrics.totalViews >= 1000 ? `${(metrics.totalViews/1000).toFixed(1)}k` : metrics.totalViews, trend: '100%', icon: <Eye size={16} className="text-blue-500"/>, bg: 'bg-blue-50', 
+        hintTitle: 'Total views', hintFormula: 'Jumlah berapa kali konten Anda dilihat (termasuk pengulangan).', hintDesc: 'Mengukur jangkauan visual konten.' },
+      interactions: { label: 'Total interactions', value: metrics.totalInteractions.toLocaleString(), trend: '100%', icon: <Sparkles size={16} className="text-amethyst-dark"/>, bg: 'bg-amethyst-light/30', 
+        hintTitle: 'Total interactions', hintFormula: 'Like + Comment + Share + Save.', hintDesc: 'Total tindakan aktif yang dilakukan audiens.' },
+      er: { label: 'Engagement rate', value: `${metrics.engagementRate.toFixed(2)}%`, trend: '100%', icon: <TrendingUp size={16} className="text-rose-500"/>, bg: 'bg-rose-50', 
+        hintTitle: 'Engagement rate', hintFormula: '(Total interaksi / Total views) x 100%.', hintDesc: 'Mengukur efektivitas konten dalam menarik interaksi.' },
+      content: { label: 'Content uploaded', value: metrics.contentUploaded.toString(), trend: '100%', icon: <Layout size={16} className="text-emerald-500"/>, bg: 'bg-emerald-50', subValue: `${Math.round(metrics.contentUploaded / (dailyMetrics.length || 1))} konten / hari`, 
+        hintTitle: 'Content uploaded', hintFormula: 'Total unit konten yang berstatus "Uploaded".', hintDesc: 'Mengukur produktivitas publikasi agency.' },
+      follows: { label: 'New followers', value: `+${metrics.newFollowers}`, trend: '100%', icon: <Users size={16} className="text-orange-500"/>, bg: 'bg-orange-50', subValue: `${metrics.totalFollowersOverall.toLocaleString()} total`, 
+        hintTitle: 'New followers', hintFormula: 'Jumlah pengikut baru yang didapat dalam periode ini.', hintDesc: 'Mengukur pertumbuhan audiens baru.' },
+      reach: { label: 'Total reach', value: metrics.totalReach >= 1000 ? `${(metrics.totalReach/1000).toFixed(1)}k` : metrics.totalReach, trend: '100%', icon: <Activity size={16} className="text-indigo-500"/>, bg: 'bg-indigo-50', 
+        hintTitle: 'Total reach', hintFormula: 'Jumlah unik akun yang melihat konten Anda.', hintDesc: 'Mengukur penetrasi audiens unik.' },
+      reposts: { label: 'Total reposts', value: metrics.totalReposts.toLocaleString(), trend: '100%', icon: <Share2 size={16} className="text-cyan-500"/>, bg: 'bg-cyan-50', 
+        hintTitle: 'Total reposts', hintFormula: 'Jumlah berapa kali konten dibagikan ulang.', hintDesc: 'Mengukur virality konten Anda.' }
     };
-
-    if (activePlatform.includes('instagram')) {
-      return [common.reach, common.views, common.er, common.reposts, common.content, common.interactions, common.follows];
-    }
-    if (activePlatform.includes('tiktok')) {
-      return [common.views, common.interactions, common.retention, common.er, common.content, common.follows];
-    }
-    if (activePlatform.includes('threads')) {
-      return [common.views, common.interactions, common.content, common.er, common.reposts, common.follows];
-    }
-
-    // Default for 'all' or others
+    if (activePlatform.includes('instagram')) return [common.reach, common.views, common.er, common.reposts, common.content, common.interactions, common.follows];
     return [common.views, common.er, common.content, common.interactions, common.follows];
-  }, [activePlatform, metrics]);
+  }, [activePlatform, metrics, dailyMetrics.length]);
 
-  const chartMax = useMemo(() => {
-    const key = activeMetric.toLowerCase();
-    const vals = dailyMetrics.map((d: any) => Number(d[key]));
-    return Math.max(...vals, 10);
-  }, [dailyMetrics, activeMetric]);
-
-  const generateLinePath = (dataItems: any[], max: number) => {
-    if (dataItems.length === 0) return '';
-    const width = 800;
-    const height = 300;
-    const key = activeMetric.toLowerCase();
-    const step = width / Math.max(dataItems.length - 1, 1);
-    
-    let path = `M 0,${height - (Number(dataItems[0][key]) / max) * height}`;
-    
-    for (let i = 0; i < dataItems.length - 1; i++) {
-      const x1 = i * step;
-      const y1 = height - (Number(dataItems[i][key]) / max) * height;
-      const x2 = (i + 1) * step;
-      const y2 = height - (Number(dataItems[i + 1][key]) / max) * height;
-      
-      const cp1x = x1 + (x2 - x1) / 3;
-      const cp2x = x1 + (x2 - x1) * 2 / 3;
-      
-      path += ` C ${cp1x},${y1} ${cp2x},${y2} ${x2},${y2}`;
-    }
-    
-    return path;
-  };
-
-  const generateAreaPath = (dataItems: any[], max: number) => {
-    const linePath = generateLinePath(dataItems, max);
-    if (!linePath) return '';
-    const width = 800;
-    const height = 300;
-    return `${linePath} L 800,300 L 0,300 Z`;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    const svg = e.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (800 / rect.width); // Scale to viewbox width
-    const totalPoints = dailyMetrics.length;
-    if (totalPoints <= 1) return;
-
-    const step = 800 / (totalPoints - 1);
-    const index = Math.round(x / step);
-    if (index >= 0 && index < totalPoints) {
-      setHoveredIdx(index);
-    }
-  };
+  const chartMax = useMemo(() => Math.max(...dailyMetrics.map((d: any) => Number(d[activeMetric.toLowerCase()])), 10), [dailyMetrics, activeMetric]);
 
   return (
-    <div className="analytics-main-container">
+    <div className="analytics-main-container" onClick={() => setOpenHintIdx(null)}>
       <div className="space-y-10 pb-20">
-      {/* Header Area */}
-      <div className="flex items-start justify-between">
-         <div className="space-y-1">
-            <h2 className="text-4xl font-extrabold text-amethyst-dark tracking-tight">Content Performance</h2>
-            <p className="text-sm text-slate-400 font-medium italic">Measurable impact of your agency&apos;s published content.</p>
-         </div>
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+           <div className="space-y-1">
+              <h2 className="text-2xl md:text-4xl font-extrabold text-amethyst-dark tracking-tight">Content Performance</h2>
+              <p className="text-sm text-slate-400 font-medium italic">Measurable impact of your agency&apos;s published content.</p>
+           </div>
+           <div className="flex items-center w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+              {['This Month', 'Last Month', 'Custom Range'].map((range) => (
+                <button key={range} onClick={() => setActiveRange(range)} className={`flex-1 lg:flex-none px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all ${activeRange === range ? 'bg-white text-amethyst-dark shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{range}</button>
+              ))}
+           </div>
+        </div>
 
-         <div className="flex items-center gap-4">
-            <AnimatePresence>
-               {activeRange === 'Custom Range' && (
-                 <motion.div 
-                   initial={{ opacity: 0, x: 20 }}
-                   animate={{ opacity: 1, x: 0 }}
-                   exit={{ opacity: 0, x: 20 }}
-                   className="flex items-center gap-3 bg-white border border-slate-100 p-1.5 rounded-2xl shadow-sm"
-                 >
-                   <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
-                     <CalendarIcon size={12} className="text-amethyst-primary"/>
-                     <input 
-                       type="date" 
-                       value={customStart}
-                       onChange={(e) => setCustomStart(e.target.value)}
-                       className="bg-transparent text-[10px] font-bold text-amethyst-dark outline-none cursor-pointer"
-                     />
-                   </div>
-                   <span className="text-slate-300 text-[10px] font-black">to</span>
-                   <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
-                     <CalendarIcon size={12} className="text-amethyst-primary"/>
-                     <input 
-                       type="date" 
-                       value={customEnd}
-                       onChange={(e) => setCustomEnd(e.target.value)}
-                       className="bg-transparent text-[10px] font-bold text-amethyst-dark outline-none cursor-pointer"
-                     />
-                   </div>
-                 </motion.div>
-               )}
-            </AnimatePresence>
-
-            <div id="tour-date-filter" className="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-               {['This Month', 'Last Month', 'Custom Range'].map((range: string) => (
-                 <button
-                   key={range}
-                   onClick={() => setActiveRange(range)}
-                   className={`px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all ${
-                     activeRange === range ? 'bg-white text-amethyst-dark shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                   }`}
-                 >
-                   {range}
-                 </button>
-               ))}
-            </div>
-          </div>
-      </div>
-
-      {isLoading ? (
-        <div className="h-64 flex items-center justify-center"><div className="w-10 h-10 border-4 border-amethyst-light border-t-amethyst-dark rounded-full animate-spin"/></div>
-      ) : (
-        <>
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-10"
-        >
-          <div 
-            id="tour-metrics-cards"
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4" 
-          >
-              {stats.map((stat: any, i: number) => {
-                const isLocked = i >= 3 && currentTier === 'free' && !isPowerUserActual;
-
-                return (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ delay: i * 0.05 }} 
-                    key={i} 
-                    className={`relative bg-white p-5 rounded-[24px] border border-slate-50 shadow-premium group transition-all hover:shadow-lg flex flex-col justify-between ${isLocked ? 'cursor-default' : ''}`}
-                  >
-                     <div className={`flex flex-col h-full justify-between transition-all duration-500 ${isLocked ? 'blur-[8px] opacity-30 select-none grayscale' : ''}`}>
-                         <div className="flex items-start justify-between mb-4">
-                            <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
-                               {React.cloneElement(stat.icon as any, { size: 14 })}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                               <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-500">
-                                  <TrendingUp size={9}/> {stat.trend}
-                               </div>
-                               
-                               {/* Hint/Tooltip Icon */}
-                               <div className="relative group/hint">
-                                  <div className="p-1 text-slate-300 hover:text-amethyst-primary cursor-help transition-colors">
-                                     <HelpCircle size={12}/>
-                                  </div>
-                                  
-                                  {/* Tooltip Popup */}
-                                  <div className="absolute right-[-10px] top-full mt-2 w-60 bg-amethyst-light p-5 rounded-2xl shadow-[0_20px_50px_rgba(172,139,238,0.15)] opacity-0 invisible group-hover/hint:opacity-100 group-hover/hint:visible transition-all z-[100] pointer-events-none border border-white">
-                                     <div className="absolute -top-1 right-3 w-2.5 h-2.5 bg-amethyst-light rotate-45" />
-                                     <div className="flex items-center justify-between mb-4 border-b border-amethyst-mauve/20 pb-3">
-                                        <div className="flex items-center gap-2">
-                                           <div className="w-1 h-3 bg-amethyst-dark rounded-full" />
-                                           <p className="text-[10px] font-black uppercase tracking-widest text-amethyst-dark">Insight</p>
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center"><div className="w-10 h-10 border-4 border-amethyst-light border-t-amethyst-dark rounded-full animate-spin"/></div>
+        ) : (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {stats.map((stat, i) => {
+                   const isLocked = i >= 3 && currentTier === 'free' && !isPowerUserActual;
+                   const isHintOpen = openHintIdx === i;
+                   return (
+                      <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="relative bg-white p-6 rounded-[32px] border border-slate-50 shadow-premium flex flex-col justify-between group">
+                         <div className={`flex flex-col h-full justify-between transition-all duration-500 ${isLocked ? 'blur-md opacity-30 select-none grayscale' : ''}`}>
+                            <div className="flex items-start justify-between mb-8">
+                               <div className={`w-9 h-9 ${stat.bg} rounded-xl flex items-center justify-center shadow-sm`}>{React.cloneElement(stat.icon as any, { size: 16 })}</div>
+                               <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1 text-[9px] font-black text-emerald-500"><TrendingUp size={10}/> {stat.trend}</div>
+                                  <div className="relative group/hint">
+                                     <div 
+                                      className="p-1 text-slate-300 hover:text-amethyst-primary cursor-help transition-colors"
+                                      onClick={(e) => { e.stopPropagation(); setOpenHintIdx(isHintOpen ? null : i); }}
+                                     >
+                                      <HelpCircle size={14}/>
+                                     </div>
+                                     <div className={`absolute right-0 top-full mt-3 w-[210px] md:w-72 bg-amethyst-light/10 backdrop-blur-xl p-5 md:p-8 rounded-[24px] md:rounded-[32px] shadow-2xl transition-all z-[100] border border-white/40 ring-1 ring-amethyst-primary/10 ${isHintOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible lg:group-hover/hint:opacity-100 lg:group-hover/hint:visible translate-y-2'}`}>
+                                        <div className="flex items-center justify-between mb-4 md:mb-6">
+                                           <div className="flex items-center gap-3"><div className="w-1 h-5 bg-amethyst-primary rounded-full"/><span className="text-[10px] md:text-[11px] font-black text-amethyst-dark tracking-[0.15em]">Insight</span></div>
+                                           <span className="text-[9px] md:text-[10px] font-bold text-amethyst-primary/60 italic">{currentMonthYear}</span>
                                         </div>
-                                        <span className="text-[9px] font-bold text-amethyst-dark/60 italic">{currentPeriodLabel}</span>
-                                     </div>
-                                     <p className="text-[11px] font-bold text-amethyst-dark/80 leading-relaxed italic">{stat.hint}</p>
-                                     <div className="mt-4 pt-3 border-t border-amethyst-mauve/10">
-                                        <p className="text-[9px] text-amethyst-dark/40 font-medium leading-tight">Data dihitung otomatis berdasarkan filter periode aktif.</p>
+                                        <div className="space-y-3 md:space-y-4">
+                                           <p className="text-[11px] md:text-[13px] font-black text-amethyst-dark leading-relaxed italic">{stat.hintFormula}</p>
+                                           <p className="text-[9px] md:text-[11px] font-bold text-amethyst-primary/70 leading-relaxed">{stat.hintDesc}</p>
+                                        </div>
+                                        <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t border-amethyst-primary/10"><p className="text-[8px] md:text-[9px] font-bold text-amethyst-primary/40 leading-none">Data dihitung otomatis berdasarkan filter periode aktif.</p></div>
+                                        <div className="absolute top-[-8px] right-[4px] md:right-[14px] w-4 h-4 bg-amethyst-light/10 backdrop-blur-xl border-l border-t border-white/40 rotate-45"/>
                                      </div>
                                   </div>
                                </div>
                             </div>
+                            <div className="space-y-1">
+                               <p className="text-[10px] font-bold text-slate-300 tracking-widest">{stat.label}</p>
+                               <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">{stat.value}</h3>
+                               {stat.subValue && <p className="text-[10px] font-bold text-slate-400 italic">{stat.subValue}</p>}
+                            </div>
                          </div>
-                         <div className="space-y-0.5">
-                            <p className="text-[9px] font-bold text-slate-300 leading-none truncate">{stat.label}</p>
-                            <h3 className="text-xl font-bold text-amethyst-dark tracking-tight">{stat.value}</h3>
-                            {stat.subValue && <p className="text-[8px] font-bold text-slate-400 truncate">{stat.subValue}</p>}
-                         </div>
-                      </div>
-
-                     {/* Subscribe Overlay */}
-                     {isLocked && (
-                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/10 backdrop-blur-[1px]">
-                          <div className="bg-amber-400 p-2 rounded-full shadow-lg mb-2 shadow-amber-400/30">
-                             <ShieldCheck size={12} className="text-white"/>
-                          </div>
-                          <span className="text-[9px] font-black uppercase tracking-widest text-amber-600 whitespace-nowrap">Subscribe only</span>
-                       </div>
-                     )}
-                  </motion.div>
-                );
-             })}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10">
-             <div className="lg:col-span-2 bg-white rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-premium p-6 md:p-10 flex flex-col min-h-[450px] md:min-h-[550px]">
-                <div className="flex items-center justify-between mb-12">
-                   <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                         <TrendingUp size={14} className="text-amethyst-primary"/>
-                         <h4 className="text-xs font-bold text-amethyst-dark tracking-tight">Growth Performance Trend</h4>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium tracking-tight">Daily visualizer — {activeRange.toLowerCase()}</p>
-                   </div>
-
-                   <div className="flex items-center bg-slate-50 p-1 rounded-xl">
-                      {['Views', 'Interactions', 'Followers'].map((type: string) => (
-                        <button 
-                          key={type}
-                          onClick={() => setActiveMetric(type)}
-                          className={`px-5 py-2 rounded-lg text-[9px] font-bold transition-all flex items-center gap-2 ${
-                            activeMetric === type ? 'bg-amethyst-dark text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          {type === 'Views' && <Eye size={12}/>}
-                          {type === 'Interactions' && <Activity size={12}/>}
-                          {type === 'Followers' && <Users size={12}/>}
-                          {type}
-                        </button>
-                      ))}
-                   </div>
-                </div>
-
-                <div className="flex-1 relative flex flex-col justify-end">
-                   <div className="absolute inset-y-0 left-0 flex flex-col justify-between py-2 text-[9px] font-bold text-slate-300 pointer-events-none">
-                      <span>{chartMax >= 1000 ? `${(chartMax / 1000).toFixed(1)}K` : chartMax}</span>
-                      <span>{chartMax >= 1000 ? `${(chartMax * 0.75 / 1000).toFixed(1)}K` : (chartMax * 0.75).toFixed(0)}</span>
-                      <span>{chartMax >= 1000 ? `${(chartMax * 0.5 / 1000).toFixed(1)}K` : (chartMax * 0.5).toFixed(0)}</span>
-                      <span>{chartMax >= 1000 ? `${(chartMax * 0.25 / 1000).toFixed(1)}K` : (chartMax * 0.25).toFixed(0)}</span>
-                      <span className="text-slate-200">0</span>
-                   </div>
-                   
-                   <div className="ml-12 flex-1 relative border-l border-b border-slate-50 group/chart">
-                      <svg 
-                         className="w-full h-full overflow-visible cursor-crosshair" 
-                         viewBox="0 0 800 300" 
-                         preserveAspectRatio="none"
-                         onMouseMove={handleMouseMove}
-                         onMouseLeave={() => setHoveredIdx(null)}
-                      >
-                         <defs>
-                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                               <stop offset="0%" stopColor="#AC8BEE" stopOpacity="0.1" />
-                               <stop offset="100%" stopColor="#AC8BEE" stopOpacity="0" />
-                            </linearGradient>
-                         </defs>
-
-                         {/* Horizontal Grid Lines */}
-                         {[0, 0.25, 0.5, 0.75, 1].map((p: number, i: number) => (
-                           <line 
-                             key={i} 
-                             x1="0" 
-                             y1={300 - p * 300} 
-                             x2="800" 
-                             y2={300 - p * 300} 
-                             stroke="#F1F5F9" 
-                             strokeWidth="1" 
-                           />
-                         ))}
-
-                         {/* Vertical Grid Lines (matching X labels) */}
-                         {dailyMetrics.filter((_: any, i: number) => i % Math.ceil(dailyMetrics.length / 4) === 0).map((_: any, i: number, arr: any[]) => (
-                           <line 
-                             key={i} 
-                             x1={(i * (dailyMetrics.length / (arr.length - 1)) * (800 / (dailyMetrics.length - 1)))} 
-                             y1="0" 
-                             x2={(i * (dailyMetrics.length / (arr.length - 1)) * (800 / (dailyMetrics.length - 1)))} 
-                             y2="300" 
-                             stroke="#F1F5F9" 
-                             strokeWidth="1" 
-                           />
-                         ))}
-                         
-                         {/* Fix vertical grid calc - simpler approach */}
-                         {[0, 200, 400, 600, 800].map((x: number) => (
-                           <line 
-                             key={'v'+x}
-                             x1={x}
-                             y1="0"
-                             x2={x}
-                             y2="300"
-                             stroke="#F8FAFC"
-                             strokeWidth="1"
-                           />
-                         ))}
-                         <motion.path 
-                            key={'area' + activeMetric + activeRange + selectedProfileId + customStart + customEnd}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 1 }}
-                            d={generateAreaPath(dailyMetrics, chartMax)} 
-                            fill="url(#chartGradient)" 
-                         />
-                         <motion.path 
-                            key={'line' + activeMetric + activeRange + selectedProfileId + customStart + customEnd}
-                            initial={{ pathLength: 0, opacity: 0 }}
-                            animate={{ pathLength: 1, opacity: 1 }}
-                            transition={{ duration: 1.5, ease: "easeInOut" }}
-                            d={generateLinePath(dailyMetrics, chartMax)} 
-                            fill="none" 
-                            stroke="#AC8BEE" 
-                            strokeWidth="5" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round"
-                         />
-
-                         {hoveredIdx !== null && dailyMetrics[hoveredIdx] && (
-                           <g>
-                             <line 
-                               x1={hoveredIdx * (800 / Math.max(dailyMetrics.length - 1, 1))} 
-                               y1="0" 
-                               x2={hoveredIdx * (800 / Math.max(dailyMetrics.length - 1, 1))} 
-                               y2="300" 
-                               stroke="#AC8BEE" 
-                               strokeWidth="1" 
-                               strokeDasharray="4 4"
-                               opacity="0.3"
-                             />
-                             <circle 
-                               cx={hoveredIdx * (800 / Math.max(dailyMetrics.length - 1, 1))} 
-                               cy={300 - (Number(dailyMetrics[hoveredIdx][activeMetric.toLowerCase()]) / chartMax) * 300} 
-                               r="5" 
-                               fill="#AC8BEE" 
-                               stroke="white" 
-                               strokeWidth="2"
-                             />
-                           </g>
-                         )}
-                      </svg>
-
-                      <AnimatePresence>
-                        {hoveredIdx !== null && dailyMetrics[hoveredIdx] && (
-                          <motion.div 
-                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                            style={{ 
-                              left: `${(hoveredIdx * (100 / Math.max(dailyMetrics.length - 1, 1)))}%`,
-                              top: `${(300 - (Number(dailyMetrics[hoveredIdx][activeMetric.toLowerCase()]) / chartMax) * 300) / 3}%` 
-                            }}
-                            className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-[calc(100%+20px)]"
-                          >
-                             <div className="bg-amethyst-dark text-white px-4 py-2.5 rounded-xl shadow-2xl border border-white/10 backdrop-blur-md min-w-[120px]">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-amethyst-light/60 mb-1">
-                                  {dailyMetrics[hoveredIdx].day} {dailyMetrics[hoveredIdx].month}
-                                </p>
-                                <div className="flex items-center justify-between gap-4">
-                                   <span className="text-xs font-bold text-white">{activeMetric}</span>
-                                   <span className="text-sm font-black text-amethyst-light">
-                                     {Number(dailyMetrics[hoveredIdx][activeMetric.toLowerCase()]).toLocaleString()}
-                                   </span>
-                                </div>
-                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-amethyst-dark" />
-                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                   </div>
-
-                   <div className="ml-12 flex justify-between pt-6 text-[9px] font-bold text-slate-300">
-                      {dailyMetrics.filter((_: any, i: number) => i % Math.ceil(dailyMetrics.length / 4) === 0).map((d: any, i: number) => (
-                        <span key={i}>{d.day} {d.month}</span>
-                      ))}
-                   </div>
-                </div>
-             </div>
-
-             <div className="space-y-12">
-                <div className="space-y-5">
-                   <div className="flex items-center justify-between px-2">
-                       <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 italic">
-                          <Sparkles size={12} className="text-amethyst-primary"/> Top 3 Performers
-                       </h4>
-                       <span className="text-[8px] font-bold text-amethyst-primary uppercase tracking-widest bg-amethyst-light/20 px-2 py-0.5 rounded-full">{activeMetric}</span>
-                   </div>
-                   <div className="space-y-4">
-                      {data.filter((p: any) => p.metrics && p.metrics[activeMetric.toLowerCase()] !== undefined).sort((a: any, b: any) => (Number(b.metrics[activeMetric.toLowerCase()]) || 0) - (Number(a.metrics[activeMetric.toLowerCase()]) || 0)).slice(0, 3).map((item: any, i: number) => (
-                        <div 
-                          key={i} 
-                          onClick={() => setSelectedContent(item)}
-                          className="bg-white p-5 rounded-2xl border border-slate-50 shadow-premium flex items-center justify-between group hover:-translate-y-1 transition-all cursor-pointer"
-                        >
-                           <div className="flex items-center gap-4">
-                              <div className={`w-8 h-8 ${i === 0 ? 'bg-amethyst-primary shadow-lg shadow-amethyst-primary/30' : 'bg-amethyst-light/30 text-amethyst-primary'} rounded-lg flex items-center justify-center text-[10px] font-black ${i === 0 ? 'text-white' : 'text-amethyst-primary'} italic`}>#{i+1}</div>
-                              <div>
-                                 <p className="text-[11px] font-bold text-amethyst-dark group-hover:text-amethyst-primary transition-colors line-clamp-1 max-w-[120px]">{item.title}</p>
-                                 <p className="text-[9px] text-slate-400 font-medium italic">{Number(item.metrics[activeMetric.toLowerCase()]).toLocaleString()} {activeMetric}</p>
-                              </div>
-                           </div>
-                           <ChevronRight size={14} className="text-slate-200 group-hover:text-amethyst-primary transition-all"/>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-
-                <div className="space-y-5">
-                   <div className="flex items-center justify-between px-2">
-                       <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 italic">
-                          <TrendingDown size={12} className="text-slate-400"/> Needs Attention
-                       </h4>
-                       <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-full">Bottom 3</span>
-                   </div>
-                   <div className="space-y-4">
-                      {data.filter((p: any) => p.status?.toLowerCase() === 'uploaded').sort((a: any, b: any) => (Number(a.metrics?.[activeMetric.toLowerCase()] || 0)) - (Number(b.metrics?.[activeMetric.toLowerCase()] || 0))).slice(0, 3).map((item: any, i: number) => (
-                        <div 
-                          key={i} 
-                          onClick={() => setSelectedContent(item)}
-                          className="bg-white p-5 rounded-2xl border border-slate-50 shadow-premium flex items-center justify-between group hover:bg-slate-50 transition-all opacity-80 hover:opacity-100 cursor-pointer"
-                        >
-                           <div className="flex items-center gap-4">
-                              <div className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center text-[10px] font-bold italic group-hover:bg-slate-200 group-hover:text-slate-600 transition-all">#{i+1}</div>
-                              <div>
-                                 <p className="text-[11px] font-bold text-amethyst-dark line-clamp-1 max-w-[120px]">{item.title}</p>
-                                 <p className="text-[9px] text-slate-400 font-medium italic">{Number(item.metrics?.[activeMetric.toLowerCase()] || 0).toLocaleString()} {activeMetric}</p>
-                              </div>
-                           </div>
-                           <TrendingDown size={14} className="text-slate-200 group-hover:text-rose-400 transition-all"/>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-             </div>
-          </div>
-        </motion.div>
-
-        {/* Detailed Asset Breakdown Section */}
-        <motion.div 
-           initial={{ opacity: 0, y: 30 }}
-           animate={{ opacity: 1, y: 0 }}
-           transition={{ delay: 0.3 }}
-           className="bg-white rounded-[32px] md:rounded-[40px] shadow-premium p-6 md:p-12 border border-slate-50 relative overflow-hidden"
-        >
-           {/* Logic Locking for Breakdown Table */}
-           {(() => {
-              const isBreakdownLocked = currentTier === 'free' && !isPowerUserActual;
-
-              return isBreakdownLocked && (
-                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/5 backdrop-blur-[12px] transition-all duration-700">
-                   <motion.div 
-                     initial={{ scale: 0.9, opacity: 0 }}
-                     animate={{ scale: 1, opacity: 1 }}
-                     className="flex flex-col items-center gap-4 text-center p-12"
-                   >
-                      <div className="flex flex-col items-center text-center space-y-4">
-                          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 shadow-inner">
-                            <ShieldCheck size={32} />
-                          </div>
-                          <div className="space-y-1">
-                             <h3 className="text-xl font-bold text-slate-800 tracking-tight">Pro Insight Required</h3>
-                             <p className="text-[10px] text-slate-400 font-medium">Upgrade to view detailed analytics for each individual asset.</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => openUpgrade()}
-                         className="mt-2 px-8 py-3 bg-amethyst-primary text-white rounded-xl text-[10px] font-bold shadow-xl shadow-amethyst-primary/20 hover:scale-105 transition-all">
-                        Upgrade to Unlock
-                      </button>
-                   </motion.div>
-                </div>
-              );
-           })()}
-
-           <div className={`transition-all duration-700 ${currentTier === 'free' && !isPowerUserActual ? 'blur-md grayscale opacity-30 select-none' : ''}`}>
-              <div className="flex items-center justify-between mb-12">
-                 <h3 className="text-2xl font-black text-amethyst-dark tracking-tight">Detailed Asset Breakdown</h3>
-                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                    <span className="text-[10px] font-black text-slate-300">Live Tracking Data (this month)</span>
-                 </div>
-              </div>
-
-           <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full">
-                 <thead>
-                    <tr className="border-b border-slate-50">
-                       <th className="text-left py-6 px-4 text-[10px] font-black text-slate-300">Content identity</th>
-                       <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">PIC / Author</th>
-                       <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Posting Date</th>
-                       <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Views</th>
-                       <th className="text-center py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">ER %</th>
-                       <th className="text-right py-6 px-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Action</th>
-                    </tr>
-                 </thead>
-                 <tbody>
-                    {data.filter((p: any) => p.status?.toLowerCase() === 'uploaded').sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((item: any, i: number) => {
-                       const m = item.metrics || {};
-                       const getV = (searchKeys: string[]) => {
-                          const normalizedSearches = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
-                          for (const dbKey in m) {
-                            const normalizedDbKey = dbKey.replace(/[\s_.]/g, '').toLowerCase();
-                            if (normalizedSearches.includes(normalizedDbKey)) {
-                              return Number(m[dbKey]) || 0;
-                            }
-                          }
-                          return 0;
-                       };
-
-                       const views = getV(['views', 'impressions']);
-                       const likes = getV(['likes']);
-                       const comments = getV(['comments']);
-                       const shares = getV(['shares', 'reposts']);
-                       const saves = getV(['saves', 'bookmarks']);
-                       const interactions = getV(['interactions']) || (likes + comments + shares + saves);
-                       const er = views > 0 ? ((interactions / views) * 100).toFixed(2) : '0.00';
-
-                       const PlatformIcon = () => {
-                           const p = item.platform?.toLowerCase() || '';
-                           if (p.includes('instagram')) return <img src="https://cdn.simpleicons.org/instagram/E4405F" className="w-5 h-5" alt="IG" />;
-                           if (p.includes('tiktok')) return <img src="https://cdn.simpleicons.org/tiktok/000000" className="w-5 h-5" alt="TT" />;
-                           if (p.includes('threads')) return <img src="https://cdn.simpleicons.org/threads/000000" className="w-5 h-5" alt="TH" />;
-                           return <Layout size={18} className="text-amethyst-primary"/>;
-                       };
-
-                       return (
-                          <tr key={i} className="group hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-0">
-                             <td className="py-6 px-4">
-                                <div className="flex items-center gap-5">
-                                   <div className="w-12 h-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
-                                      <PlatformIcon />
-                                   </div>
-                                   <div>
-                                      <p className="text-sm font-black text-amethyst-dark group-hover:text-amethyst-primary transition-colors leading-tight mb-1">{item.title}</p>
-                                      <p className="text-[10px] font-bold text-slate-400 italic uppercase tracking-widest">{item.content_pillar || 'Insight'}</p>
-                                   </div>
-                                </div>
-                             </td>
-                             <td className="py-6 px-4 text-center">
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                   <div className="w-9 h-9 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 overflow-hidden shadow-inner group-hover:border-amethyst-primary/30 transition-all">
-                                      {item.author_avatar ? (
-                                         <img src={item.author_avatar} className="w-full h-full object-cover" alt="PIC" />
-                                      ) : (
-                                         <div className="text-[10px] font-black text-slate-300 uppercase">
-                                            {item.author_name?.charAt(0) || 'P'}
-                                         </div>
-                                      )}
-                                   </div>
-                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.author_name || 'Owner'}</p>
-                                </div>
-                             </td>
-                             <td className="py-6 px-4 text-center">
-                                <p className="text-[11px] font-bold text-slate-500 italic">
-                                   {new Date(item.due_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-                                </p>
-                             </td>
-                             <td className="py-6 px-4 text-center">
-                                <p className="text-sm font-black text-amethyst-dark">{views >= 1000 ? `${(views/1000).toFixed(1)}K` : views}</p>
-                             </td>
-                             <td className="py-6 px-4 text-center">
-                                <div className="flex flex-col items-center gap-1">
-                                   <p className={`text-sm font-black ${Number(er) > 5 ? 'text-emerald-500' : 'text-amethyst-primary'}`}>{er}%</p>
-                                   <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                      <div className={`h-full ${Number(er) > 5 ? 'bg-emerald-500' : 'bg-amethyst-primary'}`} style={{ width: `${Math.min(Number(er) * 5, 100)}%` }}></div>
-                                   </div>
-                                </div>
-                             </td>
-                             <td className="py-6 px-4">
-                                <div className="flex items-center justify-end gap-3">
-                                   <button 
-                                     onClick={() => setSelectedContent(item)}
-                                     className="w-10 h-10 bg-amethyst-light/10 text-amethyst-primary rounded-xl flex items-center justify-center hover:bg-amethyst-primary hover:text-white transition-all shadow-sm"
-                                   >
-                                      <Activity size={16}/>
-                                   </button>
-                                   <a 
-                                     href={item.post_link || '#'} 
-                                     target="_blank" 
-                                     rel="noreferrer"
-                                     className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm ${
-                                       item.post_link ? 'bg-amethyst-dark text-white hover:bg-black' : 'bg-slate-50 text-slate-300 cursor-not-allowed'
-                                     }`}
-                                   >
-                                      <ExternalLink size={16}/>
-                                   </a>
-                                </div>
-                             </td>
-                          </tr>
-                       );
-                    })}
-                 </tbody>
-              </table>
-           </div>
-           </div>
-        </motion.div>
-        </>
-      )}
-    </div>
-    <AnimatePresence>
-        {selectedContent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-12 bg-slate-900/60 backdrop-blur-md">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              className="bg-white w-full max-w-6xl rounded-[48px] shadow-[0_32px_64px_-16px_rgba(172,139,238,0.3)] overflow-hidden border border-white/20 flex flex-col md:flex-row h-auto max-h-[90vh]"
-            >
-              {/* Sidebar: Performance Summary (Purple BG) */}
-              <div className="w-full md:w-[280px] bg-amethyst-primary p-7 flex flex-col text-white flex-shrink-0 relative overflow-hidden">
-                 {/* Decorative background circle */}
-                 <div className="absolute -top-10 -left-10 w-48 h-48 bg-white/5 rounded-full blur-3xl" />
-                 <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-amethyst-dark/20 rounded-full blur-3xl" />
-
-                 <div className="relative z-10 flex flex-col h-full">
-                    <div className="space-y-1 mb-6">
-                       <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse opacity-60"></div>
-                          <span className="text-[8px] font-black uppercase tracking-[3px] text-white/60">Uploaded</span>
-                       </div>
-                       <h3 className="text-lg font-black tracking-tight">Performance report</h3>
-                    </div>
-                    
-                    {(() => {
-                       const m = selectedContent.metrics || {};
-                       const get = (searchKeys: string[]) => {
-                          const ns = searchKeys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
-                          for (const k in m) if (ns.includes(k.replace(/[\s_.]/g, '').toLowerCase())) return Number(m[k]) || 0;
-                          return 0;
-                       };
-                       
-                       const views = get(['views', 'impressions']);
-                       const reach = get(['reach']) || views;
-                       const interactions = get(['interactions']) || (get(['likes']) + get(['comments']) + get(['shares', 'reposts']) + get(['saves', 'bookmarks']));
-                       const profile_visits = get(['profilevisits', 'profilevisit', 'visits', 'profilevis']);
-                       const followers = get(['newfollowers', 'followers', 'follows', 'newfollows']);
-                       const er = views > 0 ? ((interactions / views) * 100).toFixed(2) : '0';
-
-                       return (
-                         <>
-                           <div className="flex-1 space-y-1.5 overflow-hidden">
-                                {[
-                                  { label: 'Reach', value: reach, icon: <Activity size={12}/> },
-                                  { label: 'Views', value: views, icon: <Eye size={12}/> },
-                                  { label: 'Interacts', value: interactions, icon: <Sparkles size={12}/> },
-                                  { label: 'Reposts', value: get(['shares', 'reposts']), icon: <Share2 size={12}/> },
-                                  { label: 'Visits', value: profile_visits, icon: <Users size={12}/> },
-                                  { label: 'Follows', value: `+${followers}`, icon: <Users size={12}/> },
-                                  { label: 'E. Rate', value: `${er}%`, icon: <TrendingUp size={12}/> },
-                                ].map((item: any, i: number) => (
-                                  <div key={i} className="bg-white/10 p-2 rounded-lg flex items-center justify-between border border-white/5 hover:bg-white/20 transition-all">
-                                     <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 bg-white/10 rounded-md flex items-center justify-center text-white/80">{item.icon}</div>
-                                        <span className="text-[8px] font-bold uppercase tracking-widest text-white/60">{item.label}</span>
-                                     </div>
-                                     <span className="text-xs font-black">{Number(item.value.toString().replace('+', '')) >= 1000 ? `${(Number(item.value.toString().replace('+', '')) / 1000).toFixed(1)}K` : item.value}</span>
-                                  </div>
-                                ))}
-                           </div>
-
-                           <div className="mt-auto pt-3 border-t border-white/10 space-y-3">
-                              <div className="bg-amethyst-dark/30 p-3 rounded-2xl border border-white/5 flex items-center justify-between">
-                                 <div>
-                                    <p className="text-[7px] font-black text-white/40 uppercase tracking-widest">Grade</p>
-                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <div className={`w-1 h-1 rounded-full ${Number(er) > 10 ? "bg-emerald-400" : Number(er) > 5 ? "bg-yellow-400" : Number(er) > 2 ? "bg-white/60" : "bg-rose-400"}`}></div>
-                                        <h4 className="text-sm font-black text-white">{Number(er) > 10 ? "Excellent" : Number(er) > 5 ? "Good" : Number(er) > 2 ? "Average" : "Review"}</h4>
-                                     </div>
-                                  </div>
-                                 <div className="text-right">
-                                    <p className="text-[7px] font-black text-white/40 uppercase tracking-widest">ER Snapshot</p>
-                                    <p className="text-[10px] font-black text-white">{er}%</p>
-                                 </div>
-                              </div>
-
-                              <div className="flex items-center justify-center gap-3 py-2 bg-white/5 rounded-xl border border-white/5">
-                                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-                                     {(() => {
-                                       const p = selectedContent.platform?.toLowerCase() || '';
-                                       if (p.includes('instagram')) return <img src="https://cdn.simpleicons.org/instagram/E4405F" className="w-4 h-4" alt="IG" />;
-                                       if (p.includes('tiktok')) return <img src="https://cdn.simpleicons.org/tiktok/000000" className="w-4 h-4" alt="TT" />;
-                                       if (p.includes('threads')) return <img src="https://cdn.simpleicons.org/threads/000000" className="w-4 h-4" alt="TH" />;
-                                       return <Activity size={14} className="text-amethyst-primary"/>;
-                                     })()}
-                                  </div>
-                                  <div>
-                                     <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Active On</p>
-                                     <p className="text-[10px] font-black truncate max-w-[100px]">{selectedContent.platform}</p>
-                                  </div>
-                              </div>
-                           </div>
-                         </>
-                       );
-                    })()}
-                 </div>
-              </div>              {/* Main Content (White BG) */}
-              <div className="flex-1 bg-white p-8 sm:p-10 flex flex-col relative overflow-hidden">
-                 <button 
-                   onClick={() => setSelectedContent(null)}
-                   className="absolute top-6 right-6 w-9 h-9 bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all rounded-full border border-slate-100 z-30"
-                 >✕</button>
-
-                 <div className="relative z-10 flex flex-col h-full space-y-6">
-                    {/* Header Section */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                           <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[8px] font-black rounded-md border border-emerald-100/50">{selectedContent.status}</span>
-                           <span className="text-slate-300 text-[10px] font-semibold">{new Date(selectedContent.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        </div>
-                        <h2 className="text-3xl font-black text-amethyst-dark tracking-tight leading-tight">{selectedContent.title}</h2>
-                        <div className="mt-2 flex items-center gap-2">
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amethyst-primary/5 rounded-lg border border-amethyst-primary/10">
-                              <Sparkles size={10} className="text-amethyst-primary"/>
-                              <span className="text-[9px] font-black text-amethyst-primary uppercase tracking-widest">{selectedContent.content_pillar || 'Educational'}</span>
-                           </div>
-                        </div>
-                    </div>
-
-                    {/* Timeline - Much Slimmer */}
-                    <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
-                        <div className="flex items-center justify-between mb-4">
-                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-[2px]">Workflow Status</p>
-                           <span className="text-[9px] font-bold text-amethyst-primary">Stage 5/5</span>
-                        </div>
-                        <div className="relative flex items-center justify-between px-2">
-                           <div className="absolute left-2 right-2 h-0.5 bg-slate-200 top-1/2 -translate-y-1/2 rounded-full">
-                              <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-amethyst-primary shadow-[0_0_8px_rgba(172,139,238,0.5)]" />
-                           </div>
-                           {['Draft', 'Production', 'Review', 'Approved', 'Ready'].map((step: string, idx: number) => (
-                             <div key={idx} className="relative z-10 flex flex-col items-center">
-                                <div className={`w-4 h-4 rounded-full border-2 border-white flex items-center justify-center shadow-md transition-all ${idx < 5 ? 'bg-amethyst-primary text-white' : 'bg-slate-200 text-white'}`}>
-                                   <Check size={8} strokeWidth={5}/>
-                                </div>
-                                <span className={`mt-2 text-[7px] font-black uppercase tracking-widest transition-colors ${idx < 5 ? 'text-amethyst-dark' : 'text-slate-300'}`}>{step}</span>
-                             </div>
-                           ))}
-                        </div>
-                    </div>
-
-                    {/* Split Content: Resources vs AI */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-                        {/* Resource Column */}
-                        <div className="space-y-4">
-                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">Content Resources</p>
-                           <div className="space-y-2">
-                              {[
-                                { label: 'Link Script', url: selectedContent.script_link, icon: <FileText size={16}/> },
-                                { label: 'Konten Folder', url: selectedContent.content_link, icon: <Video size={16}/> },
-                              ].map((link: any, i: number) => (
-                                <a 
-                                  key={i}
-                                  href={link.url || '#'} 
-                                  target="_blank" 
-                                  rel="noreferrer"
-                                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                                    link.url ? 'bg-white border-slate-100 hover:border-amethyst-primary hover:shadow-lg' : 'bg-slate-50 border-transparent opacity-40 cursor-not-allowed'
-                                  }`}
-                                >
-                                   <div className="flex items-center gap-3">
-                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                                         link.url ? 'bg-amethyst-primary/10 text-amethyst-primary' : 'bg-slate-100 text-slate-300'
-                                      }`}>
-                                         {link.icon}
-                                      </div>
-                                      <span className="text-[11px] font-bold text-slate-600 tracking-tight">{link.label}</span>
-                                   </div>
-                                   {link.url && <ArrowUpRight size={12} className="text-slate-300"/>}
-                                </a>
-                              ))}
-                           </div>
-                        </div>
-
-                        {/* AI Insight Column */}
-                        <div className="space-y-4">
-                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">Advanced Strategy AI</p>
-                           <div className="h-full max-h-[160px] p-5 bg-gradient-to-br from-amethyst-primary/5 to-transparent border border-amethyst-primary/10 rounded-3xl relative overflow-hidden flex flex-col justify-center">
-                              <div className="absolute -top-4 -right-4 opacity-5"><Sparkles size={80}/></div>
-                              <div className="relative z-10 space-y-3">
-                                 <div className="w-10 h-10 bg-amethyst-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-amethyst-primary/30">
-                                    <Zap size={20}/>
-                                 </div>
-                                 <p className="text-sm font-bold text-amethyst-dark/90 leading-relaxed italic">
-                                    {(() => {
-                                      const m = selectedContent.metrics || {};
-                                      const hasMetrics = Object.keys(m).length > 0 && Object.values(m).some(v => Number(v) > 0);
-                                      if (!hasMetrics) return "Lengkapi data metrics untuk mendapatkan insight strategis.";
-                                      
-                                      const getV = (keys: string[]) => {
-                                        const ns = keys.map((k: any) => k.replace(/[\s_.]/g, '').toLowerCase());
-                                        for (const k in m) if (ns.includes(k.replace(/[\s_.]/g, '').toLowerCase())) return Number(m[k]) || 0;
-                                        return 0;
-                                      };
-
-                                      const v = getV(['views', 'impressions']);
-                                      const l = getV(['likes']);
-                                      const c = getV(['comments']);
-                                      const s = getV(['shares', 'reposts']);
-                                      const f = getV(['newfollowers', 'followers', 'follows']);
-                                      const er = v > 0 ? (l + c + s) / v * 100 : 0;
-                                      const platform = selectedContent.platform?.toLowerCase() || '';
-
-                                      if (v > 5000 && er < 2) return "Reach tinggi tapi engagement rendah. Coba ganti pola 'Call to Action' di awal video.";
-                                      if (er > 12) return `Performa luar biasa! Konten ini berhasil menarik ${f} followers baru secara organik.`;
-                                      return "Performa konten stabil. Fokus pada konsistensi jadwal posting untuk menjaga momentum algoritma.";
-                                    })()}
-                                 </p>
-                              </div>
-                           </div>
-                        </div>
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50 mt-auto">
-                        <div className="flex items-center gap-2">
-                           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest tracking-[1px]">Operational Sync Active</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                           <button 
-                             onClick={() => setSelectedContent(null)}
-                             className="px-6 py-3 text-slate-400 text-[10px] font-black hover:bg-slate-50 transition-all rounded-xl"
-                           >
-                             Close
-                           </button>
-                           {selectedContent.post_link ? (
-                             <a 
-                               href={selectedContent.post_link} 
-                               target="_blank" 
-                               rel="noreferrer" 
-                               className="px-8 py-3 bg-amethyst-primary text-white rounded-xl text-[10px] font-black shadow-lg shadow-amethyst-primary/20 hover:scale-[1.02] transition-all flex items-center gap-2 active:scale-95"
-                             >
-                                <ExternalLink size={12}/> View Live Link
-                             </a>
-                           ) : (
-                             <button 
-                               disabled
-                               className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black flex items-center gap-2 cursor-not-allowed border border-slate-200"
-                             >
-                                <ExternalLink size={12}/> Link Unavailable
-                             </button>
-                           )}
-                        </div>
-                    </div>
-                     </div>
-                     
-                     <p className="text-[9px] text-center text-slate-300 font-medium mt-10">
-                        Secured by Aruneeka Encryption. Payments are manually verified by our team.
-                     </p>
-                  </div>
-               </motion.div>
+                         {isLocked && <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/10 backdrop-blur-[2px] rounded-[32px]"><ShieldCheck size={16} className="text-amber-500 mb-2"/><span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Subscribe only</span></div>}
+                      </motion.div>
+                   );
+                })}
             </div>
-          )}
-       </AnimatePresence>
-     </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+               <div className="lg:col-span-2 bg-white rounded-[40px] border border-slate-50 shadow-premium p-6 md:p-10 flex flex-col min-h-[600px]">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                     <div className="space-y-1">
+                        <div className="flex items-center gap-2 mb-1">
+                           <TrendingUp size={16} className="text-amethyst-primary"/>
+                           <h4 className="text-sm font-black text-amethyst-dark tracking-tight">Growth Performance Trend</h4>
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-medium italic">Daily visualizer — this month</p>
+                     </div>
+                     <div className="flex items-center w-full md:w-auto bg-slate-50/80 p-1.5 rounded-full border border-slate-100 shadow-inner overflow-x-auto custom-scrollbar">
+                        {[
+                          { id: 'Views', icon: <Eye size={14}/> },
+                          { id: 'Interactions', icon: <Zap size={14}/> },
+                          { id: 'Followers', icon: <Users size={14}/> }
+                        ].map((type) => (
+                          <button key={type.id} onClick={() => setActiveMetric(type.id)} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${activeMetric === type.id ? 'bg-amethyst-primary text-white shadow-xl scale-105' : 'text-slate-400 hover:text-slate-600'}`}>
+                             {type.icon} {type.id}
+                          </button>
+                        ))}
+                     </div>
+                  </div>
+                  
+                  <div className="flex-1 relative">
+                     <PerformanceChart data={dailyMetrics} activeMetric={activeMetric} maxVal={chartMax} />
+                  </div>
+               </div>
+
+               <div className="space-y-8">
+                  <div className="bg-white p-8 rounded-[40px] border border-slate-50 shadow-premium">
+                     <div className="flex items-center justify-between mb-8"><h4 className="text-[10px] font-black text-slate-300 flex items-center gap-2 italic tracking-widest"><Sparkles size={14} className="text-amethyst-primary"/> Top 3 performers</h4><span className="px-2 py-0.5 bg-amethyst-light/10 text-amethyst-primary rounded-md text-[8px] font-black tracking-widest uppercase">Views</span></div>
+                     <div className="space-y-4">
+                        {data.filter(p => p.metrics && getV(p.metrics, [activeMetric.toLowerCase()]) !== undefined).sort((a,b) => (getV(b.metrics, [activeMetric.toLowerCase()]))-(getV(a.metrics, [activeMetric.toLowerCase()]))).slice(0,3).map((item,i) => (
+                          <div key={i} onClick={() => openDetail(item)} className="flex items-center justify-between group cursor-pointer hover:bg-slate-50 p-4 rounded-3xl transition-all border border-transparent hover:border-slate-100">
+                             <div className="flex items-center gap-4"><div className={`w-10 h-10 ${i === 0 ? 'bg-amethyst-primary text-white shadow-xl shadow-amethyst-primary/30' : 'bg-slate-50 text-amethyst-primary'} rounded-xl flex items-center justify-center text-[11px] font-black italic`}>#{i+1}</div><div><p className="text-xs font-black text-amethyst-dark group-hover:text-amethyst-primary truncate max-w-[140px] transition-colors">{item.title}</p><p className="text-[9px] font-bold text-slate-400 italic">{getV(item.metrics, [activeMetric.toLowerCase()]).toLocaleString()} {activeMetric}</p></div></div><ChevronRight size={16} className="text-slate-100 group-hover:text-amethyst-primary transition-colors"/>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+                  <div className="bg-white p-8 rounded-[40px] border border-slate-50 shadow-premium">
+                     <div className="flex items-center justify-between mb-8"><h4 className="text-[10px] font-black text-slate-300 flex items-center gap-2 italic tracking-widest"><TrendingDown size={14} className="text-rose-400"/> Needs attention</h4><span className="px-2 py-0.5 bg-rose-50 text-rose-400 rounded-md text-[8px] font-black tracking-widest uppercase">Bottom 3</span></div>
+                     <div className="space-y-4">
+                        {data.filter(p => p.status?.toLowerCase() === 'uploaded').sort((a,b) => (getV(a.metrics, [activeMetric.toLowerCase()]))-(getV(b.metrics, [activeMetric.toLowerCase()]))).slice(0,3).map((item,i) => (
+                          <div key={i} onClick={() => openDetail(item)} className="flex items-center justify-between group cursor-pointer hover:bg-slate-50 p-4 rounded-3xl transition-all border border-transparent hover:border-slate-100"><div className="flex items-center gap-4"><div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center text-[11px] font-black italic">#{i+1}</div><div><p className="text-xs font-black text-amethyst-dark truncate max-w-[140px]">{item.title}</p><p className="text-[9px] font-bold text-slate-400 italic">{getV(item.metrics, [activeMetric.toLowerCase()]).toLocaleString()} {activeMetric}</p></div></div><TrendingDown size={16} className="text-slate-100 group-hover:text-rose-400 transition-colors"/></div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[48px] shadow-premium p-12 border border-slate-50 relative overflow-hidden">
+               {(() => {
+                  const isLocked = currentTier === "free" && !isPowerUserActual;
+                  return isLocked && (
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/10 backdrop-blur-[16px]">
+                       <div className="flex flex-col items-center gap-6 text-center max-w-sm"><div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 shadow-inner"><ShieldCheck size={40} /></div><div className="space-y-2"><h3 className="text-2xl font-black text-slate-800 tracking-tight">Pro insight required</h3><p className="text-xs text-slate-400 font-medium leading-relaxed">Unlock granular analytics for each individual asset.</p></div><button onClick={() => openUpgrade()} className="px-10 py-4 bg-amethyst-primary text-white rounded-2xl text-xs font-black shadow-xl shadow-amethyst-primary/30 hover:scale-105 transition-all">Upgrade to Unlock</button></div>
+                    </div>
+                  );
+               })()}
+               <div className={currentTier === "free" && !isPowerUserActual ? "blur-md grayscale opacity-30 select-none" : ""}>
+                  <div className="flex items-center justify-between mb-12"><h3 className="text-3xl font-black text-amethyst-dark tracking-tight">Detailed asset breakdown</h3><div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div><span className="text-[10px] font-black text-slate-300 tracking-widest">Live data</span></div></div>
+                  <div className="overflow-x-auto custom-scrollbar">
+                     <table className="w-full">
+                        <thead>
+                           <tr className="border-b border-slate-100 text-[11px] font-black text-slate-300 uppercase tracking-widest"><th className="text-left py-8 px-6">Content identity</th><th className="text-center py-8 px-6">Author</th><th className="text-center py-8 px-6">Posting date</th><th className="text-center py-8 px-6">Views</th><th className="text-center py-8 px-6">ER %</th><th className="text-right py-8 px-6">Action</th></tr>
+                        </thead>
+                        <tbody>
+                           {data.filter(p => p.status?.toLowerCase() === 'uploaded').sort((a,b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((item, i) => {
+                              const m = item.metrics || {}; const v = getV(m, ["views", "impressions"]);
+                              const iat = getV(m, ["likes"]) + getV(m, ["comments"]) + getV(m, ["shares"]) + getV(m, ["saves"]);
+                              const er = v > 0 ? ((iat/v)*100).toFixed(2) : '0.00';
+                              return (
+                                 <tr key={i} onClick={() => openDetail(item)} className="group hover:bg-slate-50/80 transition-all border-b border-slate-50 last:border-0 cursor-pointer">
+                                    <td className="py-8 px-6"><div className="flex items-center gap-6"><div className="w-14 h-14 bg-white rounded-2xl border border-slate-100 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">{item.platform?.toLowerCase().includes('instagram') ? <img src="https://cdn.simpleicons.org/instagram/E4405F" className="w-6 h-6" /> : item.platform?.toLowerCase().includes('tiktok') ? <img src="https://cdn.simpleicons.org/tiktok/000000" className="w-6 h-6" /> : <Package size={20}/>}</div><div><p className="text-base font-black text-amethyst-dark group-hover:text-amethyst-primary transition-colors leading-tight mb-1 truncate max-w-[240px]">{item.title}</p><p className="text-[10px] font-black text-slate-300 italic">{item.content_pillar || "Insight"}</p></div></div></td>
+                                    <td className="py-8 px-6 text-center"><div className="flex flex-col items-center gap-2"><div className="w-10 h-10 bg-slate-50 rounded-full border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner">{item.author_avatar ? <img src={item.author_avatar} className="w-full h-full object-cover" /> : <span className="text-[11px] font-black text-slate-300">{item.author_name?.charAt(0)}</span>}</div><p className="text-[9px] font-black text-slate-400 tracking-widest">{item.author_name || "Owner"}</p></div></td>
+                                    <td className="py-8 px-6 text-center text-[12px] font-bold text-slate-500 italic">{new Date(item.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                                    <td className="py-8 px-6 text-center text-base font-black text-amethyst-dark">{v >= 1000 ? (v/1000).toFixed(1)+'k' : v}</td>
+                                    <td className="py-8 px-6 text-center"><div className="flex flex-col items-center gap-2"><p className={`text-base font-black ${Number(er) > 5 ? "text-emerald-500" : "text-amethyst-primary"}`}>{er}%</p><div className="w-14 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full ${Number(er) > 5 ? "bg-emerald-500" : "bg-amethyst-primary"}`} style={{ width: `${Math.min(Number(er)*5, 100)}%` }}></div></div></div></td>
+                                    <td className="py-8 px-6"><div className="flex items-center justify-end gap-3"><button onClick={(e) => { e.stopPropagation(); openMetrics(item); }} className="w-11 h-11 bg-amethyst-light/10 text-amethyst-primary rounded-xl flex items-center justify-center hover:bg-amethyst-primary hover:text-white transition-all shadow-sm"><Activity size={18}/></button><a href={item.post_link || '#'} target="_blank" rel="noreferrer" className="w-11 h-11 bg-amethyst-dark text-white rounded-xl flex items-center justify-center hover:bg-black transition-all shadow-sm"><ExternalLink size={18}/></a></div></td>
+                                 </tr>
+                              );
+                           })}
+                        </tbody>
+                     </table>
+                  </div>
+               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </div>
+    </div>
   );
 };
 

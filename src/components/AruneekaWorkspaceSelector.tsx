@@ -369,7 +369,7 @@ export const AruneekaWorkspaceSelector = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
               onClick={() => onSelect(ws)}
-              className="group relative bg-white rounded-[40px] p-10 text-left shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_30px_80px_rgba(145,109,213,0.15)] transition-all duration-700 cursor-pointer border border-white min-h-[340px] flex flex-col justify-between"
+              className="group relative bg-white rounded-[32px] md:rounded-[40px] p-6 md:p-10 text-left shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_30px_80px_rgba(145,109,213,0.15)] transition-all duration-700 cursor-pointer border border-white min-h-[240px] md:min-h-[340px] flex flex-col justify-between"
             >
               {/* Decorative Geometric Shapes (INTERNALIZED CLIPPING) */}
               <div className="absolute inset-0 rounded-[40px] overflow-hidden pointer-events-none">
@@ -381,14 +381,14 @@ export const AruneekaWorkspaceSelector = ({
               </div>
 
               {/* Top Icons & Badges */}
-              <div className="relative z-10 flex flex-col items-start h-24">
-                <h3 className="text-3xl font-black text-amethyst-dark tracking-tight leading-tight group-hover:text-amethyst-primary transition-colors pr-16 line-clamp-2">
+              <div className="relative z-10 flex flex-col items-start h-20 md:h-24">
+                <h3 className="text-xl md:text-3xl font-black text-amethyst-dark tracking-tight leading-tight group-hover:text-amethyst-primary transition-colors pr-12 md:pr-16 line-clamp-2">
                   {ws.name}
                 </h3>
                 
                 {/* Floating Category Icon (Popping Outside) */}
-                <div className={`absolute -top-14 -right-14 w-20 h-20 rounded-[28px] bg-gradient-to-br ${getCategoryColor(ws.category || '')} text-white flex items-center justify-center shadow-2xl shadow-black/10 group-hover:scale-110 group-hover:-translate-y-2 group-hover:translate-x-2 transition-all duration-500 z-30 border-4 border-white`}>
-                   {React.cloneElement(getCategoryIcon(ws.category || '') as any, { size: 28 })}
+                <div className={`absolute -top-10 -right-10 md:-top-14 md:-right-14 w-14 h-14 md:w-20 md:h-20 rounded-[20px] md:rounded-[28px] bg-gradient-to-br ${getCategoryColor(ws.category || '')} text-white flex items-center justify-center shadow-2xl shadow-black/10 group-hover:scale-110 group-hover:-translate-y-2 group-hover:translate-x-2 transition-all duration-500 z-30 border-2 md:border-4 border-white`}>
+                   {React.cloneElement(getCategoryIcon(ws.category || '') as any, { size: 24 })}
                 </div>
               </div>
 
@@ -469,14 +469,14 @@ export const AruneekaWorkspaceSelector = ({
                   <div id="tour-add-workspace">
                     <motion.div 
                        onClick={() => setIsCreateOpen(true)}
-                       className="group relative border-2 border-dashed border-slate-200 rounded-[40px] p-10 flex flex-col items-center justify-center gap-6 hover:border-amethyst-primary hover:bg-amethyst-light/5 transition-all duration-500 cursor-pointer min-h-[340px]"
+                       className="group relative border-2 border-dashed border-slate-200 rounded-[32px] md:rounded-[40px] p-6 md:p-10 flex flex-col items-center justify-center gap-4 md:gap-6 hover:border-amethyst-primary hover:bg-amethyst-light/5 transition-all duration-500 cursor-pointer min-h-[240px] md:min-h-[340px]"
                     >
-                    <div className="w-20 h-20 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-amethyst-primary group-hover:text-white transition-all duration-500 shadow-inner">
-                      <Plus size={40} />
+                    <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-amethyst-primary group-hover:text-white transition-all duration-500 shadow-inner">
+                      <Plus size={32} className="md:w-10 md:h-10" />
                     </div>
-                    <div className="text-center space-y-2">
-                      <h3 className="text-xl font-black text-slate-800">Add new brand</h3>
-                      <p className="text-xs text-slate-400 font-medium">Create a separate workspace</p>
+                    <div className="text-center space-y-1 md:space-y-2">
+                      <h3 className="text-lg md:text-xl font-black text-slate-800">Add new brand</h3>
+                      <p className="text-[10px] md:text-xs text-slate-400 font-medium">Create a separate workspace</p>
                     </div>
                   </motion.div>
                 </div>

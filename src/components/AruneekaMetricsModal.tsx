@@ -138,7 +138,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
             onClick={showWarning ? () => { onClose(); setWarningDismissed(false); } : onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99]"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9998]"
           />
           <AnimatePresence>
             {showWarning ? (
@@ -147,7 +147,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.15 } }}
-                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm z-[100] p-4"
+                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm z-[9999] p-4"
               >
                 <div className="bg-white rounded-[32px] p-8 shadow-2xl border border-amethyst-light/20 flex flex-col items-center text-center">
                   <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mb-6 shadow-inner">
@@ -179,7 +179,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.15 } }}
-                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-[100] p-4"
+                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-[9999] p-4"
               >
                 <div className="bg-white rounded-[60px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
                {/* Header */}

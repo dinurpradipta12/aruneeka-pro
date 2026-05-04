@@ -187,6 +187,8 @@ interface WorkspaceContextType {
   setSelectedWorkspace: (ws: any) => void;
   subscriptionTier?: string;
   openUpgrade: () => void;
+  openDetail: (content: any) => void;
+  openMetrics: (content: any) => void;
   user?: any;
 }
 
@@ -196,6 +198,8 @@ export const WorkspaceContext = createContext<WorkspaceContextType>({
   setSelectedWorkspace: () => {},
   subscriptionTier: 'free',
   openUpgrade: () => {},
+  openDetail: () => {},
+  openMetrics: () => {},
   user: null
 });
 
@@ -240,6 +244,16 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [deleteId, setDeleteId] = useState<string | null>(null);
 
    const showToast = (message: string, type: any = 'success') => { setLastNotification({ type, message }); setShowDynamicIsland(true); setTimeout(() => setShowDynamicIsland(false), 4000); };
+
+   const openDetail = (content: any) => {
+      setSelectedContent(content);
+      setIsDetailOpen(true);
+   };
+
+   const openMetrics = (content: any) => {
+      setSelectedContent(content);
+      setIsMetricsOpen(true);
+   };
    const [systemConfig, setSystemConfig] = useState<any>(null);
    const [isDismissed, setIsDismissed] = useState(false);
 
@@ -655,6 +669,31 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
         }
     };
 
+    const handleUpdateStatus = async (id: string, status: string) => {
+        try {
+            const { error } = await supabase
+                .from('v2_agency_content_plans')
+                .update({ status })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            showToast(`Status diperbarui: ${status.toUpperCase()}`, 'success');
+
+            // Optimistic update for selectedContent
+            if (selectedContent && selectedContent.id === id) {
+                setSelectedContent((prev: any) => prev ? { ...prev, status } : null);
+            }
+
+            if (selectedWorkspace?.id) {
+                sessionStorage.removeItem(`aruneeka_plans_cache_${selectedWorkspace.id}`);
+            }
+            window.dispatchEvent(new CustomEvent('aruneeka_refresh_content'));
+        } catch (err: any) {
+            showToast(`Gagal: ${err.message}`, 'error');
+        }
+    };
+
    // --- NEW: PUBLIC SHARING LOGIC ---
    const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
    const [isPublic, setIsPublic] = useState(false);
@@ -735,6 +774,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
         setSelectedWorkspace,
         subscriptionTier: effectiveTier,
         openUpgrade: () => setIsUpgradeModalOpen(true),
+         openDetail,
+         openMetrics,
         user
       }}>
 
@@ -850,10 +891,10 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                )}
             </AnimatePresence>
 
-            <header className="p-4 md:p-8 max-w-[1600px] mx-auto">
-               <div className="rounded-[32px] md:rounded-[48px] p-6 md:p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-visible group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
+            <header className="p-3 md:p-8 max-w-[1600px] mx-auto">
+               <div className="rounded-[28px] md:rounded-[48px] p-4 md:p-12 text-white relative flex items-center justify-between border border-white/20 shadow-2xl overflow-visible group" style={{ background: 'linear-gradient(135deg, #916DD5 0%, #AC8BEE 100%)' }}>
                   {/* DYNAMIC BACKGROUND ELEMENTS */}
-                  <div className="absolute inset-0 pointer-events-none rounded-[48px] overflow-hidden">
+                  <div className="absolute inset-0 pointer-events-none rounded-[28px] md:rounded-[48px] overflow-hidden">
                      {/* Soft Ambient Light Glows */}
                      
                      {/* 2. Floating Glass Orbs */}
@@ -880,7 +921,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent)] pointer-events-none" />
                   </div>
 
-                  <div className="relative z-10 space-y-4 md:space-y-6">
+                  <div className="relative z-10 space-y-2 md:space-y-6">
                      <div className="flex items-center gap-3">
                         <button 
                           onClick={() => {
@@ -916,7 +957,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                      </div>
                      
                      <div className="space-y-1">
-                        <h1 id="tour-workspace-selector" className="text-4xl font-black tracking-tight drop-shadow-sm">
+                        <h1 id="tour-workspace-selector" className="text-xl md:text-4xl font-black tracking-tight drop-shadow-sm">
                            {selectedWorkspace?.name || 'Aruneeka Pro Intelligence'}
                         </h1>
                         <div className="flex items-center gap-6 text-white/80 text-[10px] font-black tracking-[0.05em]">
@@ -939,7 +980,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                           whileHover={{ scale: 1.02, y: -2 }} 
                           whileTap={{ scale: 0.98 }} 
                           onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)} 
-                          className={`px-10 py-5 rounded-2xl flex items-center gap-3 shadow-xl font-black transition-all ${isShareDropdownOpen ? 'bg-amethyst-primary text-white' : 'bg-white text-amethyst-dark'}`}
+                          className={`hidden md:flex px-10 py-5 rounded-2xl items-center gap-3 shadow-xl font-black transition-all ${isShareDropdownOpen ? 'bg-amethyst-primary text-white' : 'bg-white text-amethyst-dark'}`}
                         >
                            <Share2 size={18} /> <span className="text-[11px]">Share Highlights</span>
                         </motion.button>
@@ -1080,7 +1121,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
              </div>
 
              {/* MOBILE BOTTOM NAVIGATION */}
-             <div className="md:hidden fixed bottom-6 left-6 right-6 z-[5000]">
+             <div className="md:hidden fixed bottom-6 left-6 right-6 z-[50]">
                 <nav className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-3xl p-2 flex items-center justify-around shadow-2xl shadow-amethyst-primary/20 text-slate-400">
                    <Link 
                      href="/analytics" 
@@ -1090,12 +1131,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                       <span className="text-[8px] font-black uppercase tracking-tighter">Performance</span>
                    </Link>
                    <Link 
-                     href="/content" 
-                     className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/content' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
-                   >
-                      <Calendar size={20} />
-                      <span className="text-[8px] font-black uppercase tracking-tighter">Plan</span>
-                   </Link>
+                      href="/content" 
+                      className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/content' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
+                    >
+                       <Calendar size={20} />
+                       <span className="text-[8px] font-black uppercase tracking-tighter">Plan</span>
+                    </Link>
                    <Link 
                      href="/strategy" 
                      className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname === '/strategy' ? 'bg-amethyst-primary text-white shadow-lg' : 'hover:text-amethyst-primary'}`}
@@ -1103,15 +1144,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                       <Target size={20} />
                       <span className="text-[8px] font-black uppercase tracking-tighter">KPI</span>
                    </Link>
-                   {['Superuser', 'developer'].includes(user?.role) && (
-                      <Link 
-                        href="/admin/users"
-                        className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${pathname.startsWith('/admin') ? 'bg-slate-900 text-white shadow-lg' : 'hover:text-slate-600'}`}
-                      >
-                         <Monitor size={20} />
-                         <span className="text-[8px] font-black uppercase tracking-tighter">Admin</span>
-                      </Link>
-                   )}
+                    {/* Admin removed for mobile per user request */}
                 </nav>
              </div>
 
@@ -1154,13 +1187,13 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             </AnimatePresence>
 
             {user && (
-               <div className="fixed bottom-10 right-10 z-[1000]">
+               <div className="fixed bottom-28 md:bottom-10 right-6 md:right-10 z-[40]">
                   <MotivationBubble forceHide={isProfilePopupOpen} />
                   <AnimatePresence>
                      {isProfilePopupOpen && (
-                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} className="absolute bottom-32 right-0 w-80 bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden p-3 space-y-2">
-                           <div className="flex flex-col items-center p-6 bg-slate-50 rounded-[30px] mb-1">
-                              <div className="w-24 h-24 mb-4 drop-shadow-xl"><img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Identity" className="w-full h-full object-contain" /></div>
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} className="absolute bottom-20 md:bottom-32 right-0 w-72 md:w-80 bg-white rounded-[32px] md:rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden p-2 md:p-3 space-y-1 md:space-y-2">
+                           <div className="flex flex-col items-center p-4 md:p-6 bg-slate-50 rounded-[24px] md:rounded-[30px] mb-0.5 md:mb-1">
+                              <div className="w-16 h-16 md:w-24 md:h-24 mb-3 md:mb-4 drop-shadow-xl"><img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Identity" className="w-full h-full object-contain" /></div>
                               <h4 className="text-lg font-black text-slate-800 tracking-tight">{user?.full_name}</h4>
                               <div className="flex items-center gap-2 mt-1">
                                  <span className="text-[9px] font-black text-amethyst-primary">{editForm.displayRole}</span>
@@ -1172,7 +1205,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                            </div>
 
                            {/* ACCOUNT HEALTH / STATUS SECTION */}
-                           <div className="px-6 py-5 bg-slate-50/50 rounded-[30px] mb-2 space-y-4">
+                           <div className="px-5 md:px-6 py-4 md:py-5 bg-slate-50/50 rounded-[24px] md:rounded-[30px] mb-1 md:mb-2 space-y-3 md:space-y-4">
                               <div className="flex items-center justify-between">
                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Status</span>
                                  <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
@@ -1275,13 +1308,13 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                               );
                            })()}
 
-                           <button onClick={() => { setIsEditorOpen(true); setIsProfilePopupOpen(false); }} className="w-full flex items-center gap-4 p-4 rounded-[24px] hover:bg-slate-50 transition-all text-slate-400 hover:text-amethyst-primary">
-                              <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center"><Settings size={18} /></div>
-                              <div className="text-left"><div className="text-sm font-black text-slate-700">Identity studio</div><div className="text-[9px] font-bold opacity-50">Persona setup</div></div>
+                           <button onClick={() => { setIsEditorOpen(true); setIsProfilePopupOpen(false); }} className="w-full flex items-center gap-4 p-3 md:p-4 rounded-[20px] md:rounded-[24px] hover:bg-slate-50 transition-all text-slate-400 hover:text-amethyst-primary">
+                              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white shadow-sm flex items-center justify-center"><Settings size={16} /></div>
+                              <div className="text-left"><div className="text-xs md:text-sm font-black text-slate-700">Identity studio</div><div className="text-[8px] md:text-[9px] font-bold opacity-50">Persona setup</div></div>
                            </button>
-                           <button onClick={() => { localStorage.removeItem('aruneeka_user'); window.location.href = '/login'; }} className="w-full flex items-center gap-4 p-4 rounded-[24px] hover:bg-rose-50 transition-all text-slate-300 hover:text-rose-500">
-                              <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center"><LogOut size={18} /></div>
-                              <div className="text-left"><div className="text-sm font-black text-rose-600">Terminate account</div><div className="text-[9px] font-bold opacity-50">Logout session</div></div>
+                           <button onClick={() => { localStorage.removeItem('aruneeka_user'); window.location.href = '/login'; }} className="w-full flex items-center gap-4 p-3 md:p-4 rounded-[20px] md:rounded-[24px] hover:bg-rose-50 transition-all text-slate-300 hover:text-rose-500">
+                              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white shadow-sm flex items-center justify-center"><LogOut size={16} /></div>
+                              <div className="text-left"><div className="text-xs md:text-sm font-black text-rose-600">Terminate account</div><div className="text-[8px] md:text-[9px] font-bold opacity-50">Logout session</div></div>
                            </button>
 
                            <div className="h-px bg-slate-100 mx-4 my-2 opacity-50" />
@@ -1291,7 +1324,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                                setIsProfilePopupOpen(false); 
                                if ((window as any).startAruneekaTour) (window as any).startAruneekaTour(); 
                              }} 
-                             className="w-full flex items-center gap-4 p-4 rounded-[24px] bg-amethyst-primary/5 hover:bg-amethyst-primary/10 transition-all text-amethyst-primary group"
+                             className="hidden md:flex w-full items-center gap-4 p-4 rounded-[24px] bg-amethyst-primary/5 hover:bg-amethyst-primary/10 transition-all text-amethyst-primary group"
                            >
                               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform"><Sparkles size={18} /></div>
                               <div className="text-left">
@@ -1306,7 +1339,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                     whileHover={{ scale: 1.1, rotate: 5 }} 
                     whileTap={{ scale: 0.9 }} 
                     onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)} 
-                    className="w-24 h-24 overflow-hidden drop-shadow-2xl hover:drop-shadow-amethyst transition-all relative"
+                    className="w-16 h-16 md:w-24 md:h-24 overflow-hidden drop-shadow-2xl hover:drop-shadow-amethyst transition-all relative"
                   >
                      <img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Profile" className="w-full h-full object-contain" />
                      
@@ -1359,6 +1392,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                onClose={() => setIsDetailOpen(false)}
                content={selectedContent}
                onEdit={() => { setIsDetailOpen(false); setIsWizardOpen(true); }}
+               onStatusChange={handleUpdateStatus}
             />
 
             <AruneekaMetricsModal 
