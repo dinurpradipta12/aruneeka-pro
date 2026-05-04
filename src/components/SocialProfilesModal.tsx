@@ -187,53 +187,53 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-2xl bg-white rounded-[50px] shadow-2xl overflow-hidden border border-white/20"
+            className="relative w-full max-w-2xl bg-white rounded-[32px] md:rounded-[50px] shadow-2xl overflow-y-auto max-h-[90vh] md:max-h-none border border-white/20"
           >
-             <div className="p-12 space-y-10">
-                <div className="flex items-center justify-between">
-                   <div className="space-y-1">
-                      <h2 className="text-3xl font-black text-slate-800 tracking-tight">
-                         {view === 'list' ? 'Switch Account' : editingId ? 'Edit Profile' : 'New Profile'}
-                      </h2>
-                      <p className="text-[10px] font-bold text-slate-400">
-                         {view === 'list' ? `Active Workspace Hub (${profiles.length})` : 'Register social media identity'}
-                      </p>
-                   </div>
-                   <button onClick={onClose} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all shadow-sm"><X size={24}/></button>
-                </div>
+             <div className="p-6 md:p-12 space-y-8 md:space-y-10">
+                 <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                       <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+                          {view === 'list' ? 'Switch Account' : editingId ? 'Edit Profile' : 'New Profile'}
+                       </h2>
+                       <p className="text-[10px] font-bold text-slate-400">
+                          {view === 'list' ? `Active Workspace Hub (${profiles.length})` : 'Register social media identity'}
+                       </p>
+                    </div>
+                    <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all shadow-sm"><X size={20}/></button>
+                 </div>
 
                 <AnimatePresence mode="wait">
-                   {view === 'list' ? (
-                      <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
-                         <div className="grid grid-cols-1 gap-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-                            {profiles.map((p: SocialProfile) => (
-                               <div 
-                                 key={p.id} 
-                                 onClick={() => { if (onSelect) onSelect(p); onClose(); }}
-                                 className="group relative p-6 rounded-[32px] bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-amethyst-primary hover:shadow-xl hover:shadow-amethyst-primary/5 transition-all cursor-pointer flex items-center justify-between"
-                               >
-                                  <div className="flex items-center gap-5">
-                                     <div className="w-16 h-16 rounded-[24px] bg-white shadow-sm flex items-center justify-center border border-slate-50">
-                                        {platformIcons[p.platform] || <User size={24} className="text-slate-200" />}
-                                     </div>
-                                     <div className="space-y-1">
-                                        <h4 className="text-lg font-black text-slate-800 tracking-tight">{p.name}</h4>
-                                        <p className="text-[11px] font-bold text-slate-400 flex items-center gap-2">
-                                           {p.platform} <span className="opacity-20">•</span> {p.handle}
-                                        </p>
-                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                     <div className="px-4 py-2 bg-white rounded-xl text-[10px] font-black text-amethyst-primary border border-slate-50 shadow-sm whitespace-nowrap">
-                                        {p.followers} FOLLOWERS
-                                     </div>
-                                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                                        <button onClick={(e) => handleEdit(p, e)} className="p-2 text-slate-300 hover:text-amethyst-primary transition-colors"><Settings size={18}/></button>
-                                        <button onClick={(e) => handleDelete(p.id, e)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={18}/></button>
-                                     </div>
-                                  </div>
-                               </div>
-                            ))}
+                    {view === 'list' ? (
+                       <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
+                          <div className="grid grid-cols-1 gap-4 max-h-[400px] md:max-h-[450px] overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
+                             {profiles.map((p: SocialProfile) => (
+                                <div 
+                                  key={p.id} 
+                                  onClick={() => { if (onSelect) onSelect(p); onClose(); }}
+                                  className="group relative p-5 md:p-6 rounded-[28px] md:rounded-[32px] bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-amethyst-primary hover:shadow-xl hover:shadow-amethyst-primary/5 transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0"
+                                >
+                                   <div className="flex items-center gap-4 md:gap-5">
+                                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-[18px] md:rounded-[24px] bg-white shadow-sm flex items-center justify-center border border-slate-50">
+                                         {platformIcons[p.platform] || <User size={20} className="text-slate-200" />}
+                                      </div>
+                                      <div className="space-y-0.5 md:space-y-1">
+                                         <h4 className="text-base md:text-lg font-black text-slate-800 tracking-tight">{p.name}</h4>
+                                         <p className="text-[10px] md:text-[11px] font-bold text-slate-400 flex items-center gap-2">
+                                            {p.platform} <span className="opacity-20">•</span> {p.handle}
+                                         </p>
+                                      </div>
+                                   </div>
+                                   <div className="flex items-center justify-between md:justify-end gap-3">
+                                      <div className="px-4 py-2 bg-white rounded-xl text-[10px] font-black text-amethyst-primary border border-slate-50 shadow-sm whitespace-nowrap">
+                                         {p.followers} FOLLOWERS
+                                      </div>
+                                      <div className="flex items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all md:translate-x-4 md:group-hover:translate-x-0">
+                                         <button onClick={(e) => handleEdit(p, e)} className="p-2 text-slate-300 hover:text-amethyst-primary transition-colors"><Settings size={18}/></button>
+                                         <button onClick={(e) => handleDelete(p.id, e)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={18}/></button>
+                                      </div>
+                                   </div>
+                                </div>
+                             ))}
 
                             {subscriptionTier === 'free' && profiles.length >= 2 ? (
                                <button 
@@ -258,35 +258,35 @@ const SocialProfilesModal: React.FC<SocialProfilesModalProps> = ({
                          </div>
                       </motion.div>
                    ) : (
-                      <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                         <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-3 pl-1">
-                               <label className="text-[10px] font-black text-slate-400">Account identity</label>
-                               <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. My Awesome Agency" className="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
-                            </div>
-                            <div className="space-y-3 pl-1">
-                               <label className="text-[10px] font-black text-slate-400">Target platform</label>
-                               <select value={formData.platform} onChange={e => setFormData({...formData, platform: e.target.value})} className="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none cursor-pointer">
-                                  {platforms.map((p: any) => (<option key={p.id} value={p.id}>{p.label}</option>))}
-                               </select>
-                            </div>
-                         </div>
-                         <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-3 pl-1">
-                               <label className="text-[10px] font-black text-slate-400">Username @handle</label>
-                               <input value={formData.handle} onChange={e => setFormData({...formData, handle: e.target.value})} placeholder="@username" className="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
-                            </div>
-                            <div className="space-y-3 pl-1">
-                               <label className="text-[10px] font-black text-slate-400">Followers saat ini</label>
-                               <input type="number" value={formData.followers} onChange={e => setFormData({...formData, followers: e.target.value})} className="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none" />
-                            </div>
-                         </div>
-                         <div className="flex gap-4 pt-4">
-                            <button onClick={() => setView('list')} className="flex-1 h-18 py-5 bg-slate-50 text-slate-400 rounded-[24px] font-black text-[11px] hover:bg-slate-100 transition-all">Back to list</button>
-                            <button onClick={handleSave} disabled={loading} className="flex-[2] h-18 py-5 bg-amethyst-dark text-white rounded-[24px] font-black text-[11px] shadow-2xl shadow-amethyst-dark/20 hover:bg-black transition-all">
-                               {loading ? 'Processing...' : editingId ? 'Simpan Perubahan' : 'Daftarkan Akun'}
-                            </button>
-                         </div>
+                      <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 md:space-y-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                             <div className="space-y-3 pl-1">
+                                <label className="text-[10px] font-black text-slate-400">Account identity</label>
+                                <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. My Awesome Agency" className="w-full h-14 md:h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+                             </div>
+                             <div className="space-y-3 pl-1">
+                                <label className="text-[10px] font-black text-slate-400">Target platform</label>
+                                <select value={formData.platform} onChange={e => setFormData({...formData, platform: e.target.value})} className="w-full h-14 md:h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none cursor-pointer">
+                                   {platforms.map((p: any) => (<option key={p.id} value={p.id}>{p.label}</option>))}
+                                </select>
+                             </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                             <div className="space-y-3 pl-1">
+                                <label className="text-[10px] font-black text-slate-400">Username @handle</label>
+                                <input value={formData.handle} onChange={e => setFormData({...formData, handle: e.target.value})} placeholder="@username" className="w-full h-14 md:h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none focus:ring-4 ring-amethyst-primary/5 transition-all" />
+                             </div>
+                             <div className="space-y-3 pl-1">
+                                <label className="text-[10px] font-black text-slate-400">Followers saat ini</label>
+                                <input type="number" value={formData.followers} onChange={e => setFormData({...formData, followers: e.target.value})} className="w-full h-14 md:h-16 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black outline-none" />
+                             </div>
+                          </div>
+                          <div className="flex flex-col md:flex-row gap-3 md:gap-4 pt-4">
+                             <button onClick={() => setView('list')} className="flex-1 py-4 md:py-5 bg-slate-50 text-slate-400 rounded-2xl md:rounded-[24px] font-black text-[11px] hover:bg-slate-100 transition-all">Back to list</button>
+                             <button onClick={handleSave} disabled={loading} className="flex-[2] py-4 md:py-5 bg-amethyst-dark text-white rounded-2xl md:rounded-[24px] font-black text-[11px] shadow-2xl shadow-amethyst-dark/20 hover:bg-black transition-all">
+                                {loading ? 'Processing...' : editingId ? 'Simpan Perubahan' : 'Daftarkan Akun'}
+                             </button>
+                          </div>
                       </motion.div>
                    )}
                 </AnimatePresence>

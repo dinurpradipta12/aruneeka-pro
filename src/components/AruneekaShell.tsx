@@ -806,8 +806,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                          {/* SUBTLE GLOW EFFECT */}
                          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.4),transparent)] pointer-events-none" />
                          
-                         <div className="max-w-[1600px] mx-auto px-8 py-3.5 flex items-center justify-between gap-6 relative z-10">
-                            <div className="flex items-center gap-4 flex-1 justify-center">
+                         <div className="max-w-[1600px] mx-auto px-6 md:px-8 py-4 md:py-3.5 flex flex-col md:flex-row items-center justify-center md:justify-between gap-4 md:gap-6 relative z-10 text-center md:text-left">
+                            <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 flex-1 justify-center">
                                <div className="flex items-center gap-2">
                                   <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-lg">
                                      <Megaphone size={14} className="text-white animate-pulse" />
@@ -815,7 +815,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                                   <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/90 whitespace-nowrap">Pengumuman!</span>
                                </div>
                                
-                               <div className="h-4 w-px bg-white/20 mx-1" />
+                               <div className="hidden md:block h-4 w-px bg-white/20 mx-1" />
                                
                                <p className="text-[11px] font-black tracking-tight drop-shadow-md">
                                   {systemConfig?.banner_message}
@@ -829,7 +829,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                                   localStorage.setItem('aruneeka_dismissed_announcement', systemConfig.banner_message);
                                 }
                               }}
-                              className="bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-90"
+                              className="w-max mx-auto md:mx-0 md:w-auto bg-white/10 hover:bg-white/20 border border-white/20 px-8 py-2.5 md:py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-90"
                             >
                                Oke, Mengerti
                             </button>

@@ -347,7 +347,17 @@ const AruneekaAnalytics = ({
   }, [data, profiles, selectedProfileId, activePlatform]);
 
   const stats = useMemo(() => {
-    const common = {
+    const common: Record<string, { 
+      label: string; 
+      value: string | number; 
+      trend: string; 
+      icon: React.ReactNode; 
+      bg: string; 
+      hintTitle: string; 
+      hintFormula: string; 
+      hintDesc: string; 
+      subValue?: string; 
+    }> = {
       views: { label: 'Total views', value: metrics.totalViews >= 1000 ? `${(metrics.totalViews/1000).toFixed(1)}k` : metrics.totalViews, trend: '100%', icon: <Eye size={16} className="text-blue-500"/>, bg: 'bg-blue-50', 
         hintTitle: 'Total views', hintFormula: 'Jumlah berapa kali konten Anda dilihat (termasuk pengulangan).', hintDesc: 'Mengukur jangkauan visual konten.' },
       interactions: { label: 'Total interactions', value: metrics.totalInteractions.toLocaleString(), trend: '100%', icon: <Sparkles size={16} className="text-amethyst-dark"/>, bg: 'bg-amethyst-light/30', 
@@ -434,7 +444,7 @@ const AruneekaAnalytics = ({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-               <div className="lg:col-span-2 bg-white rounded-[40px] border border-slate-50 shadow-premium p-6 md:p-10 flex flex-col min-h-[600px]">
+               <div className="lg:col-span-2 bg-white rounded-[40px] border border-slate-50 shadow-premium p-6 md:p-10 flex flex-col h-auto">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                      <div className="space-y-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -483,7 +493,7 @@ const AruneekaAnalytics = ({
                </div>
             </div>
 
-            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[48px] shadow-premium p-12 border border-slate-50 relative overflow-hidden">
+            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="hidden md:block bg-white rounded-[48px] shadow-premium p-12 border border-slate-50 relative overflow-hidden">
                {(() => {
                   const isLocked = currentTier === "free" && !isPowerUserActual;
                   return isLocked && (
