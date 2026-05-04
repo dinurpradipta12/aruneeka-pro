@@ -131,7 +131,7 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
                initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }} 
                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} 
                exit={{ opacity: 0, scale: 0.5, y: 10, x: 10 }} 
-               className={`absolute bottom-6 right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType !== "motivation" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
+               className={`absolute bottom-4 md:bottom-6 right-[70px] md:right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType !== "motivation" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
             >
                {bubbleType !== "motivation" && (
                   <div className={`absolute -top-3 -left-3 w-10 h-10 rounded-full flex items-center justify-center shadow-lg animate-bounce ${bubbleType === "subscribe" ? "bg-amber-400" : "bg-emerald-400"}`}>
