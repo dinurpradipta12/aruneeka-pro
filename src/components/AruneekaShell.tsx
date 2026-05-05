@@ -231,6 +231,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [selectedProfile, setSelectedProfile] = useState<any>(null);
    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
    const [showRealtimeSuccess, setShowRealtimeSuccess] = useState(false);
+   const [activePackageDetails, setActivePackageDetails] = useState<any>(null);
 
    // Administrative Realtime States
    const [pendingUsersCount, setPendingUsersCount] = useState(0);
@@ -394,7 +395,8 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                table: "v2_agency_users",
                filter: `id=eq.${trackingUserId}`
              },
-             (payload) => {
+             async (payload) => {
+               console.log("Realtime Update Received", payload.new);
                const oldTier = subscriptionTier;
                const newTier = payload.new.subscription_tier;
                
@@ -406,11 +408,26 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                const isPowerUser = ['Superuser', 'developer'].includes(payload.new.role);
                const resolvedTier = isPowerUser ? 'agency' : (newTier || 'free');
 
-               if (resolvedTier !== oldTier) {
+               if (resolvedTier !== oldTier || payload.new.subscription_expiry !== subscriptionExpiry) {
                   setSubscriptionTier(resolvedTier);
                   
-                  // Show success only if it's an upgrade
-                  if ((resolvedTier === "pro" || resolvedTier === "agency") && oldTier === "free") {
+                  // Show success if tier is now premium (Pro/Agency) AND it was actually updated
+                  if (resolvedTier !== 'free' && (resolvedTier !== oldTier || (payload.new.subscription_expiry && payload.new.subscription_expiry > (subscriptionExpiry || '')))) {
+                     
+                     // Fetch Package Benefits for the modal
+                     const tierNameMap: any = { pro: 'Single Creator', agency: 'Agency Pro' };
+                     const targetName = tierNameMap[resolvedTier] || '';
+                     
+                     if (targetName) {
+                        const { data: pkg } = await supabase
+                           .from('v2_agency_packages')
+                           .select('*')
+                           .ilike('name', `%${targetName}%`)
+                           .maybeSingle();
+                        
+                        if (pkg) setActivePackageDetails(pkg);
+                     }
+
                      setIsUpgradeModalOpen(false);
                      setShowRealtimeSuccess(true);
                   }
@@ -459,6 +476,21 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
               timer = setTimeout(() => setShowDynamicIsland(false), 8000);
             }
          }
+
+          // Debug Tool: Manual trigger for testing success modal
+          (window as any).triggerSuccessModal = (mockData?: any) => {
+             setActivePackageDetails(mockData || {
+                name: 'Single Creator',
+                features: JSON.stringify([
+                   "Unlimited Workspace Access",
+                   "Advanced AI Intelligence",
+                   "Priority Content Scheduling",
+                   "Full Analytics Dashboard",
+                   "Team Collaboration Tools"
+                ])
+             });
+             setShowRealtimeSuccess(true);
+          };
 
          return () => {
            supabase.removeChannel(channel);
@@ -1414,41 +1446,65 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             {/* Interactive Onboarding Guide */}
             <AruneekaOnboarding />
 
-            {/* Global Realtime Success Celebration */}
-            <AnimatePresence>
-               {showRealtimeSuccess && (
-                  <div className="fixed inset-0 z-[11000] flex items-center justify-center p-6">
-                     <motion.div 
-                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                       className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
-                     />
-                     <motion.div 
-                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                       className="bg-white w-full max-w-[90vw] md:max-w-sm rounded-[32px] md:rounded-[48px] p-6 md:p-10 text-center shadow-2xl relative z-10 space-y-8" 
-                     >
-                        <div className="relative">
-                           <div className="absolute inset-0 bg-amethyst-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                           <div className="w-24 h-24 bg-gradient-to-br from-amethyst-primary to-amethyst-dark text-white rounded-[40px] flex items-center justify-center mx-auto relative shadow-2xl shadow-amethyst-primary/40 rotate-12">
-                              <Zap size={40} className="fill-current" />
-                           </div>
-                        </div>
-                        <div className="space-y-3">
-                           <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Upgrade Successful!</h3>
-                           <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-4">
-                              &quot;Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!&quot;
-                           </p>
-                        </div>
-                        <button onClick={() => setShowRealtimeSuccess(false)} className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all">
-                           Ayo Mulai!
-                        </button>
-                     </motion.div>
-                  </div>
-               )}
-            </AnimatePresence>
                 </>
              )}
+              {/* Global Realtime Success Celebration (Always available) */}
+              <AnimatePresence>
+                 {showRealtimeSuccess && (
+                    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-6">
+                       <motion.div 
+                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                         className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
+                       />
+                       <motion.div 
+                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                         animate={{ opacity: 1, scale: 1, y: 0 }}
+                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                         className="bg-white w-full max-w-[90vw] md:max-w-sm rounded-[32px] md:rounded-[48px] p-6 md:p-10 text-center shadow-2xl relative z-10 space-y-8" 
+                       >
+                          <div className="relative">
+                             <div className="absolute inset-0 bg-amethyst-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                             <div className="w-24 h-24 bg-gradient-to-br from-amethyst-primary to-amethyst-dark text-white rounded-[40px] flex items-center justify-center mx-auto relative shadow-2xl shadow-amethyst-primary/40 rotate-12">
+                                <Zap size={40} className="fill-current" />
+                             </div>
+                          </div>
+                          <div className="space-y-3">
+                             <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Upgrade Successful!</h3>
+                             <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-4">
+                                &quot;Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!&quot;
+                             </p>
+                          </div>
+
+                          {activePackageDetails && (
+                             <div className="bg-slate-50 rounded-[32px] p-6 space-y-3 text-left border border-slate-100">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-amethyst-primary mb-1">Paket {activePackageDetails.name} Aktif:</p>
+                                {(() => {
+                                   try {
+                                      const feats = typeof activePackageDetails.features === 'string' ? JSON.parse(activePackageDetails.features) : activePackageDetails.features;
+                                      return Array.isArray(feats) ? feats.slice(0, 5).map((f: string, i: number) => (
+                                         <div key={i} className="flex items-start gap-2 text-[10px] font-bold text-slate-600">
+                                            <Check size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                                            <span className="leading-tight">{f}</span>
+                                         </div>
+                                      )) : null;
+                                   } catch(e) { return null; }
+                                })()}
+                             </div>
+                          )}
+
+                          <button 
+                            onClick={() => {
+                               setShowRealtimeSuccess(false);
+                               window.location.reload();
+                            }} 
+                            className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all"
+                          >
+                             Ayo Mulai!
+                          </button>
+                       </motion.div>
+                    </div>
+                 )}
+              </AnimatePresence>
          </div>
       </WorkspaceContext.Provider>
    );

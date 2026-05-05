@@ -1,0 +1,39 @@
+              {/* Global Realtime Success Celebration (Always available) */}
+              <AnimatePresence>
+                 {showRealtimeSuccess && (
+                    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-6">
+                       <motion.div 
+                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                         className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
+                       />
+                       <motion.div 
+                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                         animate={{ opacity: 1, scale: 1, y: 0 }}
+                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                         className="bg-white w-full max-w-[90vw] md:max-w-sm rounded-[32px] md:rounded-[48px] p-6 md:p-10 text-center shadow-2xl relative z-10 space-y-8" 
+                       >
+                          <div className="relative">
+                             <div className="absolute inset-0 bg-amethyst-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                             <div className="w-24 h-24 bg-gradient-to-br from-amethyst-primary to-amethyst-dark text-white rounded-[40px] flex items-center justify-center mx-auto relative shadow-2xl shadow-amethyst-primary/40 rotate-12">
+                                <Zap size={40} className="fill-current" />
+                             </div>
+                          </div>
+                          <div className="space-y-3">
+                             <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Upgrade Successful!</h3>
+                             <p className="text-xs font-bold text-slate-400 leading-relaxed italic px-4">
+                                &quot;Pembayaran Anda telah dikonfirmasi, selamat menggunakan aplikasi!&quot;
+                             </p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                               setShowRealtimeSuccess(false);
+                               window.location.reload();
+                            }} 
+                            className="w-full py-5 bg-amethyst-primary text-white rounded-[24px] font-black text-xs uppercase tracking-[2px] shadow-xl shadow-amethyst-primary/20 hover:scale-105 active:scale-95 transition-all"
+                          >
+                             Ayo Mulai!
+                          </button>
+                       </motion.div>
+                    </div>
+                 )}
+              </AnimatePresence>

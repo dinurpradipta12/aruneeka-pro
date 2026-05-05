@@ -106,7 +106,7 @@ export default function AdminInboxPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: string, status: string, userId: string, tier: string) => {
+  const handleStatusUpdate = async (id: string, status: string, userId: string, tierName: string) => {
     setLoading(true);
     // Get existing message to clear the proof from payload
     const msg = messages.find(m => m.id === id);
@@ -127,6 +127,18 @@ export default function AdminInboxPage() {
       .eq('id', id);
 
     if (status === 'approved') {
+      // Map human-readable tier names to technical tier IDs
+      let technicalTier = 'free';
+      const normalizedName = tierName.toLowerCase();
+      
+      if (normalizedName.includes('creator') || normalizedName.includes('pro') && !normalizedName.includes('agency')) {
+        technicalTier = 'pro';
+      } else if (normalizedName.includes('agency')) {
+        technicalTier = 'agency';
+      } else if (normalizedName.includes('starter') || normalizedName.includes('free')) {
+        technicalTier = 'free';
+      }
+
       // Get current user data to check existing expiry
       const { data: userData } = await supabase
         .from('v2_agency_users')
@@ -149,8 +161,8 @@ export default function AdminInboxPage() {
       await supabase
         .from('v2_agency_users')
         .update({ 
-          subscription_tier: tier.toLowerCase(),
-          subscription_expiry: expiryDate.toISOString() 
+          subscription_tier: technicalTier,
+          subscription_expiry: technicalTier === 'free' ? null : expiryDate.toISOString() 
         })
         .eq('id', userId);
     }
