@@ -877,19 +877,29 @@ const AruneekaContentPlan = ({
                                        {plan.platform ? (platformIcons[plan.platform.toLowerCase()] || <span className="text-[8px] font-bold uppercase text-slate-300">{plan.platform}</span>) : '-'}
                                     </div>
                                     {!isPublic && (
-                                       <div className="flex items-center gap-1">
-                                          <button 
-                                             onClick={(e: any) => { e.stopPropagation(); onEditContent?.(plan); }} 
-                                             className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-amethyst-primary/60 hover:text-amethyst-primary active:scale-90 transition-all"
-                                          >
-                                             <Pencil size={12} />
-                                          </button>
-                                          <button 
-                                             onClick={(e: any) => { e.stopPropagation(); setIsDeletingId(plan.id); setIsConfirmOpen(true); }} 
-                                             className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-amethyst-primary/60 hover:text-rose-500 active:scale-90 transition-all"
-                                          >
-                                             <Trash2 size={12} />
-                                          </button>
+                                       <div className="flex flex-col items-end gap-1.5">
+                                          {plan.status?.toLowerCase() === 'uploaded' && (
+                                             <button 
+                                                onClick={(e: any) => { e.stopPropagation(); onInsight?.(plan); }} 
+                                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all text-[8px] font-black uppercase tracking-widest shadow-sm ${plan.metrics_updated ? 'bg-slate-50 text-slate-400 border border-slate-100' : 'bg-[#9333EA] text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]'}`}
+                                             >
+                                                <TrendingUp size={10}/> {plan.metrics_updated ? 'Insights' : 'Metrics'}
+                                             </button>
+                                          )}
+                                          <div className="flex items-center gap-1">
+                                             <button 
+                                                onClick={(e: any) => { e.stopPropagation(); onEditContent?.(plan); }} 
+                                                className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-amethyst-primary/60 hover:text-amethyst-primary active:scale-90 transition-all"
+                                             >
+                                                <Pencil size={12} />
+                                             </button>
+                                             <button 
+                                                onClick={(e: any) => { e.stopPropagation(); setIsDeletingId(plan.id); setIsConfirmOpen(true); }} 
+                                                className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-amethyst-primary/60 hover:text-rose-500 active:scale-90 transition-all"
+                                             >
+                                                <Trash2 size={12} />
+                                             </button>
+                                          </div>
                                        </div>
                                     )}
                                  </div>

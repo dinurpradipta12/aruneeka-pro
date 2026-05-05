@@ -131,7 +131,7 @@ const MotivationBubble = memo(({ forceHide }: { forceHide?: boolean }) => {
                initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }} 
                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} 
                exit={{ opacity: 0, scale: 0.5, y: 10, x: 10 }} 
-               className={`absolute bottom-4 md:bottom-6 right-[70px] md:right-28 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType !== "motivation" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
+               className={`absolute bottom-4 md:bottom-6 right-[90px] md:right-32 w-56 p-5 rounded-[32px] shadow-2xl border backdrop-blur-xl ${bubbleType !== "motivation" ? "bg-gradient-to-br from-[#916DD5] to-[#AC8BEE] text-white border-white/20" : "bg-white/90 text-slate-700 border-white/40"}`}
             >
                {bubbleType !== "motivation" && (
                   <div className={`absolute -top-3 -left-3 w-10 h-10 rounded-full flex items-center justify-center shadow-lg animate-bounce ${bubbleType === "subscribe" ? "bg-amber-400" : "bg-emerald-400"}`}>
@@ -1339,7 +1339,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                     whileHover={{ scale: 1.1, rotate: 5 }} 
                     whileTap={{ scale: 0.9 }} 
                     onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)} 
-                    className="w-16 h-16 md:w-24 md:h-24 overflow-hidden drop-shadow-2xl hover:drop-shadow-amethyst transition-all relative"
+                    className="w-20 h-20 md:w-28 md:h-28 drop-shadow-[0_15px_35px_rgba(145,109,213,0.4)] hover:drop-shadow-[0_20px_45px_rgba(145,109,213,0.6)] transition-all relative outline-none"
                   >
                      <img src={user?.avatar_url || '/assets/avatars/avatar1.svg'} alt="Profile" className="w-full h-full object-contain" />
                      

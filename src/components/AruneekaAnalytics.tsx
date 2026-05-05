@@ -416,7 +416,7 @@ const AruneekaAnalytics = ({
                                      >
                                       <HelpCircle size={14}/>
                                      </div>
-                                     <div className={`absolute right-0 top-full mt-3 w-[210px] md:w-72 bg-amethyst-light/10 backdrop-blur-xl p-5 md:p-8 rounded-[24px] md:rounded-[32px] shadow-2xl transition-all z-[100] border border-white/40 ring-1 ring-amethyst-primary/10 ${isHintOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible lg:group-hover/hint:opacity-100 lg:group-hover/hint:visible translate-y-2'}`}>
+                                     <div className={`absolute ${i % 2 === 0 ? 'left-0 md:left-auto md:right-0' : 'right-0'} top-full mt-3 w-[210px] md:w-72 bg-amethyst-light/10 backdrop-blur-xl p-5 md:p-8 rounded-[24px] md:rounded-[32px] shadow-2xl transition-all z-[100] border border-white/40 ring-1 ring-amethyst-primary/10 ${isHintOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible lg:group-hover/hint:opacity-100 lg:group-hover/hint:visible translate-y-2'}`}>
                                         <div className="flex items-center justify-between mb-4 md:mb-6">
                                            <div className="flex items-center gap-3"><div className="w-1 h-5 bg-amethyst-primary rounded-full"/><span className="text-[10px] md:text-[11px] font-black text-amethyst-dark tracking-[0.15em]">Insight</span></div>
                                            <span className="text-[9px] md:text-[10px] font-bold text-amethyst-primary/60 italic">{currentMonthYear}</span>
@@ -426,7 +426,7 @@ const AruneekaAnalytics = ({
                                            <p className="text-[9px] md:text-[11px] font-bold text-amethyst-primary/70 leading-relaxed">{stat.hintDesc}</p>
                                         </div>
                                         <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t border-amethyst-primary/10"><p className="text-[8px] md:text-[9px] font-bold text-amethyst-primary/40 leading-none">Data dihitung otomatis berdasarkan filter periode aktif.</p></div>
-                                        <div className="absolute top-[-8px] right-[4px] md:right-[14px] w-4 h-4 bg-amethyst-light/10 backdrop-blur-xl border-l border-t border-white/40 rotate-45"/>
+                                        <div className={`absolute top-[-8px] ${i % 2 === 0 ? 'left-[14px] md:left-auto md:right-[14px]' : 'right-[4px] md:right-[14px]'} w-4 h-4 bg-amethyst-light/10 backdrop-blur-xl border-l border-t border-white/40 rotate-45`}/>
                                      </div>
                                   </div>
                                </div>

@@ -81,7 +81,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
          value={metrics[key] || ''}
          onChange={e => setMetrics({...metrics, [key]: e.target.value})}
          placeholder={placeholder}
-         className="w-full h-14 bg-amethyst-light/10 rounded-2xl px-6 font-black text-amethyst-dark border border-slate-100 outline-none focus:border-amethyst-primary focus:bg-white transition-all shadow-sm"
+         className="w-full h-12 md:h-14 bg-amethyst-light/10 rounded-xl md:rounded-2xl px-4 md:px-6 font-black text-amethyst-dark border border-slate-100 outline-none focus:border-amethyst-primary focus:bg-white transition-all shadow-sm text-sm md:text-base"
       />
     </div>
   );
@@ -90,7 +90,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
     switch (platform) {
       case 'tiktok':
         return (
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {renderInput('views', 'Views', <Eye size={12}/>)}
             {renderInput('likes', 'Likes', <Sparkles size={12}/>)}
             {renderInput('comments', 'Comments', <MessageSquare size={12}/>)}
@@ -102,7 +102,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
         );
       case 'threads':
         return (
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {renderInput('views', 'Views', <Eye size={12}/>)}
             {renderInput('likes', 'Likes', <Sparkles size={12}/>)}
             {renderInput('replies', 'Replies', <MessageSquare size={12}/>)}
@@ -113,7 +113,7 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
         );
       default: // Instagram
         return (
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {renderInput('reach', 'Reach', <Target size={12}/>)}
             {renderInput('views', 'Views', <Eye size={12}/>)}
             {renderInput('likes', 'Like', <Sparkles size={12}/>)}
@@ -179,65 +179,65 @@ const AruneekaMetricsModal: React.FC<AruneekaMetricsModalProps> = ({ isOpen, onC
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.15 } }}
-                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-[9999] p-4"
+                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] md:w-full max-w-5xl z-[9999] max-h-[85vh] overflow-y-auto custom-scrollbar"
               >
-                <div className="bg-white rounded-[60px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
+                <div className="bg-white rounded-[32px] md:rounded-[60px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col relative">
                {/* Header */}
-               <div className="p-10 flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                     <div className="w-16 h-16 bg-amethyst-dark text-white rounded-[22px] flex items-center justify-center shadow-lg shadow-amethyst-primary/20">
-                        <Zap size={28}/>
+               <div className="p-6 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-0">
+                  <div className="flex items-center gap-4 md:gap-6">
+                     <div className="w-12 h-12 md:w-16 md:h-16 bg-amethyst-dark text-white rounded-[18px] md:rounded-[22px] flex items-center justify-center shadow-lg shadow-amethyst-primary/20 shrink-0">
+                        <Zap size={24}/>
                      </div>
-                     <div>
-                        <p className="text-[10px] font-black text-amethyst-primary uppercase tracking-[0.2em] mb-1">Metric Tracker</p>
-                        <h3 className="text-3xl font-black text-amethyst-dark tracking-tight">Stats: {content?.title}</h3>
+                     <div className="min-w-0">
+                        <p className="text-[9px] md:text-[10px] font-black text-amethyst-primary uppercase tracking-[0.2em] mb-0.5 md:mb-1">Metric Tracker</p>
+                        <h3 className="text-lg md:text-3xl font-black text-amethyst-dark tracking-tight line-clamp-2">Stats: {content?.title}</h3>
                      </div>
                   </div>
                   
-                  <div className="flex items-center gap-4">
-                     <div className="bg-amethyst-light/30 border border-amethyst-light/50 rounded-3xl px-8 py-4 flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                           <TrendingUp size={18} className="text-amethyst-primary"/>
-                           <span className="text-[11px] font-bold text-slate-400">Engagement Rate:</span>
-                        </div>
-                        <span className="text-xl font-black text-amethyst-primary">{engagementRate.toFixed(2)}%</span>
-                     </div>
-                     <button onClick={onClose} className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all border border-slate-100">
-                       <X size={24}/>
-                     </button>
-                  </div>
+                  <div className="flex flex-row md:items-center gap-3 md:gap-4">
+                      <div className="flex-1 md:flex-none bg-amethyst-light/30 border border-amethyst-light/50 rounded-xl md:rounded-3xl px-3 md:px-8 py-2 md:py-4 flex items-center justify-between md:justify-start gap-4">
+                         <div className="flex items-center gap-2">
+                            <TrendingUp size={14} className="text-amethyst-primary"/>
+                            <span className="text-[9px] md:text-[11px] font-bold text-slate-400">Eng:</span>
+                         </div>
+                         <span className="text-sm md:text-xl font-black text-amethyst-primary">{engagementRate.toFixed(2)}%</span>
+                      </div>
+                      <button onClick={onClose} className="absolute top-4 right-4 md:relative md:top-0 md:right-0 w-8 h-8 md:w-12 md:h-12 bg-white rounded-lg md:rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all border border-slate-100">
+                        <X size={16}/>
+                      </button>
+                   </div>
                </div>
 
                {/* Metrics Inputs */}
-               <div className="px-10 py-10 bg-amethyst-light/20 border-y border-slate-50">
-                  <div className="mb-8 flex items-center justify-between px-2">
-                     <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Input Achievement Data</h4>
-                     <div className="px-4 py-1.5 bg-amethyst-light/50 text-amethyst-primary rounded-full text-[9px] font-black uppercase tracking-widest italic border border-amethyst-primary/10">
-                        Live calculation enabled
-                     </div>
-                  </div>
+               <div className="px-6 md:px-10 py-8 md:py-10 bg-amethyst-light/20 border-y border-slate-50">
+                   <div className="mb-4 md:mb-8 flex items-center justify-between px-1 md:px-2">
+                      <h4 className="text-[9px] md:text-xs font-black uppercase tracking-widest text-slate-400">Achievement Data</h4>
+                      <div className="px-2 md:px-4 py-1 bg-amethyst-light/50 text-amethyst-primary rounded-full text-[7px] md:text-[9px] font-black uppercase tracking-widest italic border border-amethyst-primary/10">
+                         Live
+                      </div>
+                   </div>
                   {platformFields()}
                </div>
 
                {/* Footer */}
-               <div className="p-10 flex items-center gap-4">
+               <div className="p-6 md:p-10 flex flex-col-reverse md:flex-row items-center gap-3 md:gap-4">
                   <button 
                     onClick={onClose}
-                    className="flex-1 py-6 bg-slate-50 text-slate-500 rounded-[28px] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all"
+                    className="w-full md:flex-1 py-4 md:py-6 bg-slate-50 text-slate-500 rounded-2xl md:rounded-[28px] font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-slate-100 transition-all"
                   >
                     Tutup
                   </button>
                   <button 
                     onClick={handleSave}
                     disabled={isSaving}
-                    className={`flex-[2] py-6 bg-amethyst-dark text-white rounded-[28px] font-black text-xs uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 transition-all ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
+                    className={`w-full md:flex-[2] py-4 md:py-6 bg-amethyst-dark text-white rounded-2xl md:rounded-[28px] font-black text-[10px] md:text-xs uppercase tracking-widest shadow-xl shadow-amethyst-dark/20 transition-all ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
                   >
                     {isSaving ? (
                       <div className="flex items-center justify-center gap-3">
                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                          Menyimpan...
                       </div>
-                    ) : 'Simpan Statistik Performa'}
+                    ) : 'Simpan Statistik'}
                   </button>
                </div>
                 </div>
