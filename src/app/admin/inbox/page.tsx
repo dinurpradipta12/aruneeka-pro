@@ -127,17 +127,13 @@ export default function AdminInboxPage() {
       .eq('id', id);
 
     if (status === 'approved') {
-      // Map human-readable tier names to technical tier IDs
-      let technicalTier = 'free';
-      const normalizedName = tierName.toLowerCase();
-      
-      if (normalizedName.includes('creator') || normalizedName.includes('pro') && !normalizedName.includes('agency')) {
-        technicalTier = 'pro';
-      } else if (normalizedName.includes('agency')) {
-        technicalTier = 'agency';
-      } else if (normalizedName.includes('starter') || normalizedName.includes('free')) {
-        technicalTier = 'free';
-      }
+      // Hybrid Approach: Store the ACTUAL package name in the tier field
+      // This allows User Management to show the correct name automatically
+      let technicalTier = tierName || 'free';
+       
+      const { data: pkgData } = await supabase.from('v2_agency_packages').select('*').ilike('name', tierName).maybeSingle();
+      // Even if we store the name, we still want to normalize it for the logic below if needed
+      // But actually, we just need the tierName.
 
       // Get current user data to check existing expiry
       const { data: userData } = await supabase
@@ -158,13 +154,15 @@ export default function AdminInboxPage() {
          expiryDate.setDate(expiryDate.getDate() + 30);
       }
 
-      await supabase
-        .from('v2_agency_users')
-        .update({ 
-          subscription_tier: technicalTier,
-          subscription_expiry: technicalTier === 'free' ? null : expiryDate.toISOString() 
-        })
-        .eq('id', userId);
+       const isFree = technicalTier.toLowerCase() === 'free' || technicalTier.toLowerCase().includes('trial') || technicalTier.toLowerCase().includes('starter');
+
+       await supabase
+         .from('v2_agency_users')
+         .update({ 
+           subscription_tier: technicalTier,
+           subscription_expiry: isFree ? null : expiryDate.toISOString() 
+         })
+         .eq('id', userId);
     }
     
     setConfirmAction(null);

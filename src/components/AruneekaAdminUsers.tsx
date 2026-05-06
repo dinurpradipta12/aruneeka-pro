@@ -340,6 +340,39 @@ const AruneekaAdminUsers = ({
     show: boolean;
     type: "delete" | "update";
   }>({ show: false, type: "delete" });
+  const [packages, setPackages] = useState<any[]>([]);
+  const [packageFilter, setPackageFilter] = useState<string>("all");
+
+  const fetchPackages = async () => {
+    const { data, error } = await supabase.from('v2_agency_packages').select('*').order('monthly_price', { ascending: true });
+    if (error) console.error("Error fetching packages:", error.message);
+    if (data) setPackages(data);
+  };
+
+  const getPackageName = (tier: string) => {
+    if (!tier || tier === 'free') return 'Free Trial';
+    
+    // 1. Try to find package where ID or Name matches the tier string
+    const pkg = packages.find(p => 
+      p.id === tier || 
+      p.name === tier ||
+      p.name.toLowerCase() === tier.toLowerCase()
+    );
+    
+    if (pkg) return pkg.name;
+
+    // 2. Try partial match
+    const partialPkg = packages.find(p => p.name.toLowerCase().includes(tier.toLowerCase()) || tier.toLowerCase().includes(p.name.toLowerCase()));
+    if (partialPkg) return partialPkg.name;
+
+    // 3. Fallback to keyword matching for technical IDs (pro/agency)
+    const techPkg = packages.find(p => 
+      (tier === 'pro' && (p.name.toLowerCase().includes('pro') || p.name.toLowerCase().includes('creator'))) ||
+      (tier === 'agency' && p.name.toLowerCase().includes('agency'))
+    );
+
+    return techPkg ? techPkg.name : (tier.charAt(0).toUpperCase() + tier.slice(1));
+  };
 
   const handleUpdateTier = async (userId: string, newTier: string) => {
     setIsUpdating(true);
@@ -431,6 +464,7 @@ const AruneekaAdminUsers = ({
 
   useEffect(() => {
     fetchUsers();
+    fetchPackages();
     const userStr = localStorage.getItem("aruneeka_user");
     if (userStr) setCurrentUser(JSON.parse(userStr));
 
@@ -602,11 +636,18 @@ const AruneekaAdminUsers = ({
     }
   };
 
-  const filteredUsers = users.filter(
-    (u: any) =>
+  const filteredUsers = users.filter((u: any) => {
+    const matchesSearch = 
       u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+      u.username?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (packageFilter === "all") return matchesSearch;
+    
+    const userTier = u.subscription_tier || "free";
+    if (packageFilter === "free") return matchesSearch && (userTier === "free" || userTier.toLowerCase().includes("trial"));
+    
+    return matchesSearch && userTier === packageFilter;
+  });
 
   const getRoleStyle = (role: string) => {
     switch (role) {
@@ -870,6 +911,34 @@ const AruneekaAdminUsers = ({
         </div>
       </div>
 
+      {/* Package Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+         <button 
+           onClick={() => setPackageFilter('all')}
+           className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${packageFilter === 'all' ? 'bg-amethyst-primary text-white shadow-lg shadow-amethyst-primary/20' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
+         >
+            All Users ({users.length})
+         </button>
+         <button 
+           onClick={() => setPackageFilter('free')}
+           className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${packageFilter === 'free' ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
+         >
+            Free Trial ({users.filter((u:any) => !u.subscription_tier || u.subscription_tier === 'free' || u.subscription_tier.toLowerCase().includes('trial')).length})
+         </button>
+         {packages.map((pkg: any) => {
+            const count = users.filter((u: any) => u.subscription_tier === pkg.name).length;
+            return (
+               <button 
+                 key={pkg.id}
+                 onClick={() => setPackageFilter(pkg.name)}
+                 className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${packageFilter === pkg.name ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
+               >
+                  {pkg.name} ({count})
+               </button>
+            );
+         })}
+      </div>
+
       {/* Data Table / Mobile List */}
       <div className="space-y-4">
         {/* Desktop Table View */}
@@ -892,8 +961,7 @@ const AruneekaAdminUsers = ({
                   : null;
                 const isUnlimited =
                   user.role === "Superuser" ||
-                  user.role === "developer" ||
-                  user.role === "Admin";
+                  user.role === "developer";
                 const expiryStr = isUnlimited
                   ? "Never"
                   : expiryDate
@@ -960,15 +1028,24 @@ const AruneekaAdminUsers = ({
                             handleUpdateTier(user.id, e.target.value)
                           }
                           disabled={isUpdating}
-                          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${user.subscription_tier === "agency" ? "bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary" : user.subscription_tier === "pro" || user.subscription_tier === "single_creator" ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-slate-50 border-slate-100 text-slate-400"}`}
+                          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:shadow-md appearance-none pr-8 relative bg-no-repeat bg-[right_12px_center] ${
+                            (user.subscription_tier?.toLowerCase().includes("agency") || user.subscription_tier?.toLowerCase().includes("team")) 
+                              ? "bg-amethyst-primary/10 border-amethyst-primary/20 text-amethyst-primary" 
+                              : (user.subscription_tier?.toLowerCase().includes("pro") || user.subscription_tier?.toLowerCase().includes("creator") || user.subscription_tier?.toLowerCase().includes("single")) 
+                                ? "bg-emerald-50 border-emerald-100 text-emerald-600" 
+                                : "bg-slate-50 border-slate-100 text-slate-400"
+                          }`}
                           style={{
                             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
                             backgroundSize: "12px",
                           }}
                         >
-                          <option value="free">Free Starter</option>
-                          <option value="pro">Single Creator</option>
-                          <option value="agency">Agency Pro</option>
+                          <option value="free">Free Trial</option>
+                          {packages.map((pkg: any) => (
+                             <option key={pkg.id} value={pkg.name}>
+                                {pkg.name}
+                             </option>
+                          ))}
                         </select>
                       )}
                     </td>
@@ -1104,7 +1181,7 @@ const AruneekaAdminUsers = ({
                     </span>
                   </div>
                   <p className="text-[10px] font-black text-amethyst-primary uppercase tracking-widest">
-                    {user.subscription_tier || "Free"}
+                    {getPackageName(user.subscription_tier)}
                   </p>
                 </div>
                 <div className="flex items-center justify-between">

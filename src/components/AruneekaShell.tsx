@@ -32,7 +32,7 @@ import {
    Megaphone,
    RefreshCcw,
    Activity,
-   Monitor
+   Monitor, CreditCard, X, Image as ImageIcon
  } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -231,13 +231,13 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [selectedProfile, setSelectedProfile] = useState<any>(null);
    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
    const [showRealtimeSuccess, setShowRealtimeSuccess] = useState(false);
-   const [activePackageDetails, setActivePackageDetails] = useState<any>(null);
+   const [activePackageDetails, setActivePackageDetails] = useState<any>(null); const resolveTechnicalTier = (t) => { if (!t || t.toLowerCase() === "free" || t.toLowerCase() === "free trial") return "free"; const norm = t.toLowerCase(); if (norm.includes("agency") || norm.includes("superteam")) return "agency"; if (norm.includes("pro") || norm.includes("creator") || norm.includes("expert") || norm.includes("premium")) return "pro"; return "pro"; };
 
    // Administrative Realtime States
    const [pendingUsersCount, setPendingUsersCount] = useState(0);
    const [pendingInboxCount, setPendingInboxCount] = useState(0);
    const [lastNotification, setLastNotification] = useState<{ type: 'user' | 'inbox' | 'success' | 'error', message: string } | null>(null);
-   const [showDynamicIsland, setShowDynamicIsland] = useState(false);
+   const [showDynamicIsland, setShowDynamicIsland] = useState(false); const [adminAlert, setAdminAlert] = useState(null); const [adminProofPreview, setAdminProofPreview] = useState(null); const [isAdminProcessing, setIsAdminProcessing] = useState(false);
    const [selectedContent, setSelectedContent] = useState<any>(null);
    const [isDetailOpen, setIsDetailOpen] = useState(false);
    const [isMetricsOpen, setIsMetricsOpen] = useState(false);
@@ -323,12 +323,12 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                supabase.from('v2_agency_social_profiles').select('*').eq('workspace_id', ws.id).order('name'),
                supabase.from('v2_agency_workspace_members').select('*', { count: 'exact', head: true }).eq('workspace_id', ws.id)
             ]).then(([subRes, profRes, memberRes]) => {
-               if (subRes.data) {
-                  // If the tracked user (owner) is a Developer/Superuser, give them 'agency' access automatically
-                  const isPowerUser = ['Superuser', 'developer'].includes(subRes.data.role);
-                  setSubscriptionTier(isPowerUser ? 'agency' : (subRes.data.subscription_tier || 'free'));
-                  setSubscriptionExpiry(subRes.data.subscription_expiry);
-               }
+                if (subRes.data) {
+                   // If the tracked user (owner) is a Developer/Superuser, give them 'agency' access automatically
+                   const isPowerUser = ['Superuser', 'developer'].includes(subRes.data.role);
+                   setSubscriptionTier(isPowerUser ? 'agency' : resolveTechnicalTier(subRes.data.subscription_tier));
+                   setSubscriptionExpiry(subRes.data.subscription_expiry);
+                }
                if (profRes.data) setProfiles(profRes.data);
                if (memberRes.count !== null) setTeamCount(memberRes.count);
             });
@@ -406,7 +406,7 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
 
                // Update local tier
                const isPowerUser = ['Superuser', 'developer'].includes(payload.new.role);
-               const resolvedTier = isPowerUser ? 'agency' : (newTier || 'free');
+               const resolvedTier = isPowerUser ? 'agency' : resolveTechnicalTier(newTier);
 
                if (resolvedTier !== oldTier || payload.new.subscription_expiry !== subscriptionExpiry) {
                   setSubscriptionTier(resolvedTier);
@@ -414,19 +414,36 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                   // Show success if tier is now premium (Pro/Agency) AND it was actually updated
                   if (resolvedTier !== 'free' && (resolvedTier !== oldTier || (payload.new.subscription_expiry && payload.new.subscription_expiry > (subscriptionExpiry || '')))) {
                      
-                     // Fetch Package Benefits for the modal
-                     const tierNameMap: any = { pro: 'Single Creator', agency: 'Agency Pro' };
-                     const targetName = tierNameMap[resolvedTier] || '';
+                     // Reset previous details to prevent showing old data
+                     setActivePackageDetails(null);
                      
-                     if (targetName) {
-                        const { data: pkg } = await supabase
-                           .from('v2_agency_packages')
-                           .select('*')
-                           .ilike('name', `%${targetName}%`)
-                           .maybeSingle();
-                        
-                        if (pkg) setActivePackageDetails(pkg);
-                     }
+                     // Fetch Package Benefits for the modal
+                      console.log("Fetching benefits for tier:", newTier);
+                      
+                      if (newTier && newTier !== 'free') {
+                         // 1. Exact Name Match
+                         const { data: pkg } = await supabase.from('v2_agency_packages').select('*').ilike('name', newTier).maybeSingle();
+                         
+                         if (pkg) {
+                            console.log("Exact match found:", pkg.name);
+                            setActivePackageDetails(pkg);
+                         } else {
+                            // 2. Partial Match Fallback
+                            const { data: pkgLike } = await supabase.from('v2_agency_packages').select('*').ilike('name', `%${newTier}%`).maybeSingle();
+                            if (pkgLike) {
+                               console.log("Partial match found:", pkgLike.name);
+                               setActivePackageDetails(pkgLike);
+                            } else {
+                               // 3. Technical Keyword Fallback
+                               const searchKeyword = resolvedTier === 'agency' ? 'agency' : 'pro';
+                               const { data: fallbackPkg } = await supabase.from('v2_agency_packages').select('*').ilike('name', `%${searchKeyword}%`).maybeSingle();
+                               if (fallbackPkg) {
+                                  console.log("Technical fallback found:", fallbackPkg.name);
+                                  setActivePackageDetails(fallbackPkg);
+                               }
+                            }
+                         }
+                      }
 
                      setIsUpgradeModalOpen(false);
                      setShowRealtimeSuccess(true);
@@ -446,29 +463,40 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                setPendingUsersCount(uCount || 0);
                setPendingInboxCount(iCount || 0);
             };
+           
+           (window as any).triggerAdminAlert = (type: 'user' | 'subscription' = 'subscription') => {
+              setAdminAlert({
+                 id: 'debug-123',
+                 type: type,
+                 title: type === 'user' ? 'Test Pendaftaran Baru!' : 'Test Pembayaran Baru!',
+                 description: 'Ini adalah notifikasi simulasi untuk keperluan testing UI.',
+                 data: {
+                    full_name: 'Tester Aruneeka',
+                    tier_name: 'Superteam Package',
+                    payment_proof_url: 'https://placehold.co/600x800?text=Bukti+Transfer+Testing'
+                 }
+              });
+           };
             fetchAdminCounts();
 
             // 2. Setup Realtime
-            adminChannel = supabase.channel('system-admin-alerts')
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_users' }, (payload) => {
-                 if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
-                    setPendingUsersCount(prev => prev + 1);
-                    setLastNotification({ type: 'user', message: 'Ada User baru butuh verifikasi!' });
-                    setShowDynamicIsland(true);
-                 } else if (payload.eventType === 'UPDATE') {
-                    fetchAdminCounts(); // Refresh on updates to be sure
-                 }
-              })
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'v2_agency_inbox' }, (payload) => {
-                 if (payload.eventType === 'INSERT' && (payload.new as any).status === 'Pending') {
-                    setPendingInboxCount(prev => prev + 1);
-                    setLastNotification({ type: 'inbox', message: 'Permintaan perpanjangan / upgrade baru!' });
-                    setShowDynamicIsland(true);
-                 } else if (payload.eventType === 'UPDATE') {
-                    fetchAdminCounts();
-                 }
-              })
-              .subscribe();
+             adminChannel = supabase.channel("system-admin-alerts")
+               .on("postgres_changes", { event: "INSERT", schema: "public", table: "v2_agency_users" }, async (payload) => {
+                  if (payload.new.status === "Pending") {
+                     setPendingUsersCount(prev => prev + 1);
+                     setAdminAlert({ id: payload.new.id, type: "user", title: "Pendaftaran Baru!", description: `${payload.new.full_name} menunggu verifikasi.`, data: payload.new });
+                  }
+               })
+               .on("postgres_changes", { event: "INSERT", schema: "public", table: "v2_agency_inbox" }, async (payload) => {
+                  if (payload.new.status === "Pending") {
+                     setPendingInboxCount(prev => prev + 1);
+                     const { data } = await supabase.from("v2_agency_inbox").select("*, v2_agency_users(full_name, avatar_url)").eq("id", payload.new.id).single();
+                     if (data) setAdminAlert({ id: data.id, type: "subscription", title: "Pembayaran Baru!", description: `${data.v2_agency_users?.full_name || "User"} kirim pembayaran ${data.tier_name}.`, data: data });
+                  }
+               })
+               .on("postgres_changes", { event: "UPDATE", schema: "public" }, () => fetchAdminCounts())
+               .subscribe();
+
             
             // Auto hide dynamic island
             let timer: any;
@@ -584,6 +612,45 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             return;
           }
           const currentUser = JSON.parse(userStr);
+
+     const handleAdminAction = async (action: 'approve' | 'reject', id: string, type: 'user' | 'subscription') => {
+        setIsAdminProcessing(true);
+        try {
+           if (type === 'user') {
+              const { error } = await supabase.from('v2_agency_users').update({ status: action === 'approve' ? 'Active' : 'Rejected' }).eq('id', id);
+              if (error) throw error;
+              showToast(`User ${action === 'approve' ? 'disetujui' : 'ditolak'}!`, action === 'approve' ? 'success' : 'error');
+           } else {
+              // Subscription Approval logic (Hybrid Mode)
+              if (action === 'approve') {
+                 const alertData = adminAlert?.data;
+                 const tierName = alertData?.tier_name || 'free';
+                 
+                 // Calculate Expiry
+                 const expiry = new Date();
+                 expiry.setDate(expiry.getDate() + 30);
+
+                 const { error: inboxErr } = await supabase.from('v2_agency_inbox').update({ status: 'approved' }).eq('id', id);
+                 const { error: userErr } = await supabase.from('v2_agency_users').update({ 
+                    subscription_tier: tierName,
+                    subscription_expiry: expiry.toISOString()
+                 }).eq('id', alertData?.user_id);
+
+                 if (inboxErr || userErr) throw (inboxErr || userErr);
+                 showToast("Pembayaran disetujui, paket aktif!", 'success');
+              } else {
+                 await supabase.from('v2_agency_inbox').update({ status: 'rejected' }).eq('id', id);
+                 showToast("Pembayaran ditolak.", 'error');
+              }
+           }
+           setAdminAlert(null);
+           setAdminProofPreview(null);
+        } catch (err: any) {
+           showToast("Gagal: " + err.message, 'error');
+        } finally {
+           setIsAdminProcessing(false);
+        }
+     };
           
           let workspaceId = selectedWorkspace?.id;
           if (!workspaceId) {
@@ -1506,6 +1573,96 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                  )}
               </AnimatePresence>
          </div>
+               {/* Admin Realtime Floating Alert */}
+               <AnimatePresence>
+                  {adminAlert && (
+                     <motion.div 
+                        initial={{ opacity: 0, y: -100 }}
+                        animate={{ opacity: 1, y: 20 }}
+                        exit={{ opacity: 0, y: -100 }}
+                        className="fixed top-0 left-1/2 -translate-x-1/2 z-[30000] w-full max-w-md px-4"
+                     >
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-[32px] p-4 flex items-center gap-4">
+                           <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-indigo-50 text-indigo-500">
+                              {adminAlert.type === 'user' ? <User size={20} /> : <CreditCard size={20} />}
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{adminAlert.title}</h4>
+                              <p className="text-[10px] font-bold text-slate-400 line-clamp-1">{adminAlert.description}</p>
+                           </div>
+                           <div className="flex items-center gap-2">
+                              {adminAlert.type === 'subscription' && (
+                                 <button 
+                                   onClick={() => setAdminProofPreview(adminAlert.data.payment_proof_url)}
+                                   className="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-all"
+                                   title="Lihat Bukti"
+                                 >
+                                    <ImageIcon size={18} />
+                                 </button>
+                              )}
+                              <button 
+                                onClick={() => handleAdminAction('approve', adminAlert.id, adminAlert.type)}
+                                disabled={isAdminProcessing}
+                                className="px-4 py-2 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                              >
+                                 {isAdminProcessing ? '...' : 'Approve'}
+                              </button>
+                              <button 
+                                onClick={() => setAdminAlert(null)}
+                                className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all"
+                              >
+                                 <X size={18} />
+                              </button>
+                           </div>
+                        </div>
+                     </motion.div>
+                  )}
+               </AnimatePresence>
+
+               {/* Admin Proof Preview Modal */}
+               <AnimatePresence>
+                  {adminProofPreview && (
+                     <div className="fixed inset-0 z-[31000] flex items-center justify-center p-6">
+                        <motion.div 
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          onClick={() => setAdminProofPreview(null)}
+                          className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" 
+                        />
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="bg-white w-full max-w-2xl rounded-[40px] overflow-hidden relative z-10 shadow-2xl flex flex-col max-h-[90vh]" 
+                        >
+                           <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center"><ImageIcon size={18} /></div>
+                                 <div>
+                                    <h3 className="font-bold text-slate-800 tracking-tight">Preview Bukti Pembayaran</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Verification Required</p>
+                                 </div>
+                              </div>
+                              <button onClick={() => setAdminProofPreview(null)} className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                 <X size={18} />
+                              </button>
+                           </div>
+                           <div className="p-8 bg-slate-100 flex-1 overflow-auto flex items-center justify-center">
+                              <img src={adminProofPreview} className="max-w-full rounded-2xl shadow-xl" alt="Payment Proof" />
+                           </div>
+                           <div className="p-8 bg-white border-t border-slate-50 flex items-center justify-end gap-3">
+                              <button onClick={() => setAdminProofPreview(null)} className="px-8 py-4 text-xs font-bold text-slate-400 hover:text-slate-600">Maybe Later</button>
+                              <button 
+                                onClick={() => adminAlert && handleAdminAction('approve', adminAlert.id, 'subscription')}
+                                disabled={isAdminProcessing}
+                                className="px-10 py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-[2px] shadow-xl shadow-emerald-500/20 hover:scale-105 transition-all disabled:opacity-50"
+                              >
+                                 {isAdminProcessing ? 'Processing...' : 'Approve Payment'}
+                              </button>
+                           </div>
+                        </motion.div>
+                     </div>
+                  )}
+               </AnimatePresence>
       </WorkspaceContext.Provider>
    );
 };
