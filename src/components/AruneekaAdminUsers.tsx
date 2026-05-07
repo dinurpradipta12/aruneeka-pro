@@ -431,17 +431,17 @@ const AruneekaAdminUsers = ({
       
       if (userError) throw userError;
 
-      // 2. Fetch all workspaces to count ownership locally (more reliable than nested count in some schemas)
-      const { data: wsData, error: wsError } = await supabase
-        .from('v2_agency_workspaces')
-        .select('owner_id');
+      // 2. Fetch all workspace memberships to count workspaces per user
+      const { data: memData, error: memError } = await supabase
+        .from('v2_agency_workspace_members')
+        .select('user_id');
       
-      if (wsError) throw wsError;
+      if (memError) throw memError;
 
-      // 3. Map workspace counts to owners
-      const wsCounts = wsData.reduce((acc: any, ws: any) => {
-        if (ws.owner_id) {
-          acc[ws.owner_id] = (acc[ws.owner_id] || 0) + 1;
+      // 3. Map membership counts to users
+      const wsCounts = memData.reduce((acc: any, mem: any) => {
+        if (mem.user_id) {
+          acc[mem.user_id] = (acc[mem.user_id] || 0) + 1;
         }
         return acc;
       }, {});
@@ -649,10 +649,13 @@ const AruneekaAdminUsers = ({
     return matchesSearch && userTier === packageFilter;
   });
 
-  const getRoleStyle = (role: string) => {
-    switch (role) {
+  const getRoleStyle = (role: string, isOwner?: boolean) => {
+    const displayRole = isOwner ? "Owner" : role;
+    switch (displayRole) {
       case "Superuser":
         return "bg-black text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest";
+      case "Owner":
+        return "bg-emerald-500 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm";
       case "Admin":
         return "bg-amethyst-primary/10 text-amethyst-primary px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-amethyst-primary/20";
       case "developer":
@@ -1009,8 +1012,8 @@ const AruneekaAdminUsers = ({
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <span className={getRoleStyle(user.role)}>
-                        {user.role}
+                      <span className={getRoleStyle(user.role, !user.parent_user_id && user.role === 'Admin')}>
+                        {!user.parent_user_id && user.role === 'Admin' ? 'Owner' : user.role}
                       </span>
                     </td>
                     <td className="px-8 py-6">
@@ -1159,7 +1162,9 @@ const AruneekaAdminUsers = ({
                   <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
                     Role
                   </p>
-                  <span className={getRoleStyle(user.role)}>{user.role}</span>
+                  <span className={getRoleStyle(user.role, !user.parent_user_id && user.role === 'Admin')}>
+                    {!user.parent_user_id && user.role === 'Admin' ? 'Owner' : user.role}
+                  </span>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">

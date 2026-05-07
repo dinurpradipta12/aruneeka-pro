@@ -65,38 +65,74 @@ export const AruneekaWorkspaceSelector = ({
          setPendingInboxCount(iCount || 0);
       }
       
-      // 1. Find all user records with the same username
+      // 1. Get all user IDs related to this account (current ID + any records with same username)
       const { data: userRecords } = await supabase
         .from('v2_agency_users')
         .select('id')
-        .eq('username', currentUser.username);
-        
-      if (!userRecords) return;
-      const userIds = userRecords.map((u: any) => u.id);
+        .or(`id.eq.${currentUser.id}${currentUser.username ? `,username.eq.${currentUser.username}` : ''}`);
+      
+      const userIds = userRecords?.map((u: any) => u.id) || [currentUser.id];
 
-      // 2. Fetch workspaces where any of these IDs is a member
-      const { data: membershipData, error: memError } = await supabase
+      // 2. Fetch Workspaces where user is a MEMBER
+      const { data: memberWorkspaces, error: memError } = await supabase
         .from('v2_agency_workspace_members')
-        .select(`
-          role,
-          v2_agency_workspaces (
-            *,
-            v2_agency_workspace_members (count)
-          )
-        `)
+        .select('role, workspace_id, v2_agency_workspaces(*)')
         .in('user_id', userIds);
 
-      if (memError) throw memError;
+      // 3. Fetch Workspaces where user is the OWNER (Safety fallback)
+      const { data: ownedWorkspaces, error: ownError } = await supabase
+        .from('v2_agency_workspaces')
+        .select('*')
+        .in('owner_id', userIds);
 
-      const formatted = membershipData.map((m: any) => ({
-        ...m.v2_agency_workspaces,
-        role: m.role,
-        member_count: m.v2_agency_workspaces.v2_agency_workspace_members[0]?.count || 0
-      }));
+      if (memError && ownError) throw memError || ownError;
+
+      // 4. Combine and deduplicate
+      const workspaceMap = new Map();
+
+      // Add member workspaces first
+      memberWorkspaces?.forEach((m: any) => {
+        if (m.v2_agency_workspaces) {
+          workspaceMap.set(m.v2_agency_workspaces.id, {
+            ...m.v2_agency_workspaces,
+            role: m.role || 'Member'
+          });
+        }
+      });
+
+      // Add owned workspaces (might overwrite role to 'Admin' if not already in map)
+      ownedWorkspaces?.forEach((ws: any) => {
+        if (!workspaceMap.has(ws.id)) {
+          workspaceMap.set(ws.id, {
+            ...ws,
+            role: 'Admin'
+          });
+        }
+      });
+
+      const formatted = Array.from(workspaceMap.values());
+      
+      // 5. Fetch member counts for these workspaces
+      if (formatted.length > 0) {
+        const wsIds = formatted.map(w => w.id);
+        const { data: counts } = await supabase
+          .from('v2_agency_workspace_members')
+          .select('workspace_id')
+          .in('workspace_id', wsIds);
+        
+        const countMap = counts?.reduce((acc: any, curr: any) => {
+          acc[curr.workspace_id] = (acc[curr.workspace_id] || 0) + 1;
+          return acc;
+        }, {});
+
+        formatted.forEach(w => {
+          w.member_count = countMap[w.id] || 0;
+        });
+      }
 
       setWorkspaces(formatted);
 
-      // 3. Fetch Global Team Members
+      // 6. Fetch Global Team Members
       const { data: team } = await supabase
         .from('v2_agency_users')
         .select('*')
@@ -438,7 +474,7 @@ export const AruneekaWorkspaceSelector = ({
           ))}
 
           {/* Add New Brand Card (Maching New Style) */}
-          {(['Owner', 'Superuser', 'developer'].includes(currentUser?.role) || currentUser?.isAdmin === true) && currentUser?.status === 'Active' && (
+          {(['Owner', 'Superuser', 'developer', 'Admin'].includes(currentUser?.role) || currentUser?.isAdmin === true) && currentUser?.status === 'Active' && (
             <>
                {(workspaces.length >= 2 && currentUser?.subscription_tier === 'free' && !(['Superuser', 'developer'].includes(currentUser?.role))) ? (
                   <motion.div

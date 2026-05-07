@@ -36,23 +36,33 @@ const PerformanceChart = ({ data, activeMetric, maxVal }: { data: any[], activeM
 
    // Generate Smooth Path (Cubic Bezier Interpolation)
    const generateSmoothPath = () => {
-      if (data.length < 2) return "";
+    if (!data || data.length < 2) return "";
+    try {
       const coords = data.map((_, i) => getCoords(i));
-      let d = `M ${coords[0].x},${coords[0].y}`;
+      if (!coords || coords.length === 0 || !coords[0]) return "";
       
+      let d = `M ${coords[0].x},${coords[0].y}`;
+
       for (let i = 0; i < coords.length - 1; i++) {
          const curr = coords[i];
          const next = coords[i + 1];
-         // Control points for smooth curves
-         const cp1x = curr.x + (next.x - curr.x) / 3;
-         const cp2x = curr.x + (next.x - curr.x) * 2 / 3;
+         if (!curr || !next) continue;
+         
+         const cp1x = curr.x + (next.x - curr.x) * 0.5;
+         const cp2x = curr.x + (next.x - curr.x) * 0.5;
          d += ` C ${cp1x},${curr.y} ${cp2x},${next.y} ${next.x},${next.y}`;
       }
       return d;
-   };
+    } catch (e) {
+      return "";
+    }
+  };
 
-   const smoothPath = useMemo(generateSmoothPath, [data, activeMetric, maxVal]);
-   const areaPath = `${smoothPath} V ${paddingTop + chartHeight} H ${paddingLeft} Z`;
+  const smoothPath = useMemo(generateSmoothPath, [data, activeMetric, maxVal]);
+  const areaPath = useMemo(() => {
+    if (!smoothPath) return "";
+    return `${smoothPath} V ${paddingTop + chartHeight} H ${paddingLeft} Z`;
+  }, [smoothPath, paddingTop, chartHeight, paddingLeft]);
 
    const yIndicators = [0, Math.ceil(maxVal * 0.25), Math.ceil(maxVal * 0.5), Math.ceil(maxVal * 0.75), maxVal];
 
