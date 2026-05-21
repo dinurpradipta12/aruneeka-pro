@@ -369,7 +369,7 @@ const AruneekaContentPlan = ({
                         p.target_account === selectedProfileId || 
                         p.profile_id === selectedProfileId;
 
-    const isMatch = platformMatch && dateMatch && accountMatch;
+    const isMatch = platformMatch && dateMatch && accountMatch && p.status?.toLowerCase() !== 'idea';
     
     if (!isMatch && displayPlans.length > 0) {
        // Only log if we actually have data but it's being filtered

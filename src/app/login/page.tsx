@@ -115,7 +115,7 @@ const LoginPage = () => {
           username: regData.username.toLowerCase(),
           password: regData.password,
           role: 'Owner',
-          status: 'Pending',
+          status: 'Active',
           workspace_id: newWorkspaceId
         });
 
@@ -706,12 +706,12 @@ const LoginPage = () => {
                    <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center shadow-inner">
                       <CheckCircle2 size={48} strokeWidth={2.5} />
                    </div>
-                   <div className="space-y-2">
-                      <h3 className="text-3xl font-black text-slate-800 tracking-tight">Pendaftaran Berhasil!</h3>
-                      <p className="text-[13px] font-medium text-slate-400 leading-relaxed max-w-[280px] mx-auto">
-                        Akun Anda sedang dalam antrean konfirmasi Superuser. Anda kini bisa login untuk eksplorasi awal.
-                      </p>
-                   </div>
+                    <div className="space-y-2">
+                       <h3 className="text-3xl font-black text-slate-800 tracking-tight">Pendaftaran Berhasil!</h3>
+                       <p className="text-[13px] font-medium text-slate-400 leading-relaxed max-w-[280px] mx-auto">
+                         Akun Anda telah aktif dan siap digunakan. Silakan login untuk masuk ke dashboard.
+                       </p>
+                    </div>
                 </div>
 
                 <div className="pt-4">

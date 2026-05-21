@@ -12,12 +12,14 @@ import {
   Users,
   ShieldCheck,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AruneekaKPI from '@/components/AruneekaKPI';
 import AruneekaContentPlan from '@/components/AruneekaContentPlan';
 import AruneekaAnalytics from '@/components/AruneekaAnalytics';
+import AruneekaIdeaBox from '@/components/AruneekaIdeaBox';
 
 export default function PublicPreviewPage({ slug: propSlug }: { slug?: string }) {
   const params = useParams();
@@ -164,6 +166,12 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
             <Calendar size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Content Plan</span>
           </button>
           <button 
+            onClick={() => setActiveTab('ideas')}
+            className={`px-6 py-3 rounded-xl flex items-center gap-2 transition-all ${activeTab === 'ideas' ? 'bg-amethyst-dark text-white' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Lightbulb size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Idea Box</span>
+          </button>
+          <button 
             onClick={() => setActiveTab('kpi')}
             className={`px-6 py-3 rounded-xl flex items-center gap-2 transition-all ${activeTab === 'kpi' ? 'bg-amethyst-dark text-white' : 'text-slate-400 hover:text-slate-600'}`}
           >
@@ -195,6 +203,13 @@ export default function PublicPreviewPage({ slug: propSlug }: { slug?: string })
                 plans={[]} // Let it fetch its own
                 isPublic={true}
                 subscriptionTier={effectiveTier}
+              />
+            )}
+            {activeTab === 'ideas' && (
+              <AruneekaIdeaBox 
+                selectedWorkspaceId={workspace.id}
+                user={null}
+                isPublic={true}
               />
             )}
             {activeTab === 'kpi' && (

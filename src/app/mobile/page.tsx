@@ -6,23 +6,27 @@ import MobileDashboard from '@/components/mobile/MobileDashboard';
 import MobileContentPlan from '@/components/mobile/MobileContentPlan';
 import MobileKPI from '@/components/mobile/MobileKPI';
 import MobileTeam from '@/components/mobile/MobileTeam';
+import AruneekaIdeaBox from '@/components/AruneekaIdeaBox';
 
 export const runtime = 'edge';
 
 export default function MobilePage() {
   return (
     <MobileShell>
-      {/* Each child has a 'tab' prop that matches the activeTab in MobileShell */}
-      <div tab="dashboard">
+      {/* Each child has a 'data-tab' prop that matches the activeTab in MobileShell */}
+      <div data-tab="dashboard">
         <MobileDashboard />
       </div>
-      <div tab="content">
+      <div data-tab="ideas">
+        <AruneekaIdeaBox />
+      </div>
+      <div data-tab="content">
         <MobileContentPlan />
       </div>
-      <div tab="strategy">
+      <div data-tab="strategy">
         <MobileKPI />
       </div>
-      <div tab="manage">
+      <div data-tab="manage">
         <MobileTeam />
       </div>
     </MobileShell>

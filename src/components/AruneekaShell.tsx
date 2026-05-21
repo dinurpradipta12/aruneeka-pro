@@ -32,7 +32,8 @@ import {
    Megaphone,
    RefreshCcw,
    Activity,
-   Monitor, CreditCard, X, Image as ImageIcon
+   Monitor, CreditCard, X, Image as ImageIcon,
+   Lightbulb
  } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -169,6 +170,7 @@ MotivationBubble.displayName = 'MotivationBubble';
 
 const navItems = [
    { label: 'Performance Dashboard', icon: <TrendingUp size={16} />, href: '/analytics' },
+   { label: 'Idea Box', icon: <Lightbulb size={16} />, href: '/ideas' },
    { label: 'Content Plan', icon: <Calendar size={16} />, href: '/content' },
    { label: 'KPI Section', icon: <Target size={16} />, href: '/strategy' },
    { label: 'Team Squad', icon: <Users size={16} />, href: '/manage' },
@@ -231,13 +233,13 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
    const [selectedProfile, setSelectedProfile] = useState<any>(null);
    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
    const [showRealtimeSuccess, setShowRealtimeSuccess] = useState(false);
-   const [activePackageDetails, setActivePackageDetails] = useState<any>(null); const resolveTechnicalTier = (t) => { if (!t || t.toLowerCase() === "free" || t.toLowerCase() === "free trial") return "free"; const norm = t.toLowerCase(); if (norm.includes("agency") || norm.includes("superteam")) return "agency"; if (norm.includes("pro") || norm.includes("creator") || norm.includes("expert") || norm.includes("premium")) return "pro"; return "pro"; };
+   const [activePackageDetails, setActivePackageDetails] = useState<any>(null); const resolveTechnicalTier = (t: any) => { if (!t || t.toLowerCase() === "free" || t.toLowerCase() === "free trial") return "free"; const norm = t.toLowerCase(); if (norm.includes("agency") || norm.includes("superteam")) return "agency"; if (norm.includes("pro") || norm.includes("creator") || norm.includes("expert") || norm.includes("premium")) return "pro"; return "pro"; };
 
    // Administrative Realtime States
    const [pendingUsersCount, setPendingUsersCount] = useState(0);
    const [pendingInboxCount, setPendingInboxCount] = useState(0);
    const [lastNotification, setLastNotification] = useState<{ type: 'user' | 'inbox' | 'success' | 'error', message: string } | null>(null);
-   const [showDynamicIsland, setShowDynamicIsland] = useState(false); const [adminAlert, setAdminAlert] = useState(null); const [adminProofPreview, setAdminProofPreview] = useState(null); const [isAdminProcessing, setIsAdminProcessing] = useState(false);
+   const [showDynamicIsland, setShowDynamicIsland] = useState(false); const [adminAlert, setAdminAlert] = useState<any>(null); const [adminProofPreview, setAdminProofPreview] = useState<any>(null); const [isAdminProcessing, setIsAdminProcessing] = useState(false);
    const [selectedContent, setSelectedContent] = useState<any>(null);
    const [isDetailOpen, setIsDetailOpen] = useState(false);
    const [isMetricsOpen, setIsMetricsOpen] = useState(false);
@@ -465,18 +467,20 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
             };
            
            (window as any).triggerAdminAlert = (type: 'user' | 'subscription' = 'subscription') => {
-              setAdminAlert({
-                 id: 'debug-123',
-                 type: type,
-                 title: type === 'user' ? 'Test Pendaftaran Baru!' : 'Test Pembayaran Baru!',
-                 description: 'Ini adalah notifikasi simulasi untuk keperluan testing UI.',
-                 data: {
-                    full_name: 'Tester Aruneeka',
-                    tier_name: 'Superteam Package',
-                    payment_proof_url: 'https://placehold.co/600x800?text=Bukti+Transfer+Testing'
-                 }
-              });
-           };
+               setAdminAlert({
+                  id: 'debug-123',
+                  type: type,
+                  title: type === 'user' ? 'Pendaftaran Baru!' : 'Pembayaran Baru!',
+                  description: type === 'user' ? 'Bagas Firmansyah menunggu verifikasi.' : 'Bagas Firmansyah kirim pembayaran.',
+                  data: {
+                     id: 'debug-123',
+                     full_name: 'Bagas Firmansyah',
+                     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
+                     tier_name: 'Superteam Package',
+                     payment_proof_url: 'https://placehold.co/600x800?text=Bukti+Transfer+Testing'
+                  }
+               });
+            };
             fetchAdminCounts();
 
             // 2. Setup Realtime
@@ -604,23 +608,17 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
        }
     };
 
-    const handleSaveContent = async (data: any) => {
-       try {
-          const userStr = localStorage.getItem('aruneeka_user');
-          if (!userStr) {
-            showToast("Sesi berakhir, silakan login kembali.", 'error');
-            return;
-          }
-          const currentUser = JSON.parse(userStr);
-
      const handleAdminAction = async (action: 'approve' | 'reject', id: string, type: 'user' | 'subscription') => {
         setIsAdminProcessing(true);
         try {
            if (type === 'user') {
-              const { error } = await supabase.from('v2_agency_users').update({ status: action === 'approve' ? 'Active' : 'Rejected' }).eq('id', id);
-              if (error) throw error;
-              showToast(`User ${action === 'approve' ? 'disetujui' : 'ditolak'}!`, action === 'approve' ? 'success' : 'error');
-           } else {
+               const { error } = await supabase.from('v2_agency_users').update({ 
+                  status: action === 'approve' ? 'Active' : 'Rejected',
+                  is_verified: action === 'approve' ? true : false
+               }).eq('id', id);
+               if (error) throw error;
+               showToast(`User ${action === 'approve' ? 'disetujui' : 'ditolak'}!`, action === 'approve' ? 'success' : 'error');
+            } else {
               // Subscription Approval logic (Hybrid Mode)
               if (action === 'approve') {
                  const alertData = adminAlert?.data;
@@ -651,6 +649,15 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
            setIsAdminProcessing(false);
         }
      };
+
+    const handleSaveContent = async (data: any) => {
+       try {
+          const userStr = localStorage.getItem('aruneeka_user');
+          if (!userStr) {
+            showToast("Sesi berakhir, silakan login kembali.", 'error');
+            return;
+          }
+          const currentUser = JSON.parse(userStr);
           
           let workspaceId = selectedWorkspace?.id;
           if (!workspaceId) {
@@ -1583,9 +1590,25 @@ const AruneekaShell = ({ children, onNewStrategy }: { children: React.ReactNode,
                         className="fixed top-0 left-1/2 -translate-x-1/2 z-[30000] w-full max-w-md px-4"
                      >
                         <div className="bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-[32px] p-4 flex items-center gap-4">
-                           <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-indigo-50 text-indigo-500">
-                              {adminAlert.type === 'user' ? <User size={20} /> : <CreditCard size={20} />}
-                           </div>
+                                                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden bg-gradient-to-br from-amethyst-primary/10 to-indigo-50 text-amethyst-primary border border-white shadow-inner">
+                               {adminAlert.type === 'user' && adminAlert.data?.avatar_url ? (
+                                  <img 
+                                     src={adminAlert.data.avatar_url} 
+                                     alt={adminAlert.data.full_name || "New User"} 
+                                     className="w-full h-full object-cover" 
+                                  />
+                               ) : adminAlert.type === 'subscription' && adminAlert.data?.v2_agency_users?.avatar_url ? (
+                                  <img 
+                                     src={adminAlert.data.v2_agency_users.avatar_url} 
+                                     alt={adminAlert.data.v2_agency_users.full_name || "User"} 
+                                     className="w-full h-full object-cover" 
+                                  />
+                               ) : adminAlert.type === 'user' ? (
+                                  <User size={20} />
+                               ) : (
+                                  <CreditCard size={20} />
+                               )}
+                            </div>
                            <div className="flex-1 min-w-0">
                               <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{adminAlert.title}</h4>
                               <p className="text-[10px] font-bold text-slate-400 line-clamp-1">{adminAlert.description}</p>

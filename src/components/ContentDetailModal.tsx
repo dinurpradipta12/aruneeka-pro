@@ -205,7 +205,7 @@ const ContentDetailModal: React.FC<ContentDetailModalProps> = ({ isOpen, onClose
                       >
                         <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
                           <div className="w-7 h-7 bg-white/10 rounded-xl flex items-center justify-center text-white shrink-0">
-                            {React.cloneElement(m.icon as React.ReactElement, { size: 12 })}
+                            {React.cloneElement(m.icon as React.ReactElement<any>, { size: 12 })}
                           </div>
                           <span className="text-[8px] md:text-[9px] font-bold text-white/50 uppercase tracking-widest truncate">{m.label}</span>
                         </div>

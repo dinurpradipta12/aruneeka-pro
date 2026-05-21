@@ -57,8 +57,10 @@ export default function MobileContentPlan() {
   }, [selectedWorkspace]);
 
   const filteredPlans = plans.filter(p => 
-    p.title?.toLowerCase().includes(search.toLowerCase()) ||
-    p.platform?.toLowerCase().includes(search.toLowerCase())
+    p.status?.toLowerCase() !== 'idea' && (
+      p.title?.toLowerCase().includes(search.toLowerCase()) ||
+      p.platform?.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   if (loading) {

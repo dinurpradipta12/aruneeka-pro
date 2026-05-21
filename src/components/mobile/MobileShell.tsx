@@ -13,7 +13,8 @@ import {
   Bell,
   Settings,
   User as UserIcon,
-  Search
+  Search,
+  Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -146,7 +147,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               transition={{ duration: 0.2 }}
             >
               {React.Children.map(children, (child: any) => {
-                if (child && child.props && child.props.tab === activeTab) return child;
+                if (child && child.props && (child.props['data-tab'] === activeTab || child.props.tab === activeTab)) return child;
                 return null;
               })}
             </motion.div>
@@ -167,9 +168,16 @@ export default function MobileShell({ children }: { children: React.ReactNode })
             icon={<Calendar size={22} />} 
             label="Plan" 
           />
-          <div className="relative -top-8">
-            <button className="w-14 h-14 rounded-[22px] bg-amethyst-dark text-white flex items-center justify-center shadow-2xl shadow-amethyst-dark/40 border-4 border-white active:scale-95 transition-all">
-              <Plus size={28} />
+          <div className="relative -top-8 animate-pulse">
+            <button 
+              onClick={() => setActiveTab('ideas')}
+              className={`w-14 h-14 rounded-[22px] flex items-center justify-center shadow-2xl border-4 border-white active:scale-95 transition-all ${
+                activeTab === 'ideas' 
+                  ? 'bg-gradient-to-tr from-violet-600 via-amethyst-primary to-rose-500 text-white shadow-amethyst-primary/40 scale-110' 
+                  : 'bg-amethyst-dark text-white shadow-amethyst-dark/40'
+              }`}
+            >
+              <Lightbulb size={26} className={activeTab === 'ideas' ? 'animate-bounce' : ''} />
             </button>
           </div>
           <NavBtn 
